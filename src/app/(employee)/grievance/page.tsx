@@ -1,23 +1,23 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DataTable } from '@/components/dashboard/data-table';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { PageHeader } from '@/components/layout/page-header';
+import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
+import { GrievanceDrawerPanel } from '@/features/grievances/grievance-drawer-panel';
 import { uploadGrievanceFile } from '@/features/grievances/upload-attachment';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
-  useAddGrievanceCommentMutation,
   useCreateGrievanceAttachmentMutation,
   useCreateGrievanceMutation,
-  useGetGrievanceQuery,
   useGetGrievancesQuery,
-  useLazyGetGrievanceAttachmentUrlQuery,
 } from '@/store/api/api';
 import type { GrievanceCategory } from '@/types/api';
 
@@ -32,20 +32,23 @@ const CATEGORIES: GrievanceCategory[] = [
 
 function tone(status: string): 'pending' | 'approved' | 'rejected' {
   if (status === 'RESOLVED' || status === 'CLOSED') return 'approved';
-  if (status === 'OPEN') return 'pending';
   return 'pending';
 }
 
-export default function GrievancePage() {
-  const { data, isLoading } = useGetGrievancesQuery();
+function GrievancePageBody() {
+  const searchParams = useSearchParams();
+  const { data, isLoading } = useGetGrievancesQuery({ scope: 'mine' });
+  const { data: assignedData, isLoading: assignedLoading } = useGetGrievancesQuery({ scope: 'assigned' });
   const [createGrievance, { isLoading: creating }] = useCreateGrievanceMutation();
   const [createAttachment] = useCreateGrievanceAttachmentMutation();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const { data: detailData } = useGetGrievanceQuery(selectedId ?? '', { skip: !selectedId });
-  const [addComment, { isLoading: commenting }] = useAddGrievanceCommentMutation();
-  const [fetchUrl] = useLazyGetGrievanceAttachmentUrlQuery();
+  const [selectedId, setSelectedId] = useState<string | null>(searchParams.get('id'));
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = searchParams.get('id');
+    if (id) setSelectedId(id);
+  }, [searchParams]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -71,31 +74,24 @@ export default function GrievancePage() {
     }
   }
 
-  async function onComment(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedId) return;
-    const form = event.currentTarget;
-    setError(null);
-    setSuccess(null);
-    try {
-      await addComment({
-        id: selectedId,
-        body: String(new FormData(form).get('body') ?? ''),
-        visibility: 'EMPLOYEE',
-      }).unwrap();
-      form.reset();
-    } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to post message.'));
-    }
-  }
-
-  async function openAttachment(attachmentId: string) {
-    if (!selectedId) return;
-    const result = await fetchUrl({ id: selectedId, attachmentId }).unwrap();
-    window.open(result.data.url, '_blank', 'noopener,noreferrer');
-  }
-
-  const detail = detailData?.data;
+  const columns = [
+    { id: 'subject', header: 'Subject', cell: (row: { subject: string }) => row.subject },
+    { id: 'category', header: 'Category', cell: (row: { category: string }) => row.category },
+    {
+      id: 'status',
+      header: 'Status',
+      cell: (row: { status: string }) => <StatusBadge status={tone(row.status)} label={row.status} />,
+    },
+    {
+      id: 'open',
+      header: 'Open',
+      cell: (row: { id: string }) => (
+        <Button type="button" size="sm" variant="outline" onClick={() => setSelectedId(row.id)}>
+          View
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <>
@@ -135,66 +131,40 @@ export default function GrievancePage() {
         </Button>
       </form>
 
-      <DataTable
-        columns={[
-          { id: 'subject', header: 'Subject', cell: (row) => row.subject },
-          { id: 'category', header: 'Category', cell: (row) => row.category },
-          {
-            id: 'status',
-            header: 'Status',
-            cell: (row) => <StatusBadge status={tone(row.status)} label={row.status} />,
-          },
-          {
-            id: 'open',
-            header: 'Open',
-            cell: (row) => (
-              <Button type="button" size="sm" variant="outline" onClick={() => setSelectedId(row.id)}>
-                View
-              </Button>
-            ),
-          },
-        ]}
-        rows={data?.data ?? []}
-        emptyTitle={isLoading ? 'Loading' : 'No grievances'}
-        emptyDescription="Your filed concerns appear here."
-      />
+      <section className="mb-10">
+        <Meta className="mb-4">Assigned to me</Meta>
+        <DataTable
+          columns={columns}
+          rows={assignedData?.data ?? []}
+          emptyTitle={assignedLoading ? 'Loading' : 'No assigned cases'}
+          emptyDescription="When HR assigns you as investigator, those cases appear here."
+        />
+      </section>
 
-      {detail ? (
-        <section className="mt-10 max-w-xl space-y-4 border border-border p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">{detail.status}</p>
-          <p className="text-sm font-medium">{detail.subject}</p>
-          <p className="whitespace-pre-line text-sm">{detail.description}</p>
-          {detail.resolution ? <p className="text-sm">Resolution: {detail.resolution}</p> : null}
-          <div className="space-y-2">
-            {detail.comments.map((comment) => (
-              <div key={comment.id} className="border border-border px-3 py-2 text-sm">
-                <p className="text-xs text-muted">{comment.authorName ?? '—'}</p>
-                <p className="mt-1 whitespace-pre-line">{comment.body}</p>
-              </div>
-            ))}
-          </div>
-          <div className="space-y-2">
-            {detail.attachments.map((item) => (
-              <Button
-                key={item.id}
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => void openAttachment(item.id)}
-              >
-                {item.fileName}
-              </Button>
-            ))}
-          </div>
-          <form onSubmit={onComment} className="space-y-3">
-            <Label htmlFor="reply">Reply</Label>
-            <Input id="reply" name="body" required />
-            <Button type="submit" size="sm" disabled={commenting}>
-              Send
-            </Button>
-          </form>
+      <section className="mb-10">
+        <Meta className="mb-4">My concerns</Meta>
+        <DataTable
+          columns={columns}
+          rows={data?.data ?? []}
+          emptyTitle={isLoading ? 'Loading' : 'No grievances'}
+          emptyDescription="Your filed concerns appear here."
+        />
+      </section>
+
+      {selectedId ? (
+        <section className="max-w-xl border border-border p-6">
+          <Meta className="mb-4">Case</Meta>
+          <GrievanceDrawerPanel grievanceId={selectedId} />
         </section>
       ) : null}
     </>
+  );
+}
+
+export default function GrievancePage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-muted">Loading</p>}>
+      <GrievancePageBody />
+    </Suspense>
   );
 }

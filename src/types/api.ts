@@ -312,6 +312,23 @@ export type GrievanceDetail = Grievance & {
   assignments: GrievanceAssignment[];
 };
 
+export type GrievanceCounts = {
+  byStatus: {
+    OPEN: number;
+    UNDER_REVIEW: number;
+    INVESTIGATING: number;
+    RESOLVED: number;
+    CLOSED: number;
+  };
+  total: number;
+};
+
+export type GrievanceHandler = {
+  employeeId: string;
+  fullName: string;
+  role: string;
+};
+
 export type GrievanceUploadSession = {
   attachment: GrievanceAttachment;
   uploadUrl: string;

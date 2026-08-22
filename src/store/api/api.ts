@@ -9,7 +9,9 @@ import type {
   AuditLog,
   Employee,
   Grievance,
+  GrievanceCounts,
   GrievanceDetail,
+  GrievanceHandler,
   GrievanceUploadSession,
   HealthData,
   Holiday,
@@ -413,12 +415,34 @@ export const api = createApi({
       query: (body) => ({ url: '/api/v1/shift-assignments', method: 'POST', body }),
       invalidatesTags: ['Shifts', 'Notifications'],
     }),
-    getGrievances: builder.query<ApiSuccess<Grievance[]>, { status?: string } | void>({
+    getGrievances: builder.query<
+      ApiSuccess<Grievance[]>,
+      { status?: string; scope?: 'mine' | 'assigned' | 'queue' } | void
+    >({
       query: (arg) => ({
         url: '/api/v1/grievances',
-        params: arg && 'status' in arg && arg.status ? { status: arg.status } : undefined,
+        params:
+          arg && typeof arg === 'object'
+            ? {
+                ...(arg.status ? { status: arg.status } : {}),
+                ...(arg.scope ? { scope: arg.scope } : {}),
+              }
+            : undefined,
       }),
       providesTags: ['Grievances'],
+    }),
+    getGrievanceCounts: builder.query<
+      ApiSuccess<GrievanceCounts>,
+      { scope?: 'mine' | 'assigned' | 'queue' } | void
+    >({
+      query: (arg) => ({
+        url: '/api/v1/grievances/counts',
+        params: arg && arg.scope ? { scope: arg.scope } : undefined,
+      }),
+      providesTags: ['Grievances'],
+    }),
+    getGrievanceHandlers: builder.query<ApiSuccess<GrievanceHandler[]>, void>({
+      query: () => '/api/v1/grievances/handlers',
     }),
     getGrievance: builder.query<ApiSuccess<GrievanceDetail>, string>({
       query: (id) => `/api/v1/grievances/${id}`,
@@ -429,14 +453,14 @@ export const api = createApi({
       { category: string; subject: string; description: string }
     >({
       query: (body) => ({ url: '/api/v1/grievances', method: 'POST', body }),
-      invalidatesTags: ['Grievances'],
+      invalidatesTags: ['Grievances', 'Notifications'],
     }),
     addGrievanceComment: builder.mutation<
       ApiSuccess<GrievanceDetail>,
       { id: string; body: string; visibility?: 'EMPLOYEE' | 'INTERNAL' }
     >({
       query: ({ id, ...body }) => ({ url: `/api/v1/grievances/${id}/comments`, method: 'POST', body }),
-      invalidatesTags: ['Grievances'],
+      invalidatesTags: ['Grievances', 'Notifications'],
     }),
     assignGrievance: builder.mutation<ApiSuccess<GrievanceDetail>, { id: string; assigneeId: string }>({
       query: ({ id, assigneeId }) => ({
@@ -444,7 +468,7 @@ export const api = createApi({
         method: 'POST',
         body: { assigneeId },
       }),
-      invalidatesTags: ['Grievances'],
+      invalidatesTags: ['Grievances', 'Notifications'],
     }),
     changeGrievanceStatus: builder.mutation<ApiSuccess<GrievanceDetail>, { id: string; status: string }>({
       query: ({ id, status }) => ({
@@ -452,7 +476,7 @@ export const api = createApi({
         method: 'POST',
         body: { status },
       }),
-      invalidatesTags: ['Grievances'],
+      invalidatesTags: ['Grievances', 'Notifications'],
     }),
     resolveGrievance: builder.mutation<ApiSuccess<GrievanceDetail>, { id: string; resolution: string }>({
       query: ({ id, resolution }) => ({
@@ -460,14 +484,14 @@ export const api = createApi({
         method: 'POST',
         body: { resolution },
       }),
-      invalidatesTags: ['Grievances'],
+      invalidatesTags: ['Grievances', 'Notifications'],
     }),
     createGrievanceAttachment: builder.mutation<
       ApiSuccess<GrievanceUploadSession>,
       { id: string; fileName: string; contentType: string; sizeBytes: number }
     >({
       query: ({ id, ...body }) => ({ url: `/api/v1/grievances/${id}/attachments`, method: 'POST', body }),
-      invalidatesTags: ['Grievances'],
+      invalidatesTags: ['Grievances', 'Notifications'],
     }),
     getGrievanceAttachmentUrl: builder.query<ApiSuccess<{ url: string }>, { id: string; attachmentId: string }>({
       query: ({ id, attachmentId }) => `/api/v1/grievances/${id}/attachments/${attachmentId}/url`,
@@ -608,6 +632,8 @@ export const {
   useGetShiftAssignmentsQuery,
   useCreateShiftAssignmentMutation,
   useGetGrievancesQuery,
+  useGetGrievanceCountsQuery,
+  useGetGrievanceHandlersQuery,
   useGetGrievanceQuery,
   useCreateGrievanceMutation,
   useAddGrievanceCommentMutation,

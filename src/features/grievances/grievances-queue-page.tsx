@@ -6,7 +6,7 @@ import { DataTable } from '@/components/dashboard/data-table';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
-import { useGetGrievancesQuery } from '@/store/api/api';
+import { useGetGrievanceCountsQuery, useGetGrievancesQuery } from '@/store/api/api';
 import { openEntityDrawer } from '@/store/slices/ui-slice';
 import { useAppDispatch } from '@/store/hooks';
 
@@ -17,12 +17,27 @@ function tone(status: string): 'pending' | 'approved' | 'rejected' {
   return 'pending';
 }
 
+function statusLabel(status: string): string {
+  return status.replaceAll('_', ' ');
+}
+
 export function GrievancesQueuePage() {
   const dispatch = useAppDispatch();
   const searchParams = useSearchParams();
   const focusId = searchParams.get('id');
-  const [status, setStatus] = useState<string>('OPEN');
+  const requested = searchParams.get('status');
+  const initial =
+    requested && STATUSES.includes(requested as (typeof STATUSES)[number]) ? requested : 'OPEN';
+  const [status, setStatus] = useState<string>(initial);
   const { data, isLoading } = useGetGrievancesQuery({ status });
+  const { data: countsData } = useGetGrievanceCountsQuery();
+  const counts = countsData?.data.byStatus;
+
+  useEffect(() => {
+    if (requested && STATUSES.includes(requested as (typeof STATUSES)[number])) {
+      setStatus(requested);
+    }
+  }, [requested]);
 
   useEffect(() => {
     if (!focusId) {
@@ -49,7 +64,7 @@ export function GrievancesQueuePage() {
             variant={status === item ? 'primary' : 'outline'}
             onClick={() => setStatus(item)}
           >
-            {item}
+            {statusLabel(item)} ({counts?.[item] ?? 0})
           </Button>
         ))}
       </div>

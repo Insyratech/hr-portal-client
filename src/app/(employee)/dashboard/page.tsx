@@ -17,6 +17,7 @@ import { apiErrorMessage } from '@/lib/api-error';
 import { formatClock, formatDuration } from '@/lib/attendance-format';
 import {
   useGetAttendanceMeQuery,
+  useGetGrievancesQuery,
   useGetLeaveApplicationsQuery,
   useGetLeaveBalancesQuery,
   useGetMeQuery,
@@ -34,6 +35,7 @@ export default function EmployeeDashboardPage() {
   const { data: attendanceData } = useGetAttendanceMeQuery();
   const { data: me } = useGetMeQuery();
   const { data: applicationsData } = useGetLeaveApplicationsQuery();
+  const { data: assignedGrievances } = useGetGrievancesQuery({ scope: 'assigned' });
   const [punchIn, { isLoading: punchingIn }] = usePunchInMutation();
   const [punchOut, { isLoading: punchingOut }] = usePunchOutMutation();
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +67,7 @@ export default function EmployeeDashboardPage() {
       !row.handoverAccepted &&
       row.status === 'PENDING',
   );
+  const assignedCases = assignedGrievances?.data ?? [];
 
   const durationLabel = punchedOut
     ? `Worked ${formatDuration(today?.workedMinutes) ?? '—'} · ${today?.status ?? ''}`
@@ -99,6 +102,31 @@ export default function EmployeeDashboardPage() {
           actionLabel={punchedOut ? 'Done for today' : punchedIn ? 'Punch out' : 'Punch in'}
         />
         {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
+        {assignedCases.length > 0 ? (
+          <section className="space-y-4">
+            <div className="flex items-baseline justify-between gap-3">
+              <Meta>Assigned grievances</Meta>
+              <Link href={`/grievance?id=${assignedCases[0].id}`} className="text-sm text-muted hover:text-foreground">
+                Open workspace
+              </Link>
+            </div>
+            {assignedCases.map((row) => (
+              <Link
+                key={row.id}
+                href={`/grievance?id=${row.id}`}
+                className="block border border-border bg-background p-5 shadow-card hover:bg-surface"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-sm font-medium">{row.subject}</p>
+                  <StatusBadge status={row.status === 'RESOLVED' || row.status === 'CLOSED' ? 'approved' : 'pending'} label={row.status} />
+                </div>
+                <p className="mt-2 text-sm text-muted">
+                  {row.employeeName ?? 'Employee'} · {row.category}
+                </p>
+              </Link>
+            ))}
+          </section>
+        ) : null}
         {handoverInbox.length > 0 ? (
           <section className="space-y-4">
             <div className="flex items-baseline justify-between gap-3">

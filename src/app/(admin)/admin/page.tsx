@@ -1,19 +1,22 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { DataTable } from '@/components/dashboard/data-table';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
-import { useGetLeaveApplicationsQuery, useGetReportsOverviewQuery } from '@/store/api/api';
+import { useGetLeaveApplicationsQuery, useGetGrievanceCountsQuery, useGetReportsOverviewQuery } from '@/store/api/api';
 import { useAppDispatch } from '@/store/hooks';
 import { openEntityDrawer } from '@/store/slices/ui-slice';
 
 export default function AdminDashboardPage() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const { data: reportData } = useGetReportsOverviewQuery();
   const { data: leaveData } = useGetLeaveApplicationsQuery({ status: 'PENDING' });
+  const { data: grievanceCounts } = useGetGrievanceCountsQuery();
   const report = reportData?.data;
   const pendingLeaves = (leaveData?.data ?? [])
     .filter((row) => row.status === 'PENDING')
@@ -40,12 +43,29 @@ export default function AdminDashboardPage() {
           label="Attendance issues"
           icon="clock"
         />
-        <StatCard value={String(report?.grievances.open ?? 0)} label="Grievances" icon="shield" />
+        <StatCard
+          value={String(grievanceCounts?.data.total ?? report?.grievances.open ?? 0)}
+          label="Grievances"
+          icon="shield"
+          onClick={() => router.push('/admin/grievances')}
+        />
         <StatCard
           value={String(report?.attendance.missingPunches ?? 0)}
           label="Missing punches"
           icon="calendar"
         />
+      </div>
+      <Meta className="mb-4">Grievances</Meta>
+      <div className="mb-10 grid grid-cols-2 gap-4 lg:grid-cols-5 lg:gap-6">
+        {(['OPEN', 'UNDER_REVIEW', 'INVESTIGATING', 'RESOLVED', 'CLOSED'] as const).map((status) => (
+          <StatCard
+            key={status}
+            value={String(grievanceCounts?.data.byStatus[status] ?? 0)}
+            label={status.replaceAll('_', ' ')}
+            icon="shield"
+            onClick={() => router.push(`/admin/grievances?status=${status}`)}
+          />
+        ))}
       </div>
       <Meta className="mb-4">Attendance this month</Meta>
       <div className="mb-10 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
