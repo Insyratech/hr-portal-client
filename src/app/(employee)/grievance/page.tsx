@@ -1,8 +1,7 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import { DataTable } from '@/components/dashboard/data-table';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { PageHeader } from '@/components/layout/page-header';
@@ -36,19 +35,13 @@ function tone(status: string): 'pending' | 'approved' | 'rejected' {
 }
 
 function GrievancePageBody() {
-  const searchParams = useSearchParams();
   const { data, isLoading } = useGetGrievancesQuery({ scope: 'mine' });
   const { data: assignedData, isLoading: assignedLoading } = useGetGrievancesQuery({ scope: 'assigned' });
   const [createGrievance, { isLoading: creating }] = useCreateGrievanceMutation();
   const [createAttachment] = useCreateGrievanceAttachmentMutation();
-  const [selectedId, setSelectedId] = useState<string | null>(searchParams.get('id'));
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  useEffect(() => {
-    const id = searchParams.get('id');
-    if (id) setSelectedId(id);
-  }, [searchParams]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -68,7 +61,6 @@ function GrievancePageBody() {
       }
       setSuccess('Concern submitted.');
       form.reset();
-      setSelectedId(created.data.id);
     } catch (cause) {
       setError(apiErrorMessage(cause, 'Unable to submit concern.'));
     }
@@ -153,7 +145,12 @@ function GrievancePageBody() {
 
       {selectedId ? (
         <section className="max-w-xl border border-border p-6">
-          <Meta className="mb-4">Case</Meta>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <Meta>Case</Meta>
+            <Button type="button" size="sm" variant="outline" onClick={() => setSelectedId(null)}>
+              Close
+            </Button>
+          </div>
           <GrievanceDrawerPanel grievanceId={selectedId} />
         </section>
       ) : null}
@@ -162,9 +159,5 @@ function GrievancePageBody() {
 }
 
 export default function GrievancePage() {
-  return (
-    <Suspense fallback={<p className="text-sm text-muted">Loading</p>}>
-      <GrievancePageBody />
-    </Suspense>
-  );
+  return <GrievancePageBody />;
 }

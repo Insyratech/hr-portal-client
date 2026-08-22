@@ -436,13 +436,13 @@ export const api = createApi({
       { scope?: 'mine' | 'assigned' | 'queue' } | void
     >({
       query: (arg) => ({
-        url: '/api/v1/grievances/counts',
+        url: '/api/v1/grievance-counts',
         params: arg && arg.scope ? { scope: arg.scope } : undefined,
       }),
       providesTags: ['Grievances'],
     }),
     getGrievanceHandlers: builder.query<ApiSuccess<GrievanceHandler[]>, void>({
-      query: () => '/api/v1/grievances/handlers',
+      query: () => '/api/v1/grievance-handlers',
     }),
     getGrievance: builder.query<ApiSuccess<GrievanceDetail>, string>({
       query: (id) => `/api/v1/grievances/${id}`,

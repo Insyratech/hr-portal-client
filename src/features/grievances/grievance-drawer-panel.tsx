@@ -33,7 +33,9 @@ export function GrievanceDrawerPanel({ grievanceId }: { grievanceId: string }) {
   const canManage = permissions.includes(PERMISSIONS.GRIEVANCES_MANAGE);
   const { data, isLoading, isError } = useGetGrievanceQuery(grievanceId);
   const { data: employees } = useGetEmployeesQuery(undefined, { skip: !canManage });
-  const { data: handlers } = useGetGrievanceHandlersQuery(undefined, { skip: canManage });
+  const { data: handlers, isError: handlersFailed } = useGetGrievanceHandlersQuery(undefined, {
+    skip: canManage,
+  });
   const [assignGrievance, { isLoading: assigning }] = useAssignGrievanceMutation();
   const [changeStatus, { isLoading: advancing }] = useChangeGrievanceStatusMutation();
   const [resolveGrievance, { isLoading: resolving }] = useResolveGrievanceMutation();
@@ -146,12 +148,17 @@ export function GrievanceDrawerPanel({ grievanceId }: { grievanceId: string }) {
             className="h-10 w-full rounded border border-border bg-background px-3 text-sm"
             required
           >
+            <option value="">Select a person</option>
             {assignOptions.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.label}
               </option>
             ))}
           </select>
+          {handlersFailed ? <StatusMessage tone="danger">Unable to load Admin / Super Admin list.</StatusMessage> : null}
+          {assignOptions.length === 0 && !handlersFailed ? (
+            <p className="text-sm text-muted">No Admin or Super Admin is available to forward to.</p>
+          ) : null}
           <Button type="submit" size="sm" disabled={assigning || assignOptions.length === 0}>
             {canManage ? 'Assign' : 'Forward'}
           </Button>

@@ -6,7 +6,7 @@ import { DataTable } from '@/components/dashboard/data-table';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
-import { useGetGrievanceCountsQuery, useGetGrievancesQuery } from '@/store/api/api';
+import { useGetGrievancesQuery } from '@/store/api/api';
 import { openEntityDrawer } from '@/store/slices/ui-slice';
 import { useAppDispatch } from '@/store/hooks';
 
@@ -29,9 +29,15 @@ export function GrievancesQueuePage() {
   const initial =
     requested && STATUSES.includes(requested as (typeof STATUSES)[number]) ? requested : 'OPEN';
   const [status, setStatus] = useState<string>(initial);
-  const { data, isLoading } = useGetGrievancesQuery({ status });
-  const { data: countsData } = useGetGrievanceCountsQuery();
-  const counts = countsData?.data.byStatus;
+  const { data, isLoading } = useGetGrievancesQuery();
+  const rows = (data?.data ?? []).filter((row) => row.status === status);
+  const counts = (data?.data ?? []).reduce(
+    (acc, row) => {
+      acc[row.status] = (acc[row.status] ?? 0) + 1;
+      return acc;
+    },
+    { OPEN: 0, UNDER_REVIEW: 0, INVESTIGATING: 0, RESOLVED: 0, CLOSED: 0 } as Record<string, number>,
+  );
 
   useEffect(() => {
     if (requested && STATUSES.includes(requested as (typeof STATUSES)[number])) {
@@ -64,7 +70,7 @@ export function GrievancesQueuePage() {
             variant={status === item ? 'primary' : 'outline'}
             onClick={() => setStatus(item)}
           >
-            {statusLabel(item)} ({counts?.[item] ?? 0})
+            {statusLabel(item)} ({counts[item] ?? 0})
           </Button>
         ))}
       </div>
@@ -101,7 +107,7 @@ export function GrievancesQueuePage() {
             ),
           },
         ]}
-        rows={data?.data ?? []}
+        rows={rows}
         emptyTitle={isLoading ? 'Loading' : 'No grievances'}
         emptyDescription="Grievances for this status appear here."
       />

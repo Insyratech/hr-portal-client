@@ -46,7 +46,7 @@ export function pathForNotification(item: NotificationItem, roles: string[]): st
     if (admin) {
       return `/admin/grievances?id=${encodeURIComponent(id)}`;
     }
-    return `/grievance?id=${encodeURIComponent(id)}`;
+    return '/grievance';
   }
 
   if (superAdmin) return '/super-admin';
