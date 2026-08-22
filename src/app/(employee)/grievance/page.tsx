@@ -74,14 +74,16 @@ export default function GrievancePage() {
   async function onComment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedId) return;
+    const form = event.currentTarget;
     setError(null);
+    setSuccess(null);
     try {
       await addComment({
         id: selectedId,
-        body: String(new FormData(event.currentTarget).get('body') ?? ''),
+        body: String(new FormData(form).get('body') ?? ''),
         visibility: 'EMPLOYEE',
       }).unwrap();
-      event.currentTarget.reset();
+      form.reset();
     } catch (cause) {
       setError(apiErrorMessage(cause, 'Unable to post message.'));
     }

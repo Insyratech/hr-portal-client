@@ -9,6 +9,7 @@ import {
   ADMIN_NAV,
   MY_WORK_NAV,
   SUPER_ADMIN_ATTENDANCE_NAV,
+  SUPER_ADMIN_GRIEVANCE_NAV,
   SUPER_ADMIN_LEAVE_NAV,
   SUPER_ADMIN_ORG_NAV,
   SUPER_ADMIN_OVERVIEW_NAV,
@@ -105,6 +106,7 @@ export function Sidebar({ variant }: { variant: 'admin' | 'super-admin' }) {
           <>
             <NavGroup label="Overview" items={SUPER_ADMIN_OVERVIEW_NAV} collapsed={collapsed} />
             <NavGroup label="Leave" items={SUPER_ADMIN_LEAVE_NAV} collapsed={collapsed} />
+            <NavGroup label="Grievances" items={SUPER_ADMIN_GRIEVANCE_NAV} collapsed={collapsed} />
             <NavGroup label="Attendance" items={SUPER_ADMIN_ATTENDANCE_NAV} collapsed={collapsed} />
             <NavGroup label="Organization" items={SUPER_ADMIN_ORG_NAV} collapsed={collapsed} />
             <NavGroup label="Policies" items={SUPER_ADMIN_POLICIES_NAV} collapsed={collapsed} />

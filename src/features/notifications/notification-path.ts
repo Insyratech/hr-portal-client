@@ -39,6 +39,16 @@ export function pathForNotification(item: NotificationItem, roles: string[]): st
     return superAdmin ? '/super-admin/profile' : '/dashboard';
   }
 
+  if (item.referenceType === 'grievance' && id) {
+    if (superAdmin) {
+      return `/super-admin/grievances?id=${encodeURIComponent(id)}`;
+    }
+    if (admin) {
+      return `/admin/grievances?id=${encodeURIComponent(id)}`;
+    }
+    return '/grievance';
+  }
+
   if (superAdmin) return '/super-admin';
   if (admin) return '/admin';
   return '/dashboard';

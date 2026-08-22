@@ -70,15 +70,16 @@ export function GrievanceDrawerPanel({ grievanceId }: { grievanceId: string }) {
 
   async function onComment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
     setError(null);
-    const form = new FormData(event.currentTarget);
     try {
       await addComment({
         id: grievanceId,
-        body: String(form.get('body') ?? ''),
-        visibility: form.get('visibility') === 'EMPLOYEE' ? 'EMPLOYEE' : 'INTERNAL',
+        body: String(data.get('body') ?? ''),
+        visibility: data.get('visibility') === 'EMPLOYEE' ? 'EMPLOYEE' : 'INTERNAL',
       }).unwrap();
-      event.currentTarget.reset();
+      form.reset();
     } catch (cause) {
       setError(apiErrorMessage(cause, 'Unable to post comment.'));
     }

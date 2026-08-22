@@ -42,6 +42,10 @@ export const SUPER_ADMIN_LEAVE_NAV: readonly NavItem[] = [
   { href: '/super-admin/leave-types', label: 'Leave types', icon: 'leave' },
 ];
 
+export const SUPER_ADMIN_GRIEVANCE_NAV: readonly NavItem[] = [
+  { href: '/super-admin/grievances', label: 'Grievances', icon: 'shield' },
+];
+
 export const SUPER_ADMIN_ATTENDANCE_NAV: readonly NavItem[] = [
   { href: '/super-admin/shifts', label: 'Shifts', icon: 'clock' },
 ];
@@ -66,6 +70,7 @@ export const SUPER_ADMIN_SYSTEM_NAV: readonly NavItem[] = [
 
 export const SUPER_ADMIN_CONFIG_NAV: readonly NavItem[] = [
   ...SUPER_ADMIN_LEAVE_NAV,
+  ...SUPER_ADMIN_GRIEVANCE_NAV,
   ...SUPER_ADMIN_ATTENDANCE_NAV,
   ...SUPER_ADMIN_ORG_NAV,
   ...SUPER_ADMIN_POLICIES_NAV,
