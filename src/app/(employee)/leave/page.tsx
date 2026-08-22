@@ -17,7 +17,8 @@ import {
   useGetLeaveApplicationsQuery,
   useGetMeQuery,
 } from '@/store/api/api';
-import type { LeaveApplication } from '@/types/api';
+import { useToast } from '@/hooks/use-toast';
+import { apiErrorMessage } from '@/lib/api-error';
 
 function tone(status: string): 'pending' | 'approved' | 'rejected' {
   if (status === 'APPROVED') return 'approved';
@@ -32,6 +33,7 @@ function LeavePageBody() {
   const { data: me } = useGetMeQuery();
   const { data } = useGetLeaveApplicationsQuery();
   const [cancelLeave, { isLoading }] = useCancelLeaveMutation();
+  const toast = useToast();
   const [editing, setEditing] = useState<LeaveApplication | null>(null);
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const myId = me?.data.employeeId;
@@ -156,7 +158,18 @@ function LeavePageBody() {
               header: 'Cancel',
               cell: (row) =>
                 (row.status === 'PENDING' || row.status === 'APPROVED') && row.employeeId === myId ? (
-                  <Button type="button" size="sm" variant="outline" disabled={isLoading} onClick={() => void cancelLeave(row.id)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={isLoading}
+                    onClick={() => {
+                      void cancelLeave(row.id)
+                        .unwrap()
+                        .then(() => toast.success('Leave cancelled.'))
+                        .catch((cause) => toast.error(apiErrorMessage(cause, 'Unable to cancel leave.')));
+                    }}
+                  >
                     Cancel
                   </Button>
                 ) : (

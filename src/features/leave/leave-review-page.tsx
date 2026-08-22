@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
 import { leaveJourneySteps } from '@/features/leave/leave-journey';
+import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
   useApproveLeaveMutation,
@@ -33,46 +34,43 @@ export function LeaveReviewPage({ listHref }: { listHref: string }) {
   const [rejectLeave, { isLoading: rejecting }] = useRejectLeaveMutation();
   const [requestChanges, { isLoading: requesting }] = useRequestLeaveChangesMutation();
   const [comment, setComment] = useState('');
-  const [message, setMessage] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
+  const toast = useToast();
   const row = data?.data;
   const busy = approving || rejecting || requesting;
   const pending = row?.status === 'PENDING';
   const waitingHandover = Boolean(row?.handoverEmployeeId && !row.handoverAccepted);
 
   async function onApprove(): Promise<void> {
-    setMessage(null);
     try {
       await approveLeave({ id, comment: comment.trim() || undefined }).unwrap();
       setComment('');
-      setMessage({ tone: 'success', text: 'Leave approved.' });
+      toast.success('Leave approved.');
     } catch (cause) {
-      setMessage({ tone: 'danger', text: apiErrorMessage(cause, 'Unable to approve this leave request.') });
+      toast.error(apiErrorMessage(cause, 'Unable to approve this leave request.'));
     }
   }
 
   async function onDecline(): Promise<void> {
-    setMessage(null);
     try {
       await rejectLeave({ id, comment: comment.trim() || undefined }).unwrap();
       setComment('');
-      setMessage({ tone: 'success', text: 'Leave declined.' });
+      toast.success('Leave declined.');
     } catch (cause) {
-      setMessage({ tone: 'danger', text: apiErrorMessage(cause, 'Unable to decline this leave request.') });
+      toast.error(apiErrorMessage(cause, 'Unable to decline this leave request.'));
     }
   }
 
   async function onRequestChanges(): Promise<void> {
-    setMessage(null);
     if (!comment.trim()) {
-      setMessage({ tone: 'danger', text: 'Describe the changes you need.' });
+      toast.warning('Describe the changes you need.');
       return;
     }
     try {
       await requestChanges({ id, comment: comment.trim() }).unwrap();
       setComment('');
-      setMessage({ tone: 'success', text: 'The employee was asked to update this request.' });
+      toast.success('The employee was asked to update this request.');
     } catch (cause) {
-      setMessage({ tone: 'danger', text: apiErrorMessage(cause, 'Unable to request changes.') });
+      toast.error(apiErrorMessage(cause, 'Unable to request changes.'));
     }
   }
 
@@ -128,7 +126,6 @@ export function LeaveReviewPage({ listHref }: { listHref: string }) {
               />
             </div>
           ) : null}
-          {message ? <StatusMessage tone={message.tone}>{message.text}</StatusMessage> : null}
           {pending ? (
             <div className="flex flex-wrap gap-3">
               <Button type="button" disabled={busy || waitingHandover} onClick={() => void onApprove()}>

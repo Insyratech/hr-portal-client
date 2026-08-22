@@ -5,6 +5,8 @@ import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { useAcceptLeaveHandoverMutation, useGetMeQuery } from '@/store/api/api';
+import { useToast } from '@/hooks/use-toast';
+import { apiErrorMessage } from '@/lib/api-error';
 import type { LeaveApplication } from '@/types/api';
 
 export function HandoverReviewCard({
@@ -16,6 +18,7 @@ export function HandoverReviewCard({
 }) {
   const { data: me } = useGetMeQuery();
   const [acceptHandover, { isLoading }] = useAcceptLeaveHandoverMutation();
+  const toast = useToast();
   const myId = me?.data.employeeId;
   const canAccept =
     application.handoverEmployeeId === myId &&
@@ -57,7 +60,17 @@ export function HandoverReviewCard({
                 : `${application.handoverEmployeeName ?? 'Colleague'} · waiting`}
       </p>
       {canAccept ? (
-        <Button className="mt-4" type="button" disabled={isLoading} onClick={() => void acceptHandover(application.id)}>
+        <Button
+          className="mt-4"
+          type="button"
+          disabled={isLoading}
+          onClick={() => {
+            void acceptHandover(application.id)
+              .unwrap()
+              .then(() => toast.success('Handover accepted.'))
+              .catch((cause) => toast.error(apiErrorMessage(cause, 'Unable to accept handover.')));
+          }}
+        >
           {isLoading ? 'Accepting' : 'Accept handover'}
         </Button>
       ) : (

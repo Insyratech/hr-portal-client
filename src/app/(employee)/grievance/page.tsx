@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
 import { GrievanceDrawerPanel } from '@/features/grievances/grievance-drawer-panel';
 import { uploadGrievanceFile } from '@/features/grievances/upload-attachment';
+import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
   useCreateGrievanceAttachmentMutation,
@@ -42,6 +43,7 @@ function GrievancePageBody() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const toast = useToast();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,8 +62,10 @@ function GrievancePageBody() {
         await uploadGrievanceFile(createAttachment, created.data.id, file);
       }
       setSuccess('Concern submitted.');
+      toast.success('Concern submitted.');
       form.reset();
     } catch (cause) {
+      toast.error(apiErrorMessage(cause, 'Unable to submit concern.'));
       setError(apiErrorMessage(cause, 'Unable to submit concern.'));
     }
   }

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusMessage, type StatusTone } from '@/components/ui/status-message';
+import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
   useApplyLeaveMutation,
@@ -37,6 +38,7 @@ export function ApplyLeaveForm({
   const [leaveTypeId, setLeaveTypeId] = useState(editing?.leaveTypeId ?? '');
   const [duration, setDuration] = useState<'full' | 'half'>(editing?.duration ?? 'full');
   const [message, setMessage] = useState<{ tone: StatusTone; text: string } | null>(null);
+  const toast = useToast();
   const isLoading = applying || saving;
 
   useEffect(() => {
@@ -96,18 +98,24 @@ export function ApplyLeaveForm({
         : undefined,
       attachmentUrl: String(form.get('attachmentUrl') ?? '') || undefined,
     };
+    if (!selectedType?.id) {
+      toast.warning('Select a leave type first.');
+      return;
+    }
     try {
       if (editing) {
         await updateLeave({ id: editing.id, body }).unwrap();
-        setMessage({ tone: 'success', text: 'Leave request updated.' });
+        toast.success('Leave request updated.');
         onCancelEdit?.();
       } else {
         await applyLeave(body).unwrap();
-        setMessage({ tone: 'success', text: 'Leave request submitted.' });
+        toast.success('Leave request submitted.');
         formEl.reset();
       }
     } catch (error) {
-      setMessage({ tone: 'danger', text: apiErrorMessage(error, editing ? 'Unable to update leave.' : 'Unable to apply for leave.') });
+      const text = apiErrorMessage(error, editing ? 'Unable to update leave.' : 'Unable to apply for leave.');
+      toast.error(text);
+      setMessage({ tone: 'danger', text });
     }
   }
 

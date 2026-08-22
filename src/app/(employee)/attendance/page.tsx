@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
+import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import { formatClock, formatDuration } from '@/lib/attendance-format';
 import {
@@ -27,6 +28,7 @@ export default function AttendancePage() {
   const [submitCorrection, { isLoading: saving }] = useSubmitAttendanceCorrectionMutation();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const toast = useToast();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -44,8 +46,10 @@ export default function AttendancePage() {
         reason: String(form.get('reason') ?? ''),
       }).unwrap();
       setSuccess('Correction submitted for approval.');
+      toast.success('Correction submitted for approval.');
       event.currentTarget.reset();
     } catch (cause) {
+      toast.error(apiErrorMessage(cause, 'Unable to submit correction.'));
       setError(apiErrorMessage(cause, 'Unable to submit correction.'));
     }
   }

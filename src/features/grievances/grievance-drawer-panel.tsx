@@ -1,11 +1,11 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
+import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import { PERMISSIONS } from '@/types/permissions';
 import {
@@ -40,7 +40,7 @@ export function GrievanceDrawerPanel({ grievanceId }: { grievanceId: string }) {
   const [changeStatus, { isLoading: advancing }] = useChangeGrievanceStatusMutation();
   const [resolveGrievance, { isLoading: resolving }] = useResolveGrievanceMutation();
   const [addComment, { isLoading: commenting }] = useAddGrievanceCommentMutation();
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const detail = data?.data;
   const assigned = Boolean(detail?.assignments.some((item) => item.assigneeId === employeeId));
   const isFiler = detail?.employeeId === employeeId;
@@ -51,34 +51,43 @@ export function GrievanceDrawerPanel({ grievanceId }: { grievanceId: string }) {
   async function onAssign(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
-    setError(null);
     const assigneeId = String(new FormData(form).get('assigneeId') ?? '');
+    if (!assigneeId) {
+      toast.warning(canManage ? 'Select a person to assign.' : 'Select Admin or Super Admin to forward.');
+      return;
+    }
     try {
       await assignGrievance({ id: grievanceId, assigneeId }).unwrap();
+      toast.success(canManage ? 'Investigator assigned.' : 'Grievance forwarded.');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to assign.'));
+      toast.error(apiErrorMessage(cause, 'Unable to assign.'));
     }
   }
 
   async function onAdvance() {
     if (!next || next === 'RESOLVED') return;
-    setError(null);
     try {
       await changeStatus({ id: grievanceId, status: next }).unwrap();
+      toast.success(`Status updated to ${next.replaceAll('_', ' ')}.`);
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to update status.'));
+      toast.error(apiErrorMessage(cause, 'Unable to update status.'));
     }
   }
 
   async function onResolve(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
-    setError(null);
+    const resolution = String(new FormData(form).get('resolution') ?? '').trim();
+    if (!resolution) {
+      toast.warning('Enter a resolution before resolving.');
+      return;
+    }
     try {
-      await resolveGrievance({ id: grievanceId, resolution: String(new FormData(form).get('resolution') ?? '') }).unwrap();
+      await resolveGrievance({ id: grievanceId, resolution }).unwrap();
       form.reset();
+      toast.success('Grievance resolved.');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to resolve.'));
+      toast.error(apiErrorMessage(cause, 'Unable to resolve.'));
     }
   }
 
@@ -86,16 +95,22 @@ export function GrievanceDrawerPanel({ grievanceId }: { grievanceId: string }) {
     event.preventDefault();
     const form = event.currentTarget;
     const payload = new FormData(form);
-    setError(null);
+    const body = String(payload.get('body') ?? '').trim();
+    const internal = staff && payload.get('visibility') === 'INTERNAL';
+    if (!body) {
+      toast.warning('Write a message first.');
+      return;
+    }
     try {
       await addComment({
         id: grievanceId,
-        body: String(payload.get('body') ?? ''),
-        visibility: staff && payload.get('visibility') === 'INTERNAL' ? 'INTERNAL' : 'EMPLOYEE',
+        body,
+        visibility: internal ? 'INTERNAL' : 'EMPLOYEE',
       }).unwrap();
       form.reset();
+      toast.success(internal ? 'Internal note posted.' : 'Message sent.');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to post comment.'));
+      toast.error(apiErrorMessage(cause, 'Unable to post comment.'));
     }
   }
 
@@ -136,8 +151,6 @@ export function GrievanceDrawerPanel({ grievanceId }: { grievanceId: string }) {
           </div>
         ))}
       </div>
-
-      {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
 
       {staff ? (
         <form onSubmit={onAssign} className="space-y-3 border-t border-border pt-4">

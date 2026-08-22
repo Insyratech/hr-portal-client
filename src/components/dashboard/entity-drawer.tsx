@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { StatusMessage } from '@/components/ui/status-message';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { GrievanceDrawerPanel } from '@/features/grievances/grievance-drawer-panel';
+import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
   useApproveAttendanceCorrectionMutation,
@@ -25,6 +26,7 @@ export function EntityDrawer() {
   const [rejectCorrection, { isLoading: rejectingCorrection }] = useRejectAttendanceCorrectionMutation();
   const correctionPending = correctionId && correctionStatus === 'PENDING';
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     setError(null);
@@ -34,11 +36,18 @@ export function EntityDrawer() {
     if (!leaveId) return;
     setError(null);
     try {
-      if (action === 'approve') await approveLeave({ id: leaveId }).unwrap();
-      else await rejectLeave({ id: leaveId }).unwrap();
+      if (action === 'approve') {
+        await approveLeave({ id: leaveId }).unwrap();
+        toast.success('Leave approved.');
+      } else {
+        await rejectLeave({ id: leaveId }).unwrap();
+        toast.success('Leave declined.');
+      }
       dispatch(closeEntityDrawer());
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to update this leave request.'));
+      const text = apiErrorMessage(cause, 'Unable to update this leave request.');
+      toast.error(text);
+      setError(text);
     }
   }
 
@@ -46,11 +55,18 @@ export function EntityDrawer() {
     if (!correctionId) return;
     setError(null);
     try {
-      if (action === 'approve') await approveCorrection(correctionId).unwrap();
-      else await rejectCorrection(correctionId).unwrap();
+      if (action === 'approve') {
+        await approveCorrection(correctionId).unwrap();
+        toast.success('Correction approved.');
+      } else {
+        await rejectCorrection(correctionId).unwrap();
+        toast.success('Correction declined.');
+      }
       dispatch(closeEntityDrawer());
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to update this correction.'));
+      const text = apiErrorMessage(cause, 'Unable to update this correction.');
+      toast.error(text);
+      setError(text);
     }
   }
 

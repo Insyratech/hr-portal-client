@@ -5,6 +5,7 @@ import { DataTable } from '@/components/dashboard/data-table';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import { StatusMessage } from '@/components/ui/status-message';
+import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useAcknowledgePolicyMutation, useGetPoliciesQuery, useGetPolicyQuery } from '@/store/api/api';
 
@@ -14,6 +15,7 @@ export default function PoliciesPage() {
   const { data: detailData } = useGetPolicyQuery(selectedId ?? '', { skip: !selectedId });
   const [acknowledge, { isLoading: acknowledging }] = useAcknowledgePolicyMutation();
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const detail = detailData?.data;
 
   async function onAcknowledge(): Promise<void> {
@@ -21,7 +23,9 @@ export default function PoliciesPage() {
     setError(null);
     try {
       await acknowledge(selectedId).unwrap();
+      toast.success('Policy acknowledged.');
     } catch (cause) {
+      toast.error(apiErrorMessage(cause, 'Unable to acknowledge policy.'));
       setError(apiErrorMessage(cause, 'Unable to acknowledge policy.'));
     }
   }

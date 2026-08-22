@@ -2,12 +2,14 @@ import { configureStore } from '@reduxjs/toolkit';
 import { api } from '@/store/api/api';
 import { authReducer } from '@/store/slices/auth-slice';
 import { permissionsReducer } from '@/store/slices/permissions-slice';
+import { toastReducer } from '@/store/slices/toast-slice';
 import { uiReducer } from '@/store/slices/ui-slice';
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     ui: uiReducer,
+    toast: toastReducer,
     permissions: permissionsReducer,
     [api.reducerPath]: api.reducer,
   },

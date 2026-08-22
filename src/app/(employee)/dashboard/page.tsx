@@ -13,6 +13,7 @@ import { HandoverReviewCard } from '@/features/leave/handover-review-card';
 import { Meta } from '@/components/layout/meta';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { StatusMessage } from '@/components/ui/status-message';
+import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import { formatClock, formatDuration } from '@/lib/attendance-format';
 import {
@@ -39,6 +40,7 @@ export default function EmployeeDashboardPage() {
   const [punchIn, { isLoading: punchingIn }] = usePunchInMutation();
   const [punchOut, { isLoading: punchingOut }] = usePunchOutMutation();
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [tick, setTick] = useState(0);
 
   const today = attendanceData?.data.today;
@@ -82,9 +84,15 @@ export default function EmployeeDashboardPage() {
   async function onPunch(): Promise<void> {
     setError(null);
     try {
-      if (punchedIn) await punchOut({}).unwrap();
-      else await punchIn({}).unwrap();
+      if (punchedIn) {
+        await punchOut({}).unwrap();
+        toast.success('Punched out.');
+      } else {
+        await punchIn({}).unwrap();
+        toast.success('Punched in.');
+      }
     } catch (cause) {
+      toast.error(apiErrorMessage(cause, 'Unable to punch.'));
       setError(apiErrorMessage(cause, 'Unable to punch.'));
     }
   }

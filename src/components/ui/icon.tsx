@@ -22,7 +22,9 @@ export type IconName =
   | 'grid'
   | 'user'
   | 'pencil'
-  | 'trash';
+  | 'trash'
+  | 'check'
+  | 'close';
 
 const paths: Record<IconName, ReactNode> = {
   overview: (
@@ -131,6 +133,13 @@ const paths: Record<IconName, ReactNode> = {
       <path d="M4 7h16" />
       <path d="M9 7V5h6v2" />
       <path d="M6 7l1 14h10l1-14" />
+    </>
+  ),
+  check: <path d="M5 12.5 10 17.5 19 7" />,
+  close: (
+    <>
+      <path d="M6 6l12 12" />
+      <path d="M18 6 6 18" />
     </>
   ),
 };
