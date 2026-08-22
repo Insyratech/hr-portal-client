@@ -1,0 +1,72 @@
+'use client';
+
+import { useEffect } from 'react';
+import { isSupabaseBrowserConfigured } from '@/lib/env';
+import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { api } from '@/store/api/api';
+import { useAppDispatch } from '@/store/hooks';
+import { clearSession, setAccessToken, setHydrated, setSession } from '@/store/slices/auth-slice';
+import { clearPermissions, setPermissions } from '@/store/slices/permissions-slice';
+import type { Permission } from '@/types/permissions';
+
+export function SessionBootstrap() {
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    if (!isSupabaseBrowserConfigured()) {
+      dispatch(setHydrated(true));
+      return;
+    }
+
+    const supabase = getSupabaseBrowserClient();
+    let cancelled = false;
+
+    async function applyAccessToken(accessToken: string | null): Promise<void> {
+      if (!accessToken) {
+        dispatch(clearPermissions());
+        dispatch(clearSession());
+        return;
+      }
+
+      dispatch(setAccessToken(accessToken));
+      const result = await dispatch(api.endpoints.getMe.initiate(undefined, { forceRefetch: true }));
+      if (cancelled) {
+        return;
+      }
+
+      if ('data' in result && result.data?.success) {
+        const me = result.data.data;
+        dispatch(
+          setSession({
+            accessToken,
+            user: {
+              employeeId: me.employeeId,
+              authUserId: me.authUserId,
+              name: me.fullName,
+              email: me.email,
+              roles: me.roles,
+            },
+          }),
+        );
+        dispatch(setPermissions(me.permissions as Permission[]));
+        return;
+      }
+
+      dispatch(clearPermissions());
+      dispatch(clearSession());
+    }
+
+    void supabase.auth.getSession().then(({ data }) => applyAccessToken(data.session?.access_token ?? null));
+
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      void applyAccessToken(session?.access_token ?? null);
+    });
+
+    return () => {
+      cancelled = true;
+      data.subscription.unsubscribe();
+    };
+  }, [dispatch]);
+
+  return null;
+}

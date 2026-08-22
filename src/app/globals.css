@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #111111;
+  --muted: #737373;
+  --border: #d4d4d4;
+  --surface: #fafafa;
+  --danger: #b42318;
+  --success: #027a48;
+  --warning: #b54708;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* Smooth focus without changing brand colors */
+  :focus-visible {
+    outline: 1px solid var(--foreground);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .panel {
+    @apply rounded border border-border bg-background shadow-card;
+  }
+
+  .panel-muted {
+    @apply rounded border border-border bg-surface shadow-card;
+  }
+
+  .field-control {
+    @apply h-10 w-full rounded border border-border bg-background px-3 text-sm text-foreground shadow-card outline-none focus:border-foreground;
+  }
+
+  /* Same #111111 as --foreground. Hex CSS variables cannot use Tailwind /50 opacity. */
+  .overlay-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background-color: rgba(17, 17, 17, 0.55);
+  }
+}
