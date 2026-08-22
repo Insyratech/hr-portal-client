@@ -2,14 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ADMIN_NAV, SUPER_ADMIN_CONFIG_NAV, SUPER_ADMIN_OVERVIEW_NAV, isNavActive } from '@/constants/nav';
+import { ADMIN_NAV, MY_WORK_NAV, SUPER_ADMIN_CONFIG_NAV, SUPER_ADMIN_OVERVIEW_NAV, isNavActive } from '@/constants/nav';
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 export function MobileSectionNav({ variant }: { variant: 'admin' | 'super-admin' }) {
   const pathname = usePathname();
   const items =
-    variant === 'admin' ? ADMIN_NAV : [...SUPER_ADMIN_OVERVIEW_NAV, ...SUPER_ADMIN_CONFIG_NAV];
+    variant === 'admin'
+      ? [...MY_WORK_NAV, ...ADMIN_NAV]
+      : [...MY_WORK_NAV, ...SUPER_ADMIN_OVERVIEW_NAV, ...SUPER_ADMIN_CONFIG_NAV];
 
   return (
     <nav className="border-b border-border bg-background md:hidden">

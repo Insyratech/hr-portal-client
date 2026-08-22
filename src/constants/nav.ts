@@ -13,6 +13,16 @@ export const EMPLOYEE_NAV: readonly NavItem[] = [
   { href: '/more', label: 'More', icon: 'more' },
 ];
 
+/** Personal employee tools shown in Admin / Super Admin sidebars. */
+export const MY_WORK_NAV: readonly NavItem[] = [
+  { href: '/dashboard', label: 'My dashboard', icon: 'dashboard' },
+  { href: '/leave', label: 'My leave', icon: 'leave' },
+  { href: '/attendance', label: 'Punch / attendance', icon: 'clock' },
+  { href: '/grievance', label: 'My grievance', icon: 'shield' },
+  { href: '/policies', label: 'Policies', icon: 'file' },
+  { href: '/more/password', label: 'Password', icon: 'settings' },
+];
+
 export const ADMIN_NAV: readonly NavItem[] = [
   { href: '/admin', label: 'Overview', icon: 'overview' },
   { href: '/admin/employees', label: 'Employees', icon: 'users' },

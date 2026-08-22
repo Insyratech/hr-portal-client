@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/password-input';
 import { StatusMessage, type StatusTone } from '@/components/ui/status-message';
 import { Meta } from '@/components/layout/meta';
-import { homePathForRoles, safeInternalPath } from '@/features/auth/role-access';
+import { destinationAfterLogin } from '@/features/auth/role-access';
 import { isSupabaseBrowserConfigured } from '@/lib/env';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { api, useGetHealthQuery } from '@/store/api/api';
@@ -30,7 +30,7 @@ export function LoginForm() {
   const apiLabel = isFetching ? 'Checking' : data?.success ? 'OK' : isError ? 'Down' : 'Idle';
 
   function destination(roles: string[]): string {
-    return safeInternalPath(searchParams.get('next')) ?? homePathForRoles(roles);
+    return destinationAfterLogin(roles, searchParams.get('next'));
   }
 
   useEffect(() => {

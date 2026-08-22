@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import {
   ADMIN_NAV,
+  MY_WORK_NAV,
   SUPER_ADMIN_ATTENDANCE_NAV,
   SUPER_ADMIN_LEAVE_NAV,
   SUPER_ADMIN_ORG_NAV,
@@ -97,8 +98,9 @@ export function Sidebar({ variant }: { variant: 'admin' | 'super-admin' }) {
         </Button>
       </div>
       <nav className="flex-1 space-y-8 overflow-y-auto px-2 py-6">
+        <NavGroup label="My work" items={MY_WORK_NAV} collapsed={collapsed} />
         {variant === 'admin' ? (
-          <NavLinks items={ADMIN_NAV} collapsed={collapsed} />
+          <NavGroup label="Admin" items={ADMIN_NAV} collapsed={collapsed} />
         ) : (
           <>
             <NavGroup label="Overview" items={SUPER_ADMIN_OVERVIEW_NAV} collapsed={collapsed} />
