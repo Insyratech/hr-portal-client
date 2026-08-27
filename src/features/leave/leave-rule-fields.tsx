@@ -19,7 +19,16 @@ export function LeaveRuleFields({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor={id('noticeValue')}>Notice</Label>
-          <Input id={id('noticeValue')} name="noticeValue" type="number" min={0} defaultValue={defaults.noticeValue} />
+          <Input
+            id={id('noticeValue')}
+            name="noticeValue"
+            type="number"
+            min={0}
+            inputMode="numeric"
+            placeholder="e.g. 24"
+            defaultValue={defaults.noticeValue}
+            required
+          />
           <FieldHint>Minimum time before the leave start date. Enforced by the system (calendar start of the day, not shift clock-in).</FieldHint>
         </div>
         <div>
@@ -41,6 +50,8 @@ export function LeaveRuleFields({
             name="minimumServiceDays"
             type="number"
             min={0}
+            inputMode="numeric"
+            placeholder="0"
             defaultValue={defaults.minimumServiceDays}
           />
           <FieldHint>Days since joining before this leave can be used. 0 = available from day one.</FieldHint>
@@ -52,6 +63,8 @@ export function LeaveRuleFields({
             name="maximumConsecutiveDays"
             type="number"
             min={1}
+            inputMode="numeric"
+            placeholder="Optional"
             defaultValue={defaults.maximumConsecutiveDays}
           />
           <FieldHint>Max working days in one application. Leave blank for no cap. ML uses 1 (one day per request).</FieldHint>
@@ -63,13 +76,23 @@ export function LeaveRuleFields({
             name="annualAllocation"
             type="number"
             min={0}
+            inputMode="numeric"
+            placeholder="e.g. 12"
             defaultValue={defaults.annualAllocation}
             required
           />
         </div>
         <div>
           <Label htmlFor={id('carryForward')}>Carry forward</Label>
-          <Input id={id('carryForward')} name="carryForward" type="number" min={0} defaultValue={defaults.carryForward} />
+          <Input
+            id={id('carryForward')}
+            name="carryForward"
+            type="number"
+            min={0}
+            inputMode="numeric"
+            placeholder="0"
+            defaultValue={defaults.carryForward}
+          />
         </div>
       </div>
       <div className="grid gap-2 text-sm">

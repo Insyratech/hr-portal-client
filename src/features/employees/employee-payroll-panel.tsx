@@ -145,7 +145,8 @@ export function EmployeePayrollPanel({
                   type="number"
                   min={0}
                   step={0.01}
-                  defaultValue={current ? current[item.key] : 0}
+                  defaultValue={current ? current[item.key] : ''}
+                  placeholder="0"
                 />
               ) : (
                 <p className="mt-1 text-sm">{current ? amount(current[item.key]) : '—'}</p>

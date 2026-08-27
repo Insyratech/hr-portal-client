@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/dashboard/data-table';
 import { PageHeader } from '@/components/layout/page-header';
+import { Icon } from '@/components/ui/icon';
 import { useGetEmployeesQuery } from '@/store/api/api';
 
 export default function SuperAdminEmployeesPage() {
@@ -47,6 +48,20 @@ export default function SuperAdminEmployeesPage() {
           { id: 'department', header: 'Department', cell: (row) => row.departmentName ?? '—' },
           { id: 'company', header: 'Company', cell: (row) => row.companyName ?? '—' },
           { id: 'status', header: 'Status', cell: (row) => row.status },
+          {
+            id: 'edit',
+            header: 'Edit',
+            cell: (row) => (
+              <Link
+                href={`/super-admin/employees/${row.id}`}
+                aria-label={`Edit ${row.fullName}`}
+                title={`Edit ${row.fullName}`}
+                className="inline-flex h-8 w-8 items-center justify-center rounded border border-border bg-background text-foreground shadow-card transition-colors hover:bg-surface"
+              >
+                <Icon name="pencil" className="h-3.5 w-3.5" />
+              </Link>
+            ),
+          },
         ]}
         rows={rows}
         emptyTitle={isFetching ? 'Loading' : 'No employees'}

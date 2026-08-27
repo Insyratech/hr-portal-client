@@ -37,12 +37,12 @@ export function leaveRuleDefaults(
   },
 ): LeaveRuleFormDefaults {
   return {
-    noticeValue: String(rules?.noticePeriod.value ?? 24),
+    noticeValue: rules ? String(rules.noticePeriod.value) : '',
     noticeUnit: rules?.noticePeriod.unit ?? 'hours',
-    minimumServiceDays: String(rules?.minimumServiceDays ?? 0),
+    minimumServiceDays: rules ? String(rules.minimumServiceDays) : '',
     maximumConsecutiveDays: rules?.maximumConsecutiveDays != null ? String(rules.maximumConsecutiveDays) : '',
-    annualAllocation: String(rules?.annualAllocation ?? 12),
-    carryForward: String(rules?.carryForward ?? 0),
+    annualAllocation: rules ? String(rules.annualAllocation) : '',
+    carryForward: rules ? String(rules.carryForward) : '',
     requiresApproval: flags?.requiresApproval ?? rules?.requiresApproval ?? true,
     requiresHandover: flags?.requiresHandover ?? rules?.requiresHandover ?? false,
     requiresAttachment: flags?.requiresAttachment ?? rules?.requiresAttachment ?? false,

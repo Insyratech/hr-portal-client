@@ -45,6 +45,7 @@ export default function LeaveTypesPage() {
   const [addVersion, { isLoading: addingVersion }] = useAddLeavePolicyVersionMutation();
   const [publish, { isLoading: publishing }] = usePublishLeavePolicyMutation();
   const [error, setError] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<CatalogRow | null>(null);
   const saving = creating || updatingType || creatingPolicy || addingVersion || publishing;
 
@@ -72,6 +73,7 @@ export default function LeaveTypesPage() {
         rules: rulesFromForm(form),
       }).unwrap();
       formEl.reset();
+      setCreateOpen(false);
     } catch (cause) {
       setError(apiErrorMessage(cause, 'Unable to create leave.'));
     }
@@ -120,43 +122,24 @@ export default function LeaveTypesPage() {
 
   return (
     <>
-      <PageHeader kicker="Leave" title="Leave" />
+      <PageHeader
+        kicker="Leave"
+        title="Leave"
+        actions={
+          canManage ? (
+            <Button type="button" onClick={() => { setError(null); setCreateOpen(true); }}>
+              Add leave
+            </Button>
+          ) : null
+        }
+      />
       <p className="mb-6 max-w-2xl text-sm text-muted">
         Days, notice, and approval rules are part of the leave. Saving publishes a new policy version; existing
         applications keep the version they were approved against.
       </p>
-      {canManage ? (
-      <form onSubmit={onSubmit} className="mb-8 max-w-3xl space-y-4 rounded border border-border bg-background p-6 shadow-card">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" name="name" required />
-          </div>
-          <div>
-            <Label htmlFor="code">Code</Label>
-            <Input id="code" name="code" required />
-          </div>
-          <div className="sm:col-span-3">
-            <Label htmlFor="description">Description</Label>
-            <Input
-              id="description"
-              name="description"
-              placeholder="Who can use it, notice expectation, and any other employee-facing rules"
-            />
-            <p className="mt-1 text-xs text-muted">
-              Shown when employees apply. Put eligibility and how to apply here (e.g. apply at least 1 hour before the leave day). Notice is also enforced by the Notice field above.
-            </p>
-          </div>
-        </div>
-        <LeaveRuleFields defaults={leaveRuleDefaults(undefined)} />
-        {error && !editing ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
-        <Button type="submit" disabled={saving}>
-          Add leave
-        </Button>
-      </form>
-      ) : (
+      {!canManage ? (
         <p className="mb-6 text-sm text-muted">HR Manager maintains leave types. This list is read-only.</p>
-      )}
+      ) : null}
       <DataTable
         columns={[
           { id: 'name', header: 'Name', cell: (row) => row.name },
@@ -197,6 +180,52 @@ export default function LeaveTypesPage() {
         emptyTitle={isLoading ? 'Loading' : 'No leave types'}
         emptyDescription="Add a leave with days and rules in one form."
       />
+
+      <Dialog
+        open={createOpen && canManage}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) setError(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogTitle>Add leave</DialogTitle>
+          <DialogDescription>Days, notice, and approval rules publish with this leave type.</DialogDescription>
+          <form onSubmit={onSubmit} className="mt-6 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="name">Name</Label>
+                <Input id="name" name="name" required />
+              </div>
+              <div>
+                <Label htmlFor="code">Code</Label>
+                <Input id="code" name="code" required />
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  name="description"
+                  placeholder="Who can use it, notice expectation, and any other employee-facing rules"
+                />
+                <p className="mt-1 text-xs text-muted">
+                  Shown when employees apply. Notice is also enforced by the Notice field below.
+                </p>
+              </div>
+            </div>
+            <LeaveRuleFields defaults={leaveRuleDefaults(undefined)} />
+            {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? 'Saving…' : 'Add leave'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(editing) && canManage} onOpenChange={(open) => { if (!open) setEditing(null); }}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">

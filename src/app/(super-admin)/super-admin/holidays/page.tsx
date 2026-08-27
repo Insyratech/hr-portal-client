@@ -33,6 +33,7 @@ export default function HolidaysPage() {
   const [createHoliday, { isLoading: saving }] = useCreateHolidayMutation();
   const [updateHoliday, { isLoading: updating }] = useUpdateHolidayMutation();
   const [error, setError] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Holiday | null>(null);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -45,10 +46,11 @@ export default function HolidaysPage() {
         name: String(form.get('name') ?? ''),
         date: String(form.get('date') ?? ''),
         type: String(form.get('type') ?? 'public'),
-        region: String(form.get('region') ?? 'IN'),
+        region: String(form.get('region') ?? '').trim() || 'IN',
         optional: form.get('optional') === 'on',
       }).unwrap();
       formEl.reset();
+      setCreateOpen(false);
     } catch (cause) {
       setError(apiErrorMessage(cause, 'Unable to create holiday.'));
     }
@@ -78,45 +80,24 @@ export default function HolidaysPage() {
 
   return (
     <>
-      <PageHeader kicker="Calendar" title="Holidays" />
+      <PageHeader
+        kicker="Calendar"
+        title="Holidays"
+        actions={
+          canManage ? (
+            <Button type="button" onClick={() => { setError(null); setCreateOpen(true); }}>
+              Add holiday
+            </Button>
+          ) : null
+        }
+      />
       <p className="mb-6 max-w-2xl text-sm text-muted">
         Public holidays are skipped when counting leave days. Optional holidays do not block leave.
       </p>
-      {canManage ? (
-      <form onSubmit={onSubmit} className="mb-8 grid max-w-3xl gap-4 rounded border border-border bg-background p-6 shadow-card sm:grid-cols-2">
-        <div>
-          <Label htmlFor="name">Name</Label>
-          <Input id="name" name="name" required />
-        </div>
-        <div>
-          <Label htmlFor="date">Date</Label>
-          <Input id="date" name="date" type="date" required />
-        </div>
-        <div>
-          <Label htmlFor="type">Type</Label>
-          <select id="type" name="type" className="h-10 w-full rounded border border-border bg-background px-3 text-sm" defaultValue="public">
-            <option value="public">Public</option>
-            <option value="restricted">Restricted</option>
-            <option value="company">Company</option>
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="region">Region</Label>
-          <Input id="region" name="region" defaultValue="IN" />
-        </div>
-        <label className="flex items-center gap-2 text-sm sm:col-span-2">
-          <input type="checkbox" name="optional" /> Optional
-        </label>
-        <div className="sm:col-span-2">
-          <Button type="submit" disabled={saving}>
-            Add holiday
-          </Button>
-        </div>
-      </form>
-      ) : (
+      {!canManage ? (
         <p className="mb-6 text-sm text-muted">HR Manager maintains holidays. This list is read-only.</p>
-      )}
-      {error && !editing ? (
+      ) : null}
+      {error && !editing && !createOpen ? (
         <div className="mb-4">
           <StatusMessage tone="danger">{error}</StatusMessage>
         </div>
@@ -144,6 +125,53 @@ export default function HolidaysPage() {
         emptyTitle={isLoading ? 'Loading' : 'No holidays'}
         emptyDescription="Public holidays are skipped when counting leave days."
       />
+
+      <Dialog
+        open={createOpen && canManage}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) setError(null);
+        }}
+      >
+        <DialogContent>
+          <DialogTitle>Add holiday</DialogTitle>
+          <DialogDescription>Public holidays are skipped when counting leave days.</DialogDescription>
+          <form onSubmit={onSubmit} className="mt-6 space-y-4">
+            <div>
+              <Label htmlFor="name">Name</Label>
+              <Input id="name" name="name" required />
+            </div>
+            <div>
+              <Label htmlFor="date">Date</Label>
+              <Input id="date" name="date" type="date" required />
+            </div>
+            <div>
+              <Label htmlFor="type">Type</Label>
+              <select id="type" name="type" className="h-10 w-full rounded border border-border bg-background px-3 text-sm" defaultValue="public">
+                <option value="public">Public</option>
+                <option value="restricted">Restricted</option>
+                <option value="company">Company</option>
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="region">Region</Label>
+              <Input id="region" name="region" placeholder="IN" />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="optional" /> Optional
+            </label>
+            {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? 'Saving…' : 'Add holiday'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(editing) && canManage} onOpenChange={(open) => { if (!open) setEditing(null); }}>
         <DialogContent>

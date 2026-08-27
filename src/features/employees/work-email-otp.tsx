@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Meta } from '@/components/layout/meta';
 import { apiErrorMessage } from '@/lib/api-error';
+import { isValidEmail } from '@/lib/email';
 import { useToast } from '@/hooks/use-toast';
 import { useSendWorkEmailOtpMutation, useVerifyWorkEmailOtpMutation } from '@/store/api/api';
 
@@ -28,8 +29,13 @@ export function WorkEmailOtpField({
   const [sendOtp, { isLoading: sending }] = useSendWorkEmailOtpMutation();
   const [verifyOtp, { isLoading: verifying }] = useVerifyWorkEmailOtpMutation();
   const confirmed = Boolean(verificationToken);
+  const emailOk = isValidEmail(email);
 
   async function send() {
+    if (!emailOk) {
+      toast.error('Enter a valid email address first.');
+      return;
+    }
     try {
       await sendOtp({ email }).unwrap();
       setSent(true);
@@ -62,6 +68,7 @@ export function WorkEmailOtpField({
         autoComplete="email"
         value={email}
         readOnly={confirmed}
+        placeholder="name@company.com"
         onChange={(event) => {
           onEmailChange(event.target.value);
           setSent(false);
@@ -69,11 +76,14 @@ export function WorkEmailOtpField({
           onReset();
         }}
       />
+      {email.trim() && !emailOk ? (
+        <p className="text-sm text-danger">Use a valid email (for example name@company.com or name@gmail.com).</p>
+      ) : null}
       {confirmed ? (
         <p className="text-sm text-muted">This email is confirmed. Updates will go here.</p>
       ) : (
         <>
-          <Button type="button" size="sm" variant="outline" disabled={sending || email.trim().length < 3} onClick={() => void send()}>
+          <Button type="button" size="sm" variant="outline" disabled={sending || !emailOk} onClick={() => void send()}>
             {sending ? 'Sending…' : sent ? 'Send again' : 'Send 4-digit code'}
           </Button>
           {sent ? (
@@ -95,7 +105,7 @@ export function WorkEmailOtpField({
               <Meta className="mt-1">Ask the person to open their inbox and read the 4-digit code to you.</Meta>
             </div>
           ) : (
-            <Meta>We send a short code so this address is real before you create the login.</Meta>
+            <Meta>Enter a valid email, then send a short code so this address is real before you create the login.</Meta>
           )}
         </>
       )}

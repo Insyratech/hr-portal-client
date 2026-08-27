@@ -36,6 +36,7 @@ export function CompaniesPage() {
   const [updateCompany, { isLoading: updating }] = useUpdateCompanyMutation();
   const [createLogo] = useCreateCompanyLogoMutation();
   const [error, setError] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Company | null>(null);
 
   async function saveLogo(companyId: string, file: File | undefined): Promise<void> {
@@ -57,6 +58,7 @@ export function CompaniesPage() {
       }).unwrap();
       await saveLogo(created.data.id, file && file.size > 0 ? file : undefined);
       formEl.reset();
+      setCreateOpen(false);
     } catch (cause) {
       setError(apiErrorMessage(cause, 'Unable to create company.'));
     }
@@ -86,38 +88,25 @@ export function CompaniesPage() {
 
   return (
     <>
-      <PageHeader kicker="Organization" title="Companies" />
+      <PageHeader
+        kicker="Organization"
+        title="Companies"
+        actions={
+          canManage ? (
+            <Button type="button" onClick={() => { setError(null); setCreateOpen(true); }}>
+              Add company
+            </Button>
+          ) : null
+        }
+      />
       <p className="mb-6 max-w-2xl text-sm text-muted">
         Salary slips use the employee’s company name, address, and logo. Changing a company later does not rewrite
         published slips.
       </p>
-      {canManage ? (
-        <form
-          onSubmit={onCreate}
-          className="mb-8 max-w-3xl space-y-4 rounded border border-border bg-background p-6 shadow-card"
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" name="name" required placeholder="30M Genomics or Insyra" />
-            </div>
-            <div>
-              <Label htmlFor="logo">Logo</Label>
-              <Input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/webp" />
-            </div>
-            <div className="sm:col-span-2">
-              <Label htmlFor="address">Address</Label>
-              <Input id="address" name="address" required />
-            </div>
-          </div>
-          <Button type="submit" disabled={creating}>
-            {creating ? 'Saving…' : 'Add company'}
-          </Button>
-        </form>
-      ) : (
+      {!canManage ? (
         <p className="mb-6 text-sm text-muted">HR Manager maintains companies. This list is read-only.</p>
-      )}
-      {error && !editing ? (
+      ) : null}
+      {error && !editing && !createOpen ? (
         <div className="mb-4">
           <StatusMessage tone="danger">{error}</StatusMessage>
         </div>
@@ -154,6 +143,42 @@ export function CompaniesPage() {
         emptyTitle={isLoading ? 'Loading' : 'No companies'}
         emptyDescription="Add 30M Genomics and Insyra so you can assign employees."
       />
+
+      <Dialog
+        open={createOpen && canManage}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) setError(null);
+        }}
+      >
+        <DialogContent>
+          <DialogTitle>Add company</DialogTitle>
+          <DialogDescription>Name, address, and optional logo for salary slips.</DialogDescription>
+          <form onSubmit={onCreate} className="mt-6 space-y-4">
+            <div>
+              <Label htmlFor="name">Name</Label>
+              <Input id="name" name="name" required placeholder="30M Genomics or Insyra" />
+            </div>
+            <div>
+              <Label htmlFor="address">Address</Label>
+              <Input id="address" name="address" required />
+            </div>
+            <div>
+              <Label htmlFor="logo">Logo</Label>
+              <Input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/webp" />
+            </div>
+            {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={creating}>
+                {creating ? 'Saving…' : 'Add company'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(editing) && canManage} onOpenChange={(open) => { if (!open) setEditing(null); }}>
         <DialogContent>
