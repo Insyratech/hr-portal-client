@@ -1,7 +1,7 @@
 'use client';
 
-import { AdminWorkInsightsPage } from '@/features/work/admin-work-insights-page';
+import { AdminWorkInsightsPage, attentionHrefForCso } from '@/features/work/admin-work-insights-page';
 
 export default function Page() {
-  return <AdminWorkInsightsPage />;
+  return <AdminWorkInsightsPage employeeHref={attentionHrefForCso} />;
 }

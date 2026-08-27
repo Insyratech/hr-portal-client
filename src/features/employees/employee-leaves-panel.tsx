@@ -50,6 +50,7 @@ export function EmployeeLeavesPanel({
   const [deleteAllocation, { isLoading: removing }] = useDeleteLeaveAllocationMutation();
   const [leaveTypeId, setLeaveTypeId] = useState('');
   const [allocated, setAllocated] = useState('');
+  const [allocateOpen, setAllocateOpen] = useState(false);
   const [editing, setEditing] = useState<LeaveAllocation | null>(null);
 
   const period = String(new Date().getUTCFullYear());
@@ -67,9 +68,14 @@ export function EmployeeLeavesPanel({
 
   const daysValue = allocated === '' ? selectedDays : allocated;
 
+  function closeAllocate() {
+    setAllocateOpen(false);
+    setLeaveTypeId('');
+    setAllocated('');
+  }
+
   async function onAllocate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formEl = event.currentTarget;
     try {
       await createAllocation({
         employeeId,
@@ -78,8 +84,7 @@ export function EmployeeLeavesPanel({
         period,
       }).unwrap();
       toast.success('Leave type allocated.');
-      formEl.reset();
-      setAllocated('');
+      closeAllocate();
     } catch (cause) {
       toast.error(apiErrorMessage(cause, 'Unable to allocate leave.'));
     }
@@ -114,13 +119,24 @@ export function EmployeeLeavesPanel({
     <div className="space-y-10">
       {canManage ? (
         <section className="space-y-4">
-          <div>
-            <Meta className="mb-1">Leave entitlements</Meta>
-            <p className="text-sm text-muted">
-              {forStaffManager
-                ? 'Staff managers cannot allocate their own leave here. Add types and days so they can apply.'
-                : 'Days default from the published leave type. Change them for this employee if needed.'}
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <Meta className="mb-1">Leave entitlements</Meta>
+              <p className="text-sm text-muted">
+                {forStaffManager
+                  ? 'Staff managers cannot allocate their own leave here. Add types and days so they can apply.'
+                  : 'Days default from the published leave type. Change them for this employee if needed.'}
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={addableTypes.length === 0}
+              onClick={() => setAllocateOpen(true)}
+            >
+              Add leave type
+            </Button>
           </div>
           <DataTable
             columns={[
@@ -152,8 +168,38 @@ export function EmployeeLeavesPanel({
                 : 'Allocate at least one leave type so this employee can apply for leave.'
             }
           />
-          <form onSubmit={onAllocate} className="max-w-xl space-y-4 rounded border border-border bg-surface p-4">
-            <Meta>Add leave type</Meta>
+        </section>
+      ) : null}
+
+      <section>
+        <Meta className="mb-3">Applications</Meta>
+        {applications.length === 0 ? (
+          <EmptyState title="No applications" description="Leave requests for this employee appear here." />
+        ) : (
+          <ul className="space-y-3 text-sm">
+            {applications.map((row) => (
+              <li key={row.id} className="border border-border px-4 py-3">
+                {row.leaveTypeCode} · {row.startDate} – {row.endDate} · {row.status}
+                {row.handoverEmployeeName ? ` · Handover: ${row.handoverEmployeeName}` : ''}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <Dialog
+        open={allocateOpen}
+        onOpenChange={(open) => {
+          if (open) setAllocateOpen(true);
+          else closeAllocate();
+        }}
+      >
+        <DialogContent>
+          <DialogTitle>Add leave type</DialogTitle>
+          <DialogDescription className="sr-only">
+            Allocate a leave type and days for this employee for the current year.
+          </DialogDescription>
+          <form key={`allocate-${allocateOpen}`} onSubmit={onAllocate} className="mt-4 space-y-4">
             <div>
               <Label htmlFor="leaveTypeId">Leave type</Label>
               <select
@@ -167,7 +213,9 @@ export function EmployeeLeavesPanel({
                   setAllocated('');
                 }}
               >
-                {addableTypes.length === 0 ? <option value="">All types allocated for {period}</option> : null}
+                {addableTypes.length === 0 ? (
+                  <option value="">All types allocated for {period}</option>
+                ) : null}
                 {addableTypes.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name} ({item.code})
@@ -192,28 +240,17 @@ export function EmployeeLeavesPanel({
               <Label htmlFor="period">Period (year)</Label>
               <Input id="period" name="period" value={period} readOnly />
             </div>
-            <Button type="submit" disabled={creating || addableTypes.length === 0}>
-              {creating ? 'Allocating…' : 'Allocate leave type'}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={creating || addableTypes.length === 0}>
+                {creating ? 'Allocating…' : 'Allocate leave type'}
+              </Button>
+              <Button type="button" variant="ghost" disabled={creating} onClick={closeAllocate}>
+                Cancel
+              </Button>
+            </div>
           </form>
-        </section>
-      ) : null}
-
-      <section>
-        <Meta className="mb-3">Applications</Meta>
-        {applications.length === 0 ? (
-          <EmptyState title="No applications" description="Leave requests for this employee appear here." />
-        ) : (
-          <ul className="space-y-3 text-sm">
-            {applications.map((row) => (
-              <li key={row.id} className="border border-border px-4 py-3">
-                {row.leaveTypeCode} · {row.startDate} – {row.endDate} · {row.status}
-                {row.handoverEmployeeName ? ` · Handover: ${row.handoverEmployeeName}` : ''}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(editing)} onOpenChange={(open) => { if (!open) setEditing(null); }}>
         <DialogContent>

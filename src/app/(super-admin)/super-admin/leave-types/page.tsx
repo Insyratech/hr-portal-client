@@ -136,9 +136,16 @@ export default function LeaveTypesPage() {
             <Label htmlFor="code">Code</Label>
             <Input id="code" name="code" required />
           </div>
-          <div>
+          <div className="sm:col-span-3">
             <Label htmlFor="description">Description</Label>
-            <Input id="description" name="description" />
+            <Input
+              id="description"
+              name="description"
+              placeholder="Who can use it, notice expectation, and any other employee-facing rules"
+            />
+            <p className="mt-1 text-xs text-muted">
+              Shown when employees apply. Put eligibility and how to apply here (e.g. apply at least 1 hour before the leave day). Notice is also enforced by the Notice field above.
+            </p>
           </div>
         </div>
         <LeaveRuleFields defaults={leaveRuleDefaults(undefined)} />
@@ -210,6 +217,9 @@ export default function LeaveTypesPage() {
               <div>
                 <Label htmlFor="edit-description">Description</Label>
                 <Input id="edit-description" name="description" defaultValue={editing.description ?? ''} />
+                <p className="mt-1 text-xs text-muted">
+                  Employee-facing: who can avail this leave and how to apply. System rules (notice, max days, approval) still come from the fields below.
+                </p>
               </div>
               <LeaveRuleFields
                 idPrefix="edit-"

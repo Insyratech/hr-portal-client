@@ -150,8 +150,6 @@ export const GM_WORK_NAV: readonly NavItem[] = [
 
 export const GM_NAV: readonly NavItem[] = [...GM_OVERVIEW_NAV, ...GM_ATTENDANCE_NAV, ...GM_LEAVE_NAV, ...GM_WORK_NAV];
 
-export const CSO_OVERVIEW_NAV: readonly NavItem[] = [{ href: '/cso', label: 'Overview', icon: 'overview' }];
-
 export const CSO_WORK_NAV: readonly NavItem[] = [
   { href: '/cso/work', label: 'Team week', icon: 'calendar' },
   { href: '/cso/work/priorities', label: 'Priorities', icon: 'grid' },
@@ -161,7 +159,7 @@ export const CSO_WORK_NAV: readonly NavItem[] = [
   { href: '/cso/work/insights', label: 'Insights', icon: 'overview' },
 ];
 
-export const CSO_NAV: readonly NavItem[] = [...CSO_OVERVIEW_NAV, ...CSO_WORK_NAV];
+export const CSO_NAV: readonly NavItem[] = [...CSO_WORK_NAV];
 
 export const FINANCE_OVERVIEW_NAV: readonly NavItem[] = [
   { href: '/finance', label: 'Overview', icon: 'overview' },

@@ -178,6 +178,9 @@ export function ApplyLeaveForm({
             </option>
           ))}
         </select>
+        {selectedType?.description ? (
+          <p className="mt-2 text-sm text-muted">{selectedType.description}</p>
+        ) : null}
       </div>
       <div>
         <Label htmlFor="startDate">Start date</Label>

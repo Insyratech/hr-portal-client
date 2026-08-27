@@ -299,6 +299,13 @@ export type WeeklyPptGmShares = {
 
 export type WorkPriorityApprovalStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'RESUBMIT_REQUESTED';
 
+export type WorkRegularSubtype =
+  | 'TESTING'
+  | 'PRODUCTION'
+  | 'GENERAL_MANAGEMENT'
+  | 'INVENTORY'
+  | 'OTHER';
+
 export type WorkPriority = {
   id: string;
   planId: string;
@@ -307,6 +314,8 @@ export type WorkPriority = {
   projectId: string | null;
   projectName: string | null;
   projectCode: string | null;
+  regularSubtype: WorkRegularSubtype | null;
+  regularSubtypeLabel: string | null;
   title: string;
   description: string;
   expectedOutcome: string;
@@ -384,6 +393,40 @@ export type WorkBoard = {
     pptStatus: 'on_time' | 'late' | 'missing' | 'pending';
     pptLabel: string;
   }[];
+};
+
+export type WorkPrioritiesQueueItem = {
+  employeeId: string;
+  employeeName: string;
+  departmentId: string | null;
+  departmentName: string | null;
+  workGoalCount: number;
+  skillCount: number;
+  submittedCount: number;
+  weekStart: string;
+  weekEnd: string;
+};
+
+export type WorkPrioritiesQueue = {
+  week: { start: string; end: string };
+  items: WorkPrioritiesQueueItem[];
+};
+
+export type WorkPrioritiesApprovedItem = {
+  employeeId: string;
+  employeeName: string;
+  departmentId: string | null;
+  departmentName: string | null;
+  workGoalCount: number;
+  skillCount: number;
+  approvedCount: number;
+  weekStart: string;
+  weekEnd: string;
+};
+
+export type WorkPrioritiesApproved = {
+  week: { start: string; end: string };
+  items: WorkPrioritiesApprovedItem[];
 };
 
 export type WorkAnalyticsTrend = {

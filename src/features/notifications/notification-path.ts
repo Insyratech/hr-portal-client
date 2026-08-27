@@ -123,7 +123,7 @@ export function pathForNotification(item: NotificationItem, roles: string[]): st
   if (superAdmin) return '/super-admin';
   if (hrManager) return '/hr';
   if (gm) return '/gm';
-  if (cso) return '/cso';
+  if (cso) return '/cso/work';
   if (finance) return '/finance';
   return '/dashboard';
 }

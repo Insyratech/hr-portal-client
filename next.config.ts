@@ -38,6 +38,7 @@ const nextConfig: NextConfig = {
     const adminToCso = ['work'];
 
     return [
+      { source: '/cso', destination: '/cso/work', permanent: false },
       { source: '/admin/leave-policies', destination: '/hr/leave-types', permanent: false },
       { source: '/admin/leave-policies/:path*', destination: '/hr/leave-types', permanent: false },
       { source: '/admin/policies', destination: '/policies', permanent: false },

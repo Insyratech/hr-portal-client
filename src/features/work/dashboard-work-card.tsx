@@ -26,7 +26,7 @@ export function DashboardWorkCard() {
         ? 'This week, from your records'
         : 'This week is on track';
   const detail = overview.actions.setPriorities
-    ? 'Three to five items is enough. It usually takes a few minutes on Monday.'
+    ? 'Add at least one work goal (about 3–5 is a focused week). Submit before end of Monday. If you are on leave Monday, submit when you are back.'
     : overview.actions.todayUpdate
       ? 'Tick what you did and add a short note. No report needed.'
       : overview.wrapUp

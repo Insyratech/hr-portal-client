@@ -7,7 +7,6 @@ import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import {
-  CSO_OVERVIEW_NAV,
   CSO_WORK_NAV,
   FINANCE_OVERVIEW_NAV,
   GM_ATTENDANCE_NAV,
@@ -148,12 +147,7 @@ function ManagerialNavGroups({
     );
   }
   if (variant === 'cso') {
-    return (
-      <>
-        <NavGroup label="Overview" items={CSO_OVERVIEW_NAV} collapsed={collapsed} />
-        <NavGroup label="Work" items={CSO_WORK_NAV} collapsed={collapsed} />
-      </>
-    );
+    return <NavGroup label="Work" items={CSO_WORK_NAV} collapsed={collapsed} />;
   }
   return <NavGroup label="Overview" items={FINANCE_OVERVIEW_NAV} collapsed={collapsed} />;
 }

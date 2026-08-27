@@ -1,12 +1,13 @@
 'use client';
 
-import type { FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Meta } from '@/components/layout/meta';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { DataTable } from '@/components/dashboard/data-table';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
@@ -43,6 +44,8 @@ export function EmployeeAttendancePanel({
   const { data: weeksData } = useGetEmployeeWorkWeekQuery(employeeId);
   const [assignShift, { isLoading }] = useCreateShiftAssignmentMutation();
   const [saveWeek, { isLoading: savingWeek }] = useSaveEmployeeWorkWeekMutation();
+  const [weekOpen, setWeekOpen] = useState(false);
+  const [shiftOpen, setShiftOpen] = useState(false);
 
   const records = (dayData?.data.records ?? []).filter((item) => item.employeeId === employeeId);
   const assignments = (assignmentsData?.data ?? []).filter((item) => item.employeeId === employeeId);
@@ -62,6 +65,7 @@ export function EmployeeAttendancePanel({
         effectiveFrom: String(form.get('effectiveFrom') ?? '') || undefined,
       }).unwrap();
       toast.success('Shift saved.');
+      setShiftOpen(false);
     } catch (cause) {
       toast.error(apiErrorMessage(cause, 'Unable to save shift.'));
     }
@@ -79,6 +83,7 @@ export function EmployeeAttendancePanel({
         },
       }).unwrap();
       toast.success('Working week saved.');
+      setWeekOpen(false);
     } catch (cause) {
       toast.error(apiErrorMessage(cause, 'Unable to save working week.'));
     }
@@ -89,12 +94,17 @@ export function EmployeeAttendancePanel({
       {canManage ? (
         <>
           <section className="space-y-4">
-            <div>
-              <Meta className="mb-1">Working week</Meta>
-              <p className="text-sm text-muted">
-                Week-offs for this person. Same date updates this row. A later date starts a new row. Company holidays
-                still apply.
-              </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <Meta className="mb-1">Working week</Meta>
+                <p className="text-sm text-muted">
+                  Week-offs for this person. Same date updates this row. A later date starts a new row. Company
+                  holidays still apply.
+                </p>
+              </div>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setWeekOpen(true)}>
+                {weeks.length ? 'Update working week' : 'Set working week'}
+              </Button>
             </div>
             <DataTable
               columns={[
@@ -104,53 +114,22 @@ export function EmployeeAttendancePanel({
               ]}
               rows={weeks}
               emptyTitle="Using company working days"
-              emptyDescription="Save a week below so leave and attendance follow this person, not only the company calendar."
+              emptyDescription="Use Set working week so leave and attendance follow this person, not only the company calendar."
             />
-            <form
-              key={`week-${currentWeek?.id ?? 'new'}`}
-              onSubmit={onSaveWeek}
-              className="max-w-xl space-y-4 border border-border bg-surface p-4"
-            >
-              <Meta>Set working week</Meta>
-              <div>
-                <Label htmlFor="pattern">Week-offs</Label>
-                <select
-                  id="pattern"
-                  name="pattern"
-                  className="h-10 w-full border border-border bg-background px-3 text-sm"
-                  required
-                  defaultValue={currentWeek?.pattern ?? 'SUNDAY_OFF'}
-                >
-                  {WEEK_OPTIONS.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="weekFrom">Effective from</Label>
-                <Input
-                  id="weekFrom"
-                  name="weekFrom"
-                  type="date"
-                  required
-                  defaultValue={currentWeek?.effectiveFrom ?? today}
-                />
-              </div>
-              <Button type="submit" disabled={savingWeek}>
-                {savingWeek ? 'Saving…' : 'Save working week'}
-              </Button>
-            </form>
           </section>
 
           <section className="space-y-4">
-            <div>
-              <Meta className="mb-1">Shift</Meta>
-              <p className="text-sm text-muted">
-                Same date updates the shift (for example Flexible 9H to General). A later date starts a new row and
-                closes the previous one.
-              </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <Meta className="mb-1">Shift</Meta>
+                <p className="text-sm text-muted">
+                  Same date updates the shift (for example Flexible 9H to General). A later date starts a new row and
+                  closes the previous one.
+                </p>
+              </div>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setShiftOpen(true)}>
+                {assignments.length ? 'Update shift' : 'Assign shift'}
+              </Button>
             </div>
             <DataTable
               columns={[
@@ -160,48 +139,106 @@ export function EmployeeAttendancePanel({
               ]}
               rows={assignments}
               emptyTitle="No shift assigned"
-              emptyDescription="Save a shift so Excel attendance rules apply for this employee."
+              emptyDescription="Use Assign shift so Excel attendance rules apply for this employee."
             />
-            <form
-              key={`shift-${currentShift?.id ?? 'new'}`}
-              onSubmit={onAssign}
-              className="max-w-xl space-y-4 border border-border bg-surface p-4"
-            >
-              <Meta>Save shift</Meta>
-              <div>
-                <Label htmlFor="shiftId">Shift</Label>
-                <select
-                  id="shiftId"
-                  name="shiftId"
-                  className="h-10 w-full border border-border bg-background px-3 text-sm"
-                  required
-                  defaultValue={currentShift?.shiftId ?? ''}
-                >
-                  <option value="" disabled>
-                    Select shift
-                  </option>
-                  {shifts.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name} ({item.startTime}–{item.endTime}
-                      {item.flexible ? ', flexible' : ''})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="effectiveFrom">Effective from</Label>
-                <Input
-                  id="effectiveFrom"
-                  name="effectiveFrom"
-                  type="date"
-                  defaultValue={currentShift?.effectiveFrom ?? today}
-                />
-              </div>
-              <Button type="submit" disabled={isLoading || shifts.length === 0}>
-                {isLoading ? 'Saving…' : 'Save shift'}
-              </Button>
-            </form>
           </section>
+
+          <Dialog open={weekOpen} onOpenChange={setWeekOpen}>
+            <DialogContent>
+              <DialogTitle>Set working week</DialogTitle>
+              <DialogDescription className="sr-only">
+                Choose week-offs and the date they take effect for this employee.
+              </DialogDescription>
+              <form key={`week-${currentWeek?.id ?? 'new'}-${weekOpen}`} onSubmit={onSaveWeek} className="mt-4 space-y-4">
+                <div>
+                  <Label htmlFor="pattern">Week-offs</Label>
+                  <select
+                    id="pattern"
+                    name="pattern"
+                    className="h-10 w-full border border-border bg-background px-3 text-sm"
+                    required
+                    defaultValue={currentWeek?.pattern ?? 'SUNDAY_OFF'}
+                  >
+                    {WEEK_OPTIONS.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="weekFrom">Effective from</Label>
+                  <Input
+                    id="weekFrom"
+                    name="weekFrom"
+                    type="date"
+                    required
+                    defaultValue={currentWeek?.effectiveFrom ?? today}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="submit" disabled={savingWeek}>
+                    {savingWeek ? 'Saving…' : 'Save working week'}
+                  </Button>
+                  <Button type="button" variant="ghost" disabled={savingWeek} onClick={() => setWeekOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={shiftOpen} onOpenChange={setShiftOpen}>
+            <DialogContent>
+              <DialogTitle>Save shift</DialogTitle>
+              <DialogDescription className="sr-only">
+                Assign or update this employee’s shift and effective date.
+              </DialogDescription>
+              <form
+                key={`shift-${currentShift?.id ?? 'new'}-${shiftOpen}`}
+                onSubmit={onAssign}
+                className="mt-4 space-y-4"
+              >
+                <div>
+                  <Label htmlFor="shiftId">Shift</Label>
+                  <select
+                    id="shiftId"
+                    name="shiftId"
+                    className="h-10 w-full border border-border bg-background px-3 text-sm"
+                    required
+                    defaultValue={currentShift?.shiftId ?? ''}
+                  >
+                    <option value="" disabled>
+                      Select shift
+                    </option>
+                    {shifts.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} ({item.startTime}–{item.endTime}
+                        {item.flexible ? ', flexible' : ''})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="effectiveFrom">Effective from</Label>
+                  <Input
+                    id="effectiveFrom"
+                    name="effectiveFrom"
+                    type="date"
+                    defaultValue={currentShift?.effectiveFrom ?? today}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="submit" disabled={isLoading || shifts.length === 0}>
+                    {isLoading ? 'Saving…' : 'Save shift'}
+                  </Button>
+                  <Button type="button" variant="ghost" disabled={isLoading} onClick={() => setShiftOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </>
       ) : null}
 

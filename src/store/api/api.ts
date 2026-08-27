@@ -48,6 +48,8 @@ import type {
   WeeklyWorkBoard,
   WorkOverview,
   WorkBoard,
+  WorkPrioritiesQueue,
+  WorkPrioritiesApproved,
   WorkAnalytics,
   WorkSettings,
   WorkPriority,
@@ -622,6 +624,20 @@ export const api = createApi({
       }),
       providesTags: ['Work'],
     }),
+    getWorkPrioritiesQueue: builder.query<ApiSuccess<WorkPrioritiesQueue>, { date?: string } | void>({
+      query: (arg) => ({
+        url: '/api/v1/work/priorities/queue',
+        params: arg && arg.date ? { date: arg.date } : undefined,
+      }),
+      providesTags: ['Work'],
+    }),
+    getWorkPrioritiesApproved: builder.query<ApiSuccess<WorkPrioritiesApproved>, { date?: string } | void>({
+      query: (arg) => ({
+        url: '/api/v1/work/priorities/approved',
+        params: arg && arg.date ? { date: arg.date } : undefined,
+      }),
+      providesTags: ['Work'],
+    }),
     getWorkAnalytics: builder.query<
       ApiSuccess<WorkAnalytics>,
       {
@@ -664,10 +680,16 @@ export const api = createApi({
       query: (body) => ({ url: '/api/v1/work/feedback', method: 'POST', body }),
       invalidatesTags: ['Work'],
     }),
-    getWorkWeek: builder.query<ApiSuccess<WeeklyWorkBoard>, { employeeId?: string } | void>({
+    getWorkWeek: builder.query<ApiSuccess<WeeklyWorkBoard>, { employeeId?: string; date?: string } | void>({
       query: (arg) => ({
         url: '/api/v1/work/week',
-        params: arg && arg.employeeId ? { employeeId: arg.employeeId } : undefined,
+        params:
+          arg && (arg.employeeId || arg.date)
+            ? {
+                ...(arg.employeeId ? { employeeId: arg.employeeId } : {}),
+                ...(arg.date ? { date: arg.date } : {}),
+              }
+            : undefined,
       }),
       providesTags: ['Work'],
     }),
@@ -711,6 +733,8 @@ export const api = createApi({
         employeeId?: string;
         type: WorkPriority['type'];
         projectId?: string | null;
+        regularSubtype?: WorkPriority['regularSubtype'];
+        regularSubtypeLabel?: string | null;
         title: string;
         description?: string;
         expectedOutcome?: string;
@@ -731,6 +755,8 @@ export const api = createApi({
           expectedOutcome?: string;
           successCriteria?: string;
           level?: WorkPriority['level'];
+          regularSubtype?: WorkPriority['regularSubtype'];
+          regularSubtypeLabel?: string | null;
           status?: WorkPriority['status'];
           incompleteReason?: string | null;
         };
@@ -763,6 +789,13 @@ export const api = createApi({
     }),
     approveWorkPriority: builder.mutation<ApiSuccess<WorkPriority>, string>({
       query: (id) => ({ url: `/api/v1/work/priorities/${id}/approve`, method: 'POST' }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    approveAllWorkPriorities: builder.mutation<
+      ApiSuccess<{ approved: WorkPriority[]; week: WeeklyWorkBoard }>,
+      { employeeId: string; date?: string }
+    >({
+      query: (body) => ({ url: '/api/v1/work/priorities/approve-all', method: 'POST', body }),
       invalidatesTags: ['Work', 'Notifications'],
     }),
     requestWorkPriorityResubmit: builder.mutation<ApiSuccess<WorkPriority>, { id: string; comment: string }>({
@@ -1181,6 +1214,8 @@ export const {
   useGetWorkHistoryQuery,
   useGetWorkOverviewQuery,
   useGetWorkBoardQuery,
+  useGetWorkPrioritiesQueueQuery,
+  useGetWorkPrioritiesApprovedQuery,
   useGetWorkAnalyticsQuery,
   useGetWorkSettingsQuery,
   useUpdateWorkSettingsMutation,
@@ -1197,6 +1232,7 @@ export const {
   useSubmitWorkPriorityMutation,
   useSubmitAllWorkPrioritiesMutation,
   useApproveWorkPriorityMutation,
+  useApproveAllWorkPrioritiesMutation,
   useRequestWorkPriorityResubmitMutation,
   useGetWeeklyWorkUpdateBoardQuery,
   useGetWeeklyPptAdminBoardQuery,

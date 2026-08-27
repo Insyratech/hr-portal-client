@@ -62,7 +62,7 @@ export function homePathForRoles(roles: string[]): string {
   if (roles.includes('SUPER_ADMIN')) return '/super-admin';
   if (isHrManager(roles)) return '/hr';
   if (isGeneralManager(roles)) return '/gm';
-  if (isCso(roles)) return '/cso';
+  if (isCso(roles)) return '/cso/work';
   if (isFinanceManager(roles)) return '/finance';
   return '/dashboard';
 }

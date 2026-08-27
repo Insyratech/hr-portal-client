@@ -79,7 +79,8 @@ export function WorkRetentionSettings() {
         <Meta>Work reminders & retention</Meta>
         <p className="mt-2 text-sm text-muted">
           Reminder hours use {timeZone} (IST). Point cron at the matching local windows. Monday priority reminder
-          is fixed at 16:00 IST. Retention is a rolling window (90 / 180 / 365 days) — never a calendar wipe.
+          is fixed at 16:00 IST (reminder only — submitting is not blocked after that hour). Retention is a rolling
+          window (90 / 180 / 365 days) — never a calendar wipe.
         </p>
       </div>
 

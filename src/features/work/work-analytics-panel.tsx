@@ -12,6 +12,7 @@ import {
   useGetEmployeesQuery,
   useGetWorkAnalyticsQuery,
 } from '@/store/api/api';
+import type { WorkAttentionLabel } from '@/types/api';
 
 const selectClass =
   'h-10 w-full rounded border border-border bg-background px-3 text-sm text-foreground shadow-card outline-none focus:border-foreground';
@@ -28,9 +29,12 @@ function monthsAgo(count: number) {
 
 export function WorkAnalyticsPanel({
   employeeBasePath,
+  employeeHref,
   fixedEmployeeId,
 }: {
   employeeBasePath?: string;
+  /** Prefer over employeeBasePath when linking into CSO priorities / team week. */
+  employeeHref?: (employeeId: string, labels: WorkAttentionLabel[]) => string;
   fixedEmployeeId?: string;
 }) {
   const teamMode = !fixedEmployeeId;
@@ -38,6 +42,7 @@ export function WorkAnalyticsPanel({
   const [to, setTo] = useState(() => monthNow());
   const [departmentId, setDepartmentId] = useState('');
   const [employeeId, setEmployeeId] = useState('');
+  const [showMonthTable, setShowMonthTable] = useState(teamMode);
 
   const filters = useMemo(
     () => ({
@@ -54,20 +59,24 @@ export function WorkAnalyticsPanel({
   const { data: employees } = useGetEmployeesQuery(undefined, { skip: !teamMode });
   const analytics = data?.data;
 
+  function hrefFor(employeeId: string, labels: WorkAttentionLabel[]): string | null {
+    if (employeeHref) return employeeHref(employeeId, labels);
+    if (employeeBasePath) return `${employeeBasePath}/${employeeId}?tab=work`;
+    return null;
+  }
+
   return (
     <section className="space-y-6">
-      {!fixedEmployeeId ? (
+      {teamMode ? (
         <p className="max-w-2xl text-sm text-muted">
           Filters apply to the whole team. Unplanned share is context, not a penalty. Leave and holidays are excluded
           from update compliance.
         </p>
       ) : (
-        <div>
-          <Meta>Trends</Meta>
-          <p className="mt-2 max-w-2xl text-sm text-muted">
-            Reliability, execution, adaptability, and development — indicators only, never a score.
-          </p>
-        </div>
+        <p className="max-w-2xl text-sm text-muted">
+          Indicators for context, not a score. Unplanned work is context, not a penalty. Leave and holidays are excluded
+          from update compliance.
+        </p>
       )}
 
       <div className={`grid gap-4 sm:grid-cols-2 ${teamMode ? 'lg:grid-cols-4' : ''}`}>
@@ -125,105 +134,150 @@ export function WorkAnalyticsPanel({
       {isLoading ? <p className="text-sm text-muted">Loading insights…</p> : null}
       {!analytics ? null : (
         <>
-          <p className="text-sm text-muted">{analytics.note}</p>
+          {teamMode ? <p className="text-sm text-muted">{analytics.note}</p> : null}
 
-          <Meta>Reliability</Meta>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatCard value={`${analytics.reliability.compliancePct}%`} label="Update compliance" />
-            <StatCard value={`${analytics.reliability.weeksWithPlanPct}%`} label="Weeks with a plan" />
-            <StatCard
-              value={`${analytics.reliability.submittedDays}/${analytics.reliability.requiredDays}`}
-              label="Days submitted"
-            />
-            <StatCard
-              value={`${analytics.reliability.weeksWithPlan}/${analytics.reliability.weeksTotal}`}
-              label="Planned weeks"
-            />
-          </div>
+          {teamMode ? (
+            <>
+              <Meta>Reliability</Meta>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <StatCard compact value={`${analytics.reliability.compliancePct}%`} label="Update compliance" />
+                <StatCard compact value={`${analytics.reliability.weeksWithPlanPct}%`} label="Weeks with a plan" />
+                <StatCard
+                  compact
+                  value={`${analytics.reliability.submittedDays}/${analytics.reliability.requiredDays}`}
+                  label="Days submitted"
+                />
+                <StatCard
+                  compact
+                  value={`${analytics.reliability.weeksWithPlan}/${analytics.reliability.weeksTotal}`}
+                  label="Planned weeks"
+                />
+              </div>
 
-          <Meta>Execution</Meta>
-          <div className="grid grid-cols-3 gap-4">
-            <StatCard value={String(analytics.execution.completed)} label="Completed" />
-            <StatCard value={String(analytics.execution.carriedForward)} label="Carried forward" />
-            <StatCard value={String(analytics.execution.blocked)} label="Blocked" />
-          </div>
+              <Meta>Execution</Meta>
+              <div className="grid grid-cols-3 gap-3">
+                <StatCard compact value={String(analytics.execution.completed)} label="Completed" />
+                <StatCard compact value={String(analytics.execution.carriedForward)} label="Carried forward" />
+                <StatCard compact value={String(analytics.execution.blocked)} label="Blocked" />
+              </div>
 
-          <Meta>Adaptability</Meta>
-          <div className="grid grid-cols-3 gap-4">
-            <StatCard value={`${analytics.adaptability.unplannedSharePct}%`} label="Unplanned share" />
-            <StatCard value={String(analytics.adaptability.plannedEntries)} label="Planned entries" />
-            <StatCard value={String(analytics.adaptability.unplannedEntries)} label="Unplanned entries" />
-          </div>
+              <Meta>Adaptability</Meta>
+              <div className="grid grid-cols-3 gap-3">
+                <StatCard compact value={`${analytics.adaptability.unplannedSharePct}%`} label="Unplanned share" />
+                <StatCard compact value={String(analytics.adaptability.plannedEntries)} label="Planned entries" />
+                <StatCard compact value={String(analytics.adaptability.unplannedEntries)} label="Unplanned entries" />
+              </div>
 
-          <Meta>Development</Meta>
-          <div className="grid grid-cols-3 gap-4">
-            <StatCard value={String(analytics.development.skillEntries)} label="Skill entries" />
-            <StatCard
-              value={String(analytics.development.skillPrioritiesCompleted)}
-              label="Skill goals done"
-            />
-            <StatCard
-              value={String(analytics.development.skillPrioritiesTotal)}
-              label="Skill goals set"
-            />
-          </div>
+              <Meta>Development</Meta>
+              <div className="grid grid-cols-3 gap-3">
+                <StatCard compact value={String(analytics.development.skillEntries)} label="Skill entries" />
+                <StatCard
+                  compact
+                  value={String(analytics.development.skillPrioritiesCompleted)}
+                  label="Skill goals done"
+                />
+                <StatCard
+                  compact
+                  value={String(analytics.development.skillPrioritiesTotal)}
+                  label="Skill goals set"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              <StatCard compact value={`${analytics.reliability.compliancePct}%`} label="Update compliance" />
+              <StatCard compact value={`${analytics.reliability.weeksWithPlanPct}%`} label="Weeks with a plan" />
+              <StatCard
+                compact
+                value={`${analytics.reliability.submittedDays}/${analytics.reliability.requiredDays}`}
+                label="Days submitted"
+              />
+              <StatCard compact value={String(analytics.execution.completed)} label="Completed priorities" />
+              <StatCard compact value={String(analytics.execution.carriedForward)} label="Carried forward" />
+              <StatCard compact value={String(analytics.execution.blocked)} label="Blocked" />
+              <StatCard compact value={`${analytics.adaptability.unplannedSharePct}%`} label="Unplanned share" />
+              <StatCard
+                compact
+                value={`${analytics.development.skillPrioritiesCompleted}/${analytics.development.skillPrioritiesTotal}`}
+                label="Skill goals done"
+              />
+            </div>
+          )}
 
           <section className="border border-border bg-background p-5 shadow-card">
-            <Meta>Trends by month</Meta>
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[40rem] text-left text-sm">
-                <thead className="text-xs uppercase tracking-[0.16em] text-muted">
-                  <tr>
-                    <th className="pb-2 font-medium">Month</th>
-                    <th className="pb-2 font-medium">Updates</th>
-                    <th className="pb-2 font-medium">Plans</th>
-                    <th className="pb-2 font-medium">Done</th>
-                    <th className="pb-2 font-medium">Carried</th>
-                    <th className="pb-2 font-medium">Blocked</th>
-                    <th className="pb-2 font-medium">Unplanned</th>
-                    <th className="pb-2 font-medium">Skills</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {analytics.trends.map((row) => (
-                    <tr key={row.month} className="border-t border-border">
-                      <td className="py-2">{row.month}</td>
-                      <td className="py-2">{row.compliancePct}%</td>
-                      <td className="py-2">{row.weeksWithPlanPct}%</td>
-                      <td className="py-2">{row.completed}</td>
-                      <td className="py-2">{row.carriedForward}</td>
-                      <td className="py-2">{row.blocked}</td>
-                      <td className="py-2">{row.unplannedSharePct}%</td>
-                      <td className="py-2">
-                        {row.skillPrioritiesCompleted}/{row.skillPrioritiesTotal}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Meta>Trends by month</Meta>
+              {!teamMode ? (
+                <button
+                  type="button"
+                  className="text-xs uppercase tracking-[0.16em] text-muted hover:text-foreground"
+                  onClick={() => setShowMonthTable((open) => !open)}
+                  aria-expanded={showMonthTable}
+                >
+                  {showMonthTable ? 'Hide table' : 'Show table'}
+                </button>
+              ) : null}
             </div>
+            {showMonthTable ? (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full min-w-[40rem] text-left text-sm">
+                  <thead className="text-xs uppercase tracking-[0.16em] text-muted">
+                    <tr>
+                      <th className="pb-2 font-medium">Month</th>
+                      <th className="pb-2 font-medium">Updates</th>
+                      <th className="pb-2 font-medium">Plans</th>
+                      <th className="pb-2 font-medium">Done</th>
+                      <th className="pb-2 font-medium">Carried</th>
+                      <th className="pb-2 font-medium">Blocked</th>
+                      <th className="pb-2 font-medium">Unplanned</th>
+                      <th className="pb-2 font-medium">Skills</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analytics.trends.map((row) => (
+                      <tr key={row.month} className="border-t border-border">
+                        <td className="py-2">{row.month}</td>
+                        <td className="py-2">{row.compliancePct}%</td>
+                        <td className="py-2">{row.weeksWithPlanPct}%</td>
+                        <td className="py-2">{row.completed}</td>
+                        <td className="py-2">{row.carriedForward}</td>
+                        <td className="py-2">{row.blocked}</td>
+                        <td className="py-2">{row.unplannedSharePct}%</td>
+                        <td className="py-2">
+                          {row.skillPrioritiesCompleted}/{row.skillPrioritiesTotal}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-muted">Open the table when you need month-by-month detail.</p>
+            )}
           </section>
 
           {teamMode ? (
             <section className="space-y-3">
               <Meta>Needs attention · {analytics.attentionMonth}</Meta>
               <p className="text-sm text-muted">
-                Labels from fixed rules (missing updates, no plan, blockers, heavy carry). Alphabetical —
-                not a ranking.
+                Labels from fixed rules (missing updates, no plan, blockers, heavy carry). Alphabetical — not a
+                ranking. Open a name to jump to Team week or Priorities.
               </p>
               <DataTable
                 columns={[
                   {
                     id: 'name',
                     header: 'Employee',
-                    cell: (row) =>
-                      employeeBasePath ? (
-                        <Link href={`${employeeBasePath}/${row.id}?tab=work`} className="hover:underline">
+                    cell: (row) => {
+                      const href = hrefFor(row.id, row.labels);
+                      return href ? (
+                        <Link href={href} className="hover:underline">
                           {row.employeeName}
                         </Link>
                       ) : (
                         row.employeeName
-                      ),
+                      );
+                    },
                   },
                   { id: 'dept', header: 'Department', cell: (row) => row.departmentName ?? '—' },
                   {

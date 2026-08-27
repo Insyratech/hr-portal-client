@@ -2,6 +2,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { LeaveRuleFormDefaults } from '@/features/leave/leave-rule-form';
 
+function FieldHint({ children }: { children: string }) {
+  return <p className="mt-1 text-xs text-muted">{children}</p>;
+}
+
 export function LeaveRuleFields({
   defaults,
   idPrefix = '',
@@ -16,6 +20,7 @@ export function LeaveRuleFields({
         <div>
           <Label htmlFor={id('noticeValue')}>Notice</Label>
           <Input id={id('noticeValue')} name="noticeValue" type="number" min={0} defaultValue={defaults.noticeValue} />
+          <FieldHint>Minimum time before the leave start date. Enforced by the system (calendar start of the day, not shift clock-in).</FieldHint>
         </div>
         <div>
           <Label htmlFor={id('noticeUnit')}>Notice unit</Label>
@@ -38,6 +43,7 @@ export function LeaveRuleFields({
             min={0}
             defaultValue={defaults.minimumServiceDays}
           />
+          <FieldHint>Days since joining before this leave can be used. 0 = available from day one.</FieldHint>
         </div>
         <div>
           <Label htmlFor={id('maximumConsecutiveDays')}>Max consecutive days</Label>
@@ -48,6 +54,7 @@ export function LeaveRuleFields({
             min={1}
             defaultValue={defaults.maximumConsecutiveDays}
           />
+          <FieldHint>Max working days in one application. Leave blank for no cap. ML uses 1 (one day per request).</FieldHint>
         </div>
         <div>
           <Label htmlFor={id('annualAllocation')}>Days per year</Label>
@@ -66,8 +73,13 @@ export function LeaveRuleFields({
         </div>
       </div>
       <div className="grid gap-2 text-sm">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="requiresApproval" defaultChecked={defaults.requiresApproval} /> Approval required
+        <label className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+          <span className="flex items-center gap-2">
+            <input type="checkbox" name="requiresApproval" defaultChecked={defaults.requiresApproval} /> Approval required
+          </span>
+          <span className="text-xs font-normal text-muted">
+            Off = auto-approved; HR still gets an awareness mail. On = HR must approve before it counts.
+          </span>
         </label>
         <label className="flex items-center gap-2">
           <input type="checkbox" name="requiresHandover" defaultChecked={defaults.requiresHandover} /> Handover required
