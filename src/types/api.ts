@@ -184,8 +184,57 @@ export type WorkProject = {
   name: string;
   code: string;
   status: string;
+  leadEmployeeId?: string | null;
+  leadName?: string | null;
   memberCount?: number;
   members?: WorkProjectMember[];
+};
+
+export type LeadProjectSummary = {
+  id: string;
+  name: string;
+  code: string;
+  status: string;
+  leadEmployeeId: string;
+  memberCount: number;
+};
+
+export type ProjectStatusUpdate = {
+  id: string;
+  projectId: string;
+  authorId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+};
+
+export type LeadProjectDesk = {
+  project: WorkProject & {
+    leadEmployeeId: string;
+    leadName: string;
+    members: WorkProjectMember[];
+    memberCount: number;
+  };
+  week: { start: string; end: string };
+  updates: ProjectStatusUpdate[];
+  priorities: {
+    id: string;
+    employeeId: string;
+    employeeName: string;
+    title: string;
+    type: string;
+    status: string;
+    approvalStatus: string;
+  }[];
+  dailyEntries: {
+    id: string;
+    date: string;
+    employeeId: string;
+    employeeName: string;
+    category: string;
+    description: string;
+    priorityId: string | null;
+  }[];
 };
 
 export type EmployeeWorkProjects = {
@@ -598,10 +647,24 @@ export type LeaveApplication = {
   handoverEmployeeId: string | null;
   handoverEmployeeName: string | null;
   handoverAccepted: boolean;
+  projectId: string | null;
+  projectName: string | null;
+  projectCode: string | null;
+  projectLeadEmployeeId: string | null;
+  projectLeadAccepted: boolean;
+  hasProjectLeadStep: boolean;
   reviewerComment: string | null;
   attachmentUrl: string | null;
   status: string;
   createdAt: string;
+};
+
+export type LeaveProjectOption = {
+  id: string;
+  name: string;
+  code: string;
+  leadEmployeeId: string;
+  leadName: string;
 };
 
 export type LeaveColleague = {

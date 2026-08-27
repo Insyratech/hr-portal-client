@@ -88,7 +88,11 @@ export function shellVariantForRoles(roles: string[]): ShellVariant {
 }
 
 export function isSharedPersonalPath(pathname: string): boolean {
-  return pathname === '/more/password' || pathname.startsWith('/leave/handover');
+  return (
+    pathname === '/more/password' ||
+    pathname === '/more/profile' ||
+    pathname.startsWith('/leave/handover')
+  );
 }
 
 function isEmployeeWorkspacePath(pathname: string): boolean {

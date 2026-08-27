@@ -15,6 +15,7 @@ import { StatusBadge } from '@/components/dashboard/status-badge';
 import {
   useGetAttendanceMeQuery,
   useGetGrievancesQuery,
+  useGetLeadProjectsQuery,
   useGetLeaveApplicationsQuery,
   useGetLeaveBalancesQuery,
   useGetMeQuery,
@@ -22,6 +23,7 @@ import {
   useGetMyWorkPermissionsQuery,
 } from '@/store/api/api';
 import { remainingInMonth, remainingText } from '@/features/work-permissions/format';
+import { DashboardMyProjectsCard } from '@/features/work/dashboard-my-projects-card';
 import { DashboardWorkCard } from '@/features/work/dashboard-work-card';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
@@ -41,7 +43,9 @@ export default function EmployeeDashboardPage() {
   const { data: assignedGrievances } = useGetGrievancesQuery({ scope: 'assigned' });
   const { data: permissionData } = useGetMyWorkPermissionsQuery(undefined, { skip: !canApplyPermission });
   const { data: payslipData } = useGetMyPayslipsQuery();
+  const { data: leadProjectsData } = useGetLeadProjectsQuery();
   const latestSlip = payslipData?.data[0];
+  const isProjectLead = (leadProjectsData?.data ?? []).length > 0;
 
   const balances = (balanceData?.data ?? [])
     .filter((item) => DASHBOARD_CODES.includes(item.code))
@@ -68,8 +72,10 @@ export default function EmployeeDashboardPage() {
   return (
     <>
       <PageHeader kicker="Dashboard" title={title} />
-      <div className="space-y-8">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-x-8 lg:gap-y-8">
         <DashboardWorkCard />
+        <DashboardMyProjectsCard />
+
         <section className="border border-border bg-background p-5 shadow-card">
           <Meta>This month</Meta>
           <p className="mt-2 text-sm">
@@ -105,75 +111,93 @@ export default function EmployeeDashboardPage() {
             )}
           </p>
         </section>
+
+        <LeaveBalanceCard items={balances} />
+
         {assignedCases.length > 0 ? (
-          <section className="space-y-4">
+          <section className="space-y-4 lg:col-span-2">
             <div className="flex items-baseline justify-between gap-3">
               <Meta>Assigned grievances</Meta>
               <Link href={`/grievance?id=${assignedCases[0].id}`} className="text-sm text-muted hover:text-foreground">
                 Open workspace
               </Link>
             </div>
-            {assignedCases.map((row) => (
-              <Link
-                key={row.id}
-                href={`/grievance?id=${row.id}`}
-                className="block border border-border bg-background p-5 shadow-card hover:bg-surface"
-              >
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="text-sm font-medium">{row.subject}</p>
-                  <StatusBadge status={row.status === 'RESOLVED' || row.status === 'CLOSED' ? 'approved' : 'pending'} label={row.status} />
-                </div>
-                <p className="mt-2 text-sm text-muted">
-                  {row.employeeName ?? 'Employee'} · {row.category}
-                </p>
-              </Link>
-            ))}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {assignedCases.map((row) => (
+                <Link
+                  key={row.id}
+                  href={`/grievance?id=${row.id}`}
+                  className="block border border-border bg-background p-5 shadow-card hover:bg-surface"
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <p className="text-sm font-medium">{row.subject}</p>
+                    <StatusBadge
+                      status={row.status === 'RESOLVED' || row.status === 'CLOSED' ? 'approved' : 'pending'}
+                      label={row.status}
+                    />
+                  </div>
+                  <p className="mt-2 text-sm text-muted">
+                    {row.employeeName ?? 'Employee'} · {row.category}
+                  </p>
+                </Link>
+              ))}
+            </div>
           </section>
         ) : null}
+
         {handoverInbox.length > 0 ? (
-          <section className="space-y-4">
+          <section className="space-y-4 lg:col-span-2">
             <div className="flex items-baseline justify-between gap-3">
               <Meta>Handover requests</Meta>
               <Link href={`/leave/handover/${handoverInbox[0].id}`} className="text-sm text-muted hover:text-foreground">
                 Review and accept
               </Link>
             </div>
-            {handoverInbox.map((row) => (
-              <HandoverReviewCard key={row.id} application={row} />
-            ))}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {handoverInbox.map((row) => (
+                <HandoverReviewCard key={row.id} application={row} />
+              ))}
+            </div>
           </section>
         ) : null}
-        <HandoversTakenList items={covering} />
+
+        <div className="lg:col-span-2">
+          <HandoversTakenList items={covering} />
+        </div>
+
         {myLeaves.length > 0 ? (
-          <section className="space-y-4">
+          <section className="space-y-4 lg:col-span-2">
             <Meta>Leave status</Meta>
-            {myLeaves.map((row) => (
-              <div key={row.id} className="border border-border bg-background p-5 shadow-card">
-                <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="text-sm font-medium">
-                    {row.leaveTypeName ?? row.leaveTypeCode} · {row.startDate} – {row.endDate}
-                  </p>
-                  <StatusBadge
-                    status={row.status === 'APPROVED' ? 'approved' : 'pending'}
-                    label={row.status}
-                  />
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {myLeaves.map((row) => (
+                <div key={row.id} className="border border-border bg-background p-5 shadow-card">
+                  <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
+                    <p className="text-sm font-medium">
+                      {row.leaveTypeName ?? row.leaveTypeCode} · {row.startDate} – {row.endDate}
+                    </p>
+                    <StatusBadge
+                      status={row.status === 'APPROVED' ? 'approved' : 'pending'}
+                      label={row.status}
+                    />
+                  </div>
+                  <LeaveJourney steps={leaveJourneySteps(row)} />
+                  {row.reviewerComment ? (
+                    <p className="mt-4 text-sm">
+                      <span className="text-muted">Requested changes: </span>
+                      {row.reviewerComment}
+                    </p>
+                  ) : null}
                 </div>
-                <LeaveJourney steps={leaveJourneySteps(row)} />
-                {row.reviewerComment ? (
-                  <p className="mt-4 text-sm">
-                    <span className="text-muted">Requested changes: </span>
-                    {row.reviewerComment}
-                  </p>
-                ) : null}
-              </div>
-            ))}
+              ))}
+            </div>
           </section>
         ) : null}
-        <LeaveBalanceCard items={balances} />
-        <section>
+
+        <section className="lg:col-span-2">
           <Meta className="mb-4">Quick actions</Meta>
           <div className="flex flex-wrap gap-3">
             <QuickAction href="/work" label="My week" />
+            {isProjectLead ? <QuickAction href="/work/projects" label="Project desk" /> : null}
             <QuickAction href="/leave?apply=1" label="Apply leave" />
             {canApplyPermission ? <QuickAction href="/permission?apply=1" label="Request permission" /> : null}
             <QuickAction href="/attendance" label="Attendance" />
@@ -182,7 +206,10 @@ export default function EmployeeDashboardPage() {
             <QuickAction href="/policies" label="Policies" />
           </div>
         </section>
-        <ActivityTimeline items={[]} />
+
+        <div className="lg:col-span-2">
+          <ActivityTimeline items={[]} />
+        </div>
       </div>
     </>
   );

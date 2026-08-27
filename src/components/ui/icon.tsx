@@ -25,7 +25,9 @@ export type IconName =
   | 'pencil'
   | 'trash'
   | 'check'
-  | 'close';
+  | 'close'
+  | 'sun'
+  | 'moon';
 
 const paths: Record<IconName, ReactNode> = {
   overview: (
@@ -144,6 +146,13 @@ const paths: Record<IconName, ReactNode> = {
       <path d="M18 6 6 18" />
     </>
   ),
+  sun: (
+    <>
+      <circle cx="12" cy="12" r="3.5" />
+      <path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" />
+    </>
+  ),
+  moon: <path d="M20 14.5A7.5 7.5 0 0 1 9.5 4 7.5 7.5 0 1 0 20 14.5z" />,
 };
 
 export function Icon({

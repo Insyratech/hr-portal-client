@@ -4,6 +4,7 @@ import { useState, Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ApplyLeaveForm } from '@/features/leave/apply-leave-form';
 import { HandoverReviewCard } from '@/features/leave/handover-review-card';
+import { ProjectLeadReviewCard } from '@/features/leave/project-lead-review-card';
 import { HandoversTakenList } from '@/features/leave/handovers-taken';
 import { takenHandovers } from '@/features/leave/leave-presence';
 import { leaveJourneySteps } from '@/features/leave/leave-journey';
@@ -50,8 +51,17 @@ function LeavePageBody() {
     if (!focusId || !myId) return;
     const row = (data?.data ?? []).find((item) => item.id === focusId);
     if (!row) return;
-    if (row.handoverEmployeeId === myId && row.employeeId !== myId) {
+    if (row.handoverEmployeeId === myId && row.employeeId !== myId && !row.handoverAccepted) {
       router.replace(`/leave/handover/${focusId}`);
+      return;
+    }
+    if (
+      row.projectLeadEmployeeId === myId &&
+      row.hasProjectLeadStep &&
+      !row.projectLeadAccepted &&
+      row.employeeId !== myId
+    ) {
+      router.replace(`/leave/lead/${focusId}`);
     }
   }, [focusId, data, myId, router]);
 
@@ -74,6 +84,15 @@ function LeavePageBody() {
   const handoverInbox = (data?.data ?? []).filter(
     (row) => row.handoverEmployeeId === myId && !row.handoverAccepted && row.status === 'PENDING',
   );
+  const leadInbox = (data?.data ?? []).filter(
+    (row) =>
+      row.projectLeadEmployeeId === myId &&
+      row.hasProjectLeadStep &&
+      !row.projectLeadAccepted &&
+      row.handoverAccepted &&
+      row.status === 'PENDING' &&
+      row.employeeId !== myId,
+  );
   const covering = takenHandovers(data?.data ?? [], myId);
   const balances = (balanceData?.data ?? []).map((item) => ({ code: item.code, days: item.available }));
 
@@ -91,6 +110,21 @@ function LeavePageBody() {
               }}
             >
               <HandoverReviewCard application={row} highlight={focusId === row.id} />
+            </div>
+          ))}
+        </section>
+      ) : null}
+      {leadInbox.length > 0 ? (
+        <section className="mb-10 space-y-4">
+          <Meta>Project lead approvals</Meta>
+          {leadInbox.map((row) => (
+            <div
+              key={row.id}
+              ref={(node) => {
+                rowRefs.current[row.id] = node;
+              }}
+            >
+              <ProjectLeadReviewCard application={row} highlight={focusId === row.id} />
             </div>
           ))}
         </section>

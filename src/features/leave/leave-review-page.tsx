@@ -44,6 +44,8 @@ export function LeaveReviewPage({ listHref }: { listHref: string }) {
     state.permissions.permissions.includes(PERMISSIONS.LEAVE_APPROVE),
   );
   const waitingHandover = Boolean(row?.handoverEmployeeId && !row.handoverAccepted);
+  const waitingLead = Boolean(row?.hasProjectLeadStep && !row.projectLeadAccepted);
+  const waitingPrior = waitingHandover || waitingLead;
 
   async function onApprove(): Promise<void> {
     try {
@@ -114,9 +116,24 @@ export function LeaveReviewPage({ listHref }: { listHref: string }) {
               ? `${row.handoverEmployeeName}${row.handoverAccepted ? ' · accepted' : ' · waiting'}`
               : 'Not required'}
           </p>
+          <p className="text-sm text-muted">
+            Project:{' '}
+            {row.projectName
+              ? `${row.projectName}${
+                  row.hasProjectLeadStep
+                    ? row.projectLeadAccepted
+                      ? ' · lead approved'
+                      : ' · waiting for lead'
+                    : ''
+                }`
+              : 'Not linked'}
+          </p>
           <LeaveJourney steps={leaveJourneySteps(row)} />
           {pending && waitingHandover && canDecide ? (
             <p className="text-sm text-muted">Waiting for handover acceptance before you can approve.</p>
+          ) : null}
+          {pending && !waitingHandover && waitingLead && canDecide ? (
+            <p className="text-sm text-muted">Waiting for project-lead approval before you can approve.</p>
           ) : null}
           {pending && !canDecide ? (
             <p className="text-sm text-muted">
@@ -138,7 +155,7 @@ export function LeaveReviewPage({ listHref }: { listHref: string }) {
           ) : null}
           {pending && canDecide ? (
             <div className="flex flex-wrap gap-3">
-              <Button type="button" disabled={busy || waitingHandover} onClick={() => void onApprove()}>
+              <Button type="button" disabled={busy || waitingPrior} onClick={() => void onApprove()}>
                 {approving ? 'Approving' : 'Approve'}
               </Button>
               <Button type="button" variant="outline" disabled={busy} onClick={() => void onDecline()}>

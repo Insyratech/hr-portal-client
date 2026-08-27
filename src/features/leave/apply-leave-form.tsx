@@ -13,7 +13,9 @@ import {
   useGetLeaveBalancesQuery,
   useGetLeaveColleaguesQuery,
   useGetLeavePoliciesQuery,
+  useGetLeaveProjectsQuery,
   useGetLeaveTypesQuery,
+  useGetMeQuery,
   useUpdateLeaveMutation,
 } from '@/store/api/api';
 import type { LeaveApplication } from '@/types/api';
@@ -36,6 +38,9 @@ export function ApplyLeaveForm({
   const { data: types } = useGetLeaveTypesQuery();
   const { data: balances } = useGetLeaveBalancesQuery();
   const { data: policies } = useGetLeavePoliciesQuery();
+  const { data: leaveProjects } = useGetLeaveProjectsQuery();
+  const { data: me } = useGetMeQuery();
+  const meEmployeeId = me?.data.employeeId;
   const [applyLeave, { isLoading: applying }] = useApplyLeaveMutation();
   const [updateLeave, { isLoading: saving }] = useUpdateLeaveMutation();
   const [leaveTypeId, setLeaveTypeId] = useState(editing?.leaveTypeId ?? '');
@@ -43,6 +48,7 @@ export function ApplyLeaveForm({
   const [startDate, setStartDate] = useState(editing ? dateValue(editing.startDate) : '');
   const [endDate, setEndDate] = useState(editing ? dateValue(editing.endDate) : '');
   const [handoverEmployeeId, setHandoverEmployeeId] = useState(editing?.handoverEmployeeId ?? '');
+  const [projectId, setProjectId] = useState(editing?.projectId ?? '');
   const [message, setMessage] = useState<{ tone: StatusTone; text: string } | null>(null);
   const toast = useToast();
   const isLoading = applying || saving;
@@ -56,6 +62,7 @@ export function ApplyLeaveForm({
     setStartDate(dateValue(editing.startDate));
     setEndDate(dateValue(editing.endDate));
     setHandoverEmployeeId(editing.handoverEmployeeId ?? '');
+    setProjectId(editing.projectId ?? '');
   }, [editing]);
 
   useEffect(() => {
@@ -96,6 +103,23 @@ export function ApplyLeaveForm({
 
   const needsHandover = Boolean(selectedType?.requiresHandover || rules?.requiresHandover);
   const needsAttachment = Boolean(selectedType?.requiresAttachment || rules?.requiresAttachment);
+  const needsApproval = Boolean(selectedType?.requiresApproval || rules?.requiresApproval);
+  const projectOptions = leaveProjects?.data ?? [];
+  const projectsLoaded = leaveProjects !== undefined;
+  const needsProject = needsApproval && projectsLoaded && projectOptions.length > 0;
+
+  useEffect(() => {
+    if (!projectsLoaded) return;
+    if (!needsProject) {
+      setProjectId((current) => (current ? '' : current));
+      return;
+    }
+    setProjectId((current) => {
+      if (current && projectOptions.some((item) => item.id === current)) return current;
+      if (projectOptions.length === 1) return projectOptions[0].id;
+      return '';
+    });
+  }, [needsProject, projectsLoaded, leaveProjects?.data]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -115,9 +139,14 @@ export function ApplyLeaveForm({
         ? (colleagues?.data ?? []).find((item) => item.id === handoverEmployeeId)?.fullName
         : undefined,
       attachmentUrl: String(form.get('attachmentUrl') ?? '') || undefined,
+      projectId: needsProject ? projectId || undefined : undefined,
     };
     if (!selectedType?.id) {
       toast.warning('Select a leave type first.');
+      return;
+    }
+    if (needsProject && !projectId) {
+      toast.warning('Select which project this leave relates to.');
       return;
     }
     if (needsHandover) {
@@ -225,6 +254,40 @@ export function ApplyLeaveForm({
         <Label htmlFor="reason">Reason</Label>
         <Input id="reason" name="reason" defaultValue={editing?.reason ?? ''} />
       </div>
+      {needsProject ? (
+        <div>
+          <Label htmlFor="projectId">Project</Label>
+          <select
+            id="projectId"
+            name="projectId"
+            className="h-10 w-full rounded border border-border bg-background px-3 text-sm shadow-card outline-none"
+            required
+            value={projectId}
+            onChange={(event) => setProjectId(event.target.value)}
+          >
+            <option value="" disabled>
+              Select project for this leave
+            </option>
+            {projectOptions.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name} ({item.code}) · lead {item.leadName}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-sm text-muted">
+            Your project lead reviews this leave before HR. Pick the project the leave relates to.
+          </p>
+          {projectId &&
+          projectOptions.find((item) => item.id === projectId)?.leadEmployeeId &&
+          meEmployeeId &&
+          projectOptions.find((item) => item.id === projectId)?.leadEmployeeId === meEmployeeId ? (
+            <p className="mt-2 text-sm text-muted">
+              You lead this project — the project-lead step is skipped automatically. Handover (if required) and HR
+              still apply.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       {needsHandover ? (
         <div>
           <Label htmlFor="handoverEmployeeId">Handover colleague</Label>
@@ -249,6 +312,14 @@ export function ApplyLeaveForm({
           </select>
           {startDate ? (
             <p className="mt-2 text-sm text-muted">Colleagues on leave for these dates cannot take handover.</p>
+          ) : null}
+          {needsProject &&
+          projectId &&
+          handoverEmployeeId &&
+          projectOptions.find((item) => item.id === projectId)?.leadEmployeeId === handoverEmployeeId ? (
+            <p className="mt-2 text-sm text-muted">
+              This colleague is also the project lead — accepting handover completes both steps.
+            </p>
           ) : null}
         </div>
       ) : null}

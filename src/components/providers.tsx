@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
+import { ThemeProvider } from '@/components/theme-provider';
 import { ToastHost } from '@/components/ui/toast-host';
 import { SessionBootstrap } from '@/features/auth/session-bootstrap';
 import { store } from '@/store/store';
@@ -9,9 +10,11 @@ import { store } from '@/store/store';
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <Provider store={store}>
-      <SessionBootstrap />
-      {children}
-      <ToastHost />
+      <ThemeProvider>
+        <SessionBootstrap />
+        {children}
+        <ToastHost />
+      </ThemeProvider>
     </Provider>
   );
 }

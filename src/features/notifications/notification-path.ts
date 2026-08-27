@@ -32,6 +32,11 @@ export function pathForNotification(item: NotificationItem, roles: string[]): st
     if (handoverRequest) {
       return `/leave/handover/${encodeURIComponent(id)}`;
     }
+    const leadRequest =
+      /project lead approval/i.test(item.title) || /project-lead approval/i.test(item.message);
+    if (leadRequest) {
+      return `/leave/lead/${encodeURIComponent(id)}`;
+    }
     return leaveApprovalPath(roles, id);
   }
 

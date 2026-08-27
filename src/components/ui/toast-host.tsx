@@ -7,9 +7,9 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { dismissToast, type ToastTone } from '@/store/slices/toast-slice';
 
 const TONE_CLASS: Record<ToastTone, string> = {
-  success: 'border-[rgba(2,122,72,0.45)] bg-[rgba(255,255,255,0.72)] text-success shadow-[0_8px_30px_rgba(2,122,72,0.12)]',
-  error: 'border-[rgba(180,35,24,0.45)] bg-[rgba(255,255,255,0.72)] text-danger shadow-[0_8px_30px_rgba(180,35,24,0.12)]',
-  warning: 'border-[rgba(181,71,8,0.45)] bg-[rgba(255,255,255,0.72)] text-warning shadow-[0_8px_30px_rgba(181,71,8,0.12)]',
+  success: 'border-success bg-background text-success shadow-card',
+  error: 'border-danger bg-background text-danger shadow-card',
+  warning: 'border-warning bg-background text-warning shadow-card',
 };
 
 const TONE_ICON: Record<ToastTone, 'check' | 'close' | 'bell'> = {

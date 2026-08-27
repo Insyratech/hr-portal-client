@@ -30,6 +30,7 @@ import type {
   LeaveAllocation,
   LeaveBalance,
   LeaveColleague,
+  LeaveProjectOption,
   LeavePolicy,
   LeaveType,
   MeData,
@@ -55,6 +56,9 @@ import type {
   WorkPriority,
   WorkProject,
   EmployeeWorkProjects,
+  LeadProjectSummary,
+  LeadProjectDesk,
+  ProjectStatusUpdate,
   WorkProjectMember,
   WorkDayBoard,
   WorkHistoryMonth,
@@ -440,6 +444,7 @@ export const api = createApi({
         handover?: string;
         handoverEmployeeId?: string;
         attachmentUrl?: string;
+        projectId?: string;
       }
     >({
       query: (body) => ({ url: '/api/v1/leaves/applications', method: 'POST', body }),
@@ -458,6 +463,7 @@ export const api = createApi({
           handover?: string;
           handoverEmployeeId?: string;
           attachmentUrl?: string;
+          projectId?: string;
         };
       }
     >({
@@ -483,6 +489,13 @@ export const api = createApi({
     acceptLeaveHandover: builder.mutation<ApiSuccess<LeaveApplication>, string>({
       query: (id) => ({ url: `/api/v1/leaves/${id}/handover-accept`, method: 'POST' }),
       invalidatesTags: ['LeaveApplications', 'LeaveBalances', 'Notifications'],
+    }),
+    acceptLeaveProjectLead: builder.mutation<ApiSuccess<LeaveApplication>, string>({
+      query: (id) => ({ url: `/api/v1/leaves/${id}/project-lead-accept`, method: 'POST' }),
+      invalidatesTags: ['LeaveApplications', 'LeaveBalances', 'Notifications'],
+    }),
+    getLeaveProjects: builder.query<ApiSuccess<LeaveProjectOption[]>, void>({
+      query: () => '/api/v1/leave-projects',
     }),
     getLeaveColleagues: builder.query<
       ApiSuccess<LeaveColleague[]>,
@@ -697,18 +710,64 @@ export const api = createApi({
       query: () => '/api/v1/work/projects',
       providesTags: ['Work'],
     }),
+    getLeadProjects: builder.query<ApiSuccess<LeadProjectSummary[]>, void>({
+      query: () => '/api/v1/work/lead/projects',
+      providesTags: ['Work'],
+    }),
+    getLeadProjectDesk: builder.query<
+      ApiSuccess<LeadProjectDesk>,
+      { projectId: string; date?: string }
+    >({
+      query: ({ projectId, date }) => ({
+        url: `/api/v1/work/lead/projects/${projectId}`,
+        params: date ? { date } : undefined,
+      }),
+      providesTags: ['Work'],
+    }),
+    getProjectStatusUpdates: builder.query<ApiSuccess<ProjectStatusUpdate[]>, string>({
+      query: (projectId) => `/api/v1/work/projects/${projectId}/updates`,
+      providesTags: ['Work'],
+    }),
+    createProjectStatusUpdate: builder.mutation<
+      ApiSuccess<ProjectStatusUpdate>,
+      { projectId: string; body: string }
+    >({
+      query: ({ projectId, body }) => ({
+        url: `/api/v1/work/projects/${projectId}/updates`,
+        method: 'POST',
+        body: { body },
+      }),
+      invalidatesTags: ['Work'],
+    }),
     getProjectMembers: builder.query<ApiSuccess<{ projectId: string; members: WorkProjectMember[] }>, string>({
       query: (id) => `/api/v1/work/projects/${id}/members`,
       providesTags: ['Work'],
     }),
     setProjectMembers: builder.mutation<
-      ApiSuccess<{ projectId: string; memberCount: number; members: WorkProjectMember[] }>,
-      { projectId: string; employeeIds: string[] }
+      ApiSuccess<{
+        projectId: string;
+        memberCount: number;
+        members: WorkProjectMember[];
+        leadEmployeeId: string;
+        leadName: string | null;
+      }>,
+      { projectId: string; employeeIds: string[]; leadEmployeeId: string }
     >({
-      query: ({ projectId, employeeIds }) => ({
+      query: ({ projectId, employeeIds, leadEmployeeId }) => ({
         url: `/api/v1/work/projects/${projectId}/members`,
         method: 'PUT',
-        body: { employeeIds },
+        body: { employeeIds, leadEmployeeId },
+      }),
+      invalidatesTags: ['Work'],
+    }),
+    setWorkProjectStatus: builder.mutation<
+      ApiSuccess<WorkProject>,
+      { projectId: string; status: 'active' | 'inactive' }
+    >({
+      query: ({ projectId, status }) => ({
+        url: `/api/v1/work/projects/${projectId}/status`,
+        method: 'PATCH',
+        body: { status },
       }),
       invalidatesTags: ['Work'],
     }),
@@ -852,7 +911,10 @@ export const api = createApi({
         };
       },
     }),
-    createWorkProject: builder.mutation<ApiSuccess<WorkProject>, { name: string; code: string; employeeIds?: string[] }>({
+    createWorkProject: builder.mutation<
+      ApiSuccess<WorkProject>,
+      { name: string; code: string; leadEmployeeId: string; employeeIds?: string[] }
+    >({
       query: (body) => ({ url: '/api/v1/work/projects', method: 'POST', body }),
       invalidatesTags: ['Work'],
     }),
@@ -1199,6 +1261,8 @@ export const {
   useRejectLeaveMutation,
   useRequestLeaveChangesMutation,
   useAcceptLeaveHandoverMutation,
+  useAcceptLeaveProjectLeadMutation,
+  useGetLeaveProjectsQuery,
   useGetLeaveColleaguesQuery,
   useGetHolidaysQuery,
   useCreateHolidayMutation,
@@ -1222,8 +1286,13 @@ export const {
   useCreateWorkFeedbackMutation,
   useGetWorkWeekQuery,
   useGetWorkProjectsQuery,
+  useGetLeadProjectsQuery,
+  useGetLeadProjectDeskQuery,
+  useGetProjectStatusUpdatesQuery,
+  useCreateProjectStatusUpdateMutation,
   useGetProjectMembersQuery,
   useSetProjectMembersMutation,
+  useSetWorkProjectStatusMutation,
   useGetEmployeeWorkProjectsQuery,
   useSetEmployeeWorkProjectsMutation,
   useCreateWorkPriorityMutation,

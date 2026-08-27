@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/dashboard/status-badge';
-import { useAcceptLeaveHandoverMutation, useGetMeQuery } from '@/store/api/api';
+import { useAcceptLeaveProjectLeadMutation, useGetMeQuery } from '@/store/api/api';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import type { LeaveApplication } from '@/types/api';
 
-export function HandoverReviewCard({
+export function ProjectLeadReviewCard({
   application,
   highlight = false,
 }: {
@@ -17,23 +17,20 @@ export function HandoverReviewCard({
   highlight?: boolean;
 }) {
   const { data: me } = useGetMeQuery();
-  const [acceptHandover, { isLoading }] = useAcceptLeaveHandoverMutation();
+  const [acceptLead, { isLoading }] = useAcceptLeaveProjectLeadMutation();
   const toast = useToast();
   const myId = me?.data.employeeId;
-  const canAccept =
-    application.handoverEmployeeId === myId &&
-    !application.handoverAccepted &&
-    application.status === 'PENDING';
-  const alsoLead =
-    canAccept &&
+  const canApprove =
+    application.projectLeadEmployeeId === myId &&
     application.hasProjectLeadStep &&
     !application.projectLeadAccepted &&
-    application.projectLeadEmployeeId === myId;
+    application.handoverAccepted &&
+    application.status === 'PENDING';
 
   return (
     <div className={`border bg-background p-5 shadow-card ${highlight ? 'border-foreground' : 'border-border'}`}>
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <Meta>Review and accept</Meta>
+        <Meta>Project lead approval</Meta>
         <StatusBadge
           status={
             application.status === 'APPROVED'
@@ -50,7 +47,9 @@ export function HandoverReviewCard({
         {application.startDate} – {application.endDate}
       </p>
       <p className="mt-2 text-sm text-muted">
-        {application.quantity} day{application.quantity === 1 ? '' : 's'} · {application.duration === 'half' ? 'Half day' : 'Full day'}
+        {application.quantity} day{application.quantity === 1 ? '' : 's'} ·{' '}
+        {application.duration === 'half' ? 'Half day' : 'Full day'}
+        {application.projectName ? ` · ${application.projectName}` : ''}
       </p>
       {application.reason ? <p className="mt-3 text-sm">{application.reason}</p> : null}
       <p className="mt-3 text-sm text-muted">
@@ -58,29 +57,27 @@ export function HandoverReviewCard({
           ? 'This leave was cancelled.'
           : application.status === 'REJECTED'
             ? 'This leave was rejected.'
-            : application.handoverAccepted
-              ? `${application.handoverEmployeeName ?? 'Colleague'} accepted handover`
-              : canAccept
-                ? alsoLead
-                  ? 'Waiting for you to accept handover (also completes project-lead step)'
-                  : 'Waiting for you to accept'
-                : `${application.handoverEmployeeName ?? 'Colleague'} · waiting`}
+            : !application.handoverAccepted
+              ? 'Waiting for handover acceptance first.'
+              : application.projectLeadAccepted
+                ? 'Project lead step completed'
+                : canApprove
+                  ? 'Waiting for you to approve as project lead'
+                  : 'Waiting for project lead'}
       </p>
-      {canAccept ? (
+      {canApprove ? (
         <Button
           className="mt-4"
           type="button"
           disabled={isLoading}
           onClick={() => {
-            void acceptHandover(application.id)
+            void acceptLead(application.id)
               .unwrap()
-              .then(() =>
-                toast.success(alsoLead ? 'Handover and project-lead steps completed.' : 'Handover accepted.'),
-              )
-              .catch((cause) => toast.error(apiErrorMessage(cause, 'Unable to accept handover.')));
+              .then(() => toast.success('Project lead approval recorded.'))
+              .catch((cause) => toast.error(apiErrorMessage(cause, 'Unable to approve as project lead.')));
           }}
         >
-          {isLoading ? 'Accepting' : alsoLead ? 'Accept handover & lead' : 'Accept handover'}
+          {isLoading ? 'Approving…' : 'Approve as project lead'}
         </Button>
       ) : (
         <Link href="/leave" className="mt-4 inline-block text-sm text-muted hover:text-foreground">

@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
+  darkMode: 'class',
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
@@ -15,7 +16,7 @@ const config: Config = {
         warning: 'var(--warning)',
       },
       boxShadow: {
-        card: '0 1px 2px rgba(0,0,0,.04)',
+        card: 'var(--shadow-card)',
       },
       borderRadius: {
         sm: '2px',

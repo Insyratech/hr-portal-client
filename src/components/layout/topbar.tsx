@@ -6,17 +6,22 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { EMPLOYEE_NAV, EMPLOYEE_WORK_SUBNAV, isNavActive, isWorkSubnavActive } from '@/constants/nav';
 import { Meta } from '@/components/layout/meta';
 import { Icon } from '@/components/ui/icon';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { NotificationsPanel } from '@/features/notifications/notifications-panel';
-import { useGetNotificationUnreadCountQuery } from '@/store/api/api';
+import { useGetLeadProjectsQuery, useGetNotificationUnreadCountQuery } from '@/store/api/api';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { openConfirmDialog, setCommandPaletteOpen, toggleNotificationsOpen } from '@/store/slices/ui-slice';
 import { cn } from '@/lib/utils';
 import { primaryRoleCode, type ShellVariant } from '@/features/auth/role-access';
 import { roleLabel } from '@/features/employees/onboarding-roles';
 
+function isProjectDeskPath(pathname: string): boolean {
+  return pathname === '/work/projects' || pathname.startsWith('/work/projects/');
+}
+
 function EmployeeWorkMenu() {
   const pathname = usePathname();
-  const workActive = isNavActive(pathname, '/work');
+  const workActive = isNavActive(pathname, '/work') && !isProjectDeskPath(pathname);
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -114,19 +119,147 @@ function EmployeeWorkMenu() {
   );
 }
 
+function ProjectDeskNavLink() {
+  const pathname = usePathname();
+  const user = useAppSelector((state) => state.auth.user);
+  const { data } = useGetLeadProjectsQuery(undefined, { skip: !user });
+  const projects = data?.data ?? [];
+  if (projects.length === 0) return null;
+
+  const active = isProjectDeskPath(pathname);
+  return (
+    <Link
+      href="/work/projects"
+      className={cn(
+        'inline-flex shrink-0 items-center gap-2 rounded px-2.5 py-2 text-sm transition-colors lg:px-3',
+        active ? 'bg-surface text-foreground' : 'text-muted hover:bg-surface hover:text-foreground',
+      )}
+    >
+      <Icon name="building" className="h-3.5 w-3.5" />
+      Project desk
+    </Link>
+  );
+}
+
+function UserAccountMenu({
+  displayName,
+  displayRole,
+  isSuperAdmin,
+}: {
+  displayName: string;
+  displayRole: string | null;
+  isSuperAdmin: boolean;
+}) {
+  const menuId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const dispatch = useAppDispatch();
+  const profileHref = isSuperAdmin ? '/super-admin/profile' : '/more/profile';
+  const profileLabel = isSuperAdmin ? 'Profile' : 'Profile details';
+
+  useEffect(() => {
+    function onPointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, []);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
+        className={cn(
+          'inline-flex min-h-10 items-center gap-2 rounded border border-border bg-background px-3 py-1.5 text-sm text-foreground shadow-card transition-colors hover:bg-surface',
+          open && 'bg-surface',
+        )}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Icon name="user" className="h-4 w-4 shrink-0 text-muted" />
+        <span className="flex min-w-0 flex-col items-start text-left leading-tight">
+          <span className="max-w-[12rem] truncate font-medium">{displayName}</span>
+          {displayRole ? (
+            <span className="max-w-[12rem] truncate text-[11px] text-muted">{displayRole}</span>
+          ) : null}
+        </span>
+        <Icon name="chevron-down" className={cn('h-3 w-3 shrink-0 opacity-70 transition', open && 'rotate-180')} />
+      </button>
+      {open ? (
+        <div
+          id={menuId}
+          role="menu"
+          className="absolute right-0 top-[calc(100%+0.4rem)] z-[60] w-56 rounded border border-border bg-background py-1 shadow-card"
+        >
+          <div className="border-b border-border px-3 py-2.5">
+            <p className="truncate text-sm font-medium">{displayName}</p>
+            {displayRole ? <p className="truncate text-xs text-muted">{displayRole}</p> : null}
+          </div>
+          <Link
+            href={profileHref}
+            role="menuitem"
+            className="flex items-center gap-2 px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-surface"
+            onClick={() => setOpen(false)}
+          >
+            <Icon name="pencil" className="h-3.5 w-3.5 text-muted" />
+            {profileLabel}
+          </Link>
+          <Link
+            href="/more/password"
+            role="menuitem"
+            className="flex items-center gap-2 px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-surface"
+            onClick={() => setOpen(false)}
+          >
+            <Icon name="settings" className="h-3.5 w-3.5 text-muted" />
+            Password
+          </Link>
+          <button
+            type="button"
+            role="menuitem"
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-surface"
+            onClick={() => {
+              setOpen(false);
+              dispatch(
+                openConfirmDialog({
+                  title: 'Sign out',
+                  description: 'You will need to sign in again to use the portal.',
+                  action: 'logout',
+                }),
+              );
+            }}
+          >
+            <Icon name="close" className="h-3.5 w-3.5 text-muted" />
+            Sign out
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function Topbar({ variant }: { variant: ShellVariant }) {
   const pathname = usePathname();
   const user = useAppSelector((state) => state.auth.user);
   const dispatch = useAppDispatch();
   const displayName = user?.name ?? 'Guest';
-  const displayRole = user?.roles?.length ? roleLabel(primaryRoleCode(user.roles)) : null;
+  const roles = user?.roles ?? [];
+  const displayRole = roles.length ? roleLabel(primaryRoleCode(roles)) : null;
+  const isSuperAdmin = roles.includes('SUPER_ADMIN');
   const { data: unread } = useGetNotificationUnreadCountQuery(undefined, {
     skip: !user,
     refetchOnFocus: false,
     refetchOnReconnect: false,
   });
   const unreadCount = unread?.data.count ?? 0;
-  const onWorkSection = pathname === '/work' || pathname.startsWith('/work/');
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-[2px]">
@@ -138,7 +271,10 @@ export function Topbar({ variant }: { variant: ShellVariant }) {
               <nav className="hidden items-center gap-0.5 md:flex lg:gap-1">
                 {EMPLOYEE_NAV.map((item) =>
                   item.href === '/work' ? (
-                    <EmployeeWorkMenu key={item.href} />
+                    <span key={item.href} className="contents">
+                      <EmployeeWorkMenu />
+                      <ProjectDeskNavLink />
+                    </span>
                   ) : (
                     <Link
                       key={item.href}
@@ -171,6 +307,7 @@ export function Topbar({ variant }: { variant: ShellVariant }) {
           )}
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
+          <ThemeToggle />
           <button
             type="button"
             className="relative inline-flex h-10 items-center gap-2 rounded border border-transparent px-3 text-sm text-foreground transition-colors hover:border-border hover:bg-surface"
@@ -185,63 +322,13 @@ export function Topbar({ variant }: { variant: ShellVariant }) {
               </span>
             ) : null}
           </button>
-          {variant === 'employee' ? (
-            <Link
-              href="/more/password"
-              className="hidden h-10 items-center rounded px-3 text-sm text-muted transition-colors hover:bg-surface hover:text-foreground sm:inline-flex"
-            >
-              Password
-            </Link>
-          ) : null}
-          <button
-            type="button"
-            className="inline-flex min-h-10 items-center gap-2 rounded border border-border bg-background px-3 py-1.5 text-sm text-foreground shadow-card transition-colors hover:bg-surface"
-            onClick={() =>
-              dispatch(
-                openConfirmDialog({
-                  title: 'Sign out',
-                  description: 'You will need to sign in again to use the portal.',
-                  action: 'logout',
-                }),
-              )
-            }
-          >
-            <Icon name="user" className="h-4 w-4 shrink-0 text-muted" />
-            <span className="flex min-w-0 flex-col items-start text-left leading-tight">
-              <span className="max-w-[12rem] truncate font-medium">{displayName}</span>
-              {displayRole ? (
-                <span className="max-w-[12rem] truncate text-[11px] text-muted">{displayRole}</span>
-              ) : null}
-            </span>
-          </button>
+          <UserAccountMenu
+            displayName={displayName}
+            displayRole={displayRole}
+            isSuperAdmin={isSuperAdmin}
+          />
         </div>
       </div>
-
-      {variant === 'employee' && onWorkSection ? (
-        <nav aria-label="Work sections" className="border-t border-border bg-surface">
-          <ul className="flex gap-1 overflow-x-auto px-4 py-2 md:px-8">
-            {EMPLOYEE_WORK_SUBNAV.map((item) => {
-              const active = isWorkSubnavActive(pathname, item.href);
-              return (
-                <li key={item.href} className="shrink-0">
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      'inline-flex items-center gap-2 rounded border px-3 py-2 text-xs uppercase tracking-[0.12em] transition-colors',
-                      active
-                        ? 'border-foreground bg-foreground text-background'
-                        : 'border-border bg-background text-muted hover:text-foreground',
-                    )}
-                  >
-                    <Icon name={item.icon} className="h-3.5 w-3.5" />
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-      ) : null}
 
       <NotificationsPanel />
     </header>

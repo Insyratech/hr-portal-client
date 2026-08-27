@@ -6,11 +6,10 @@ export type NavItem = {
   icon: IconName;
 };
 
-/** Primary employee chrome (header + mobile bottom nav). */
+/** Primary employee chrome (header + mobile bottom nav). Leave lives under More. */
 export const EMPLOYEE_NAV: readonly NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
   { href: '/work', label: 'Work', icon: 'grid' },
-  { href: '/leave', label: 'Leave', icon: 'leave' },
   { href: '/permission', label: 'Permission', icon: 'clock' },
   { href: '/attendance', label: 'Attendance', icon: 'clock' },
   { href: '/more', label: 'More', icon: 'more' },
@@ -19,6 +18,7 @@ export const EMPLOYEE_NAV: readonly NavItem[] = [
 export const EMPLOYEE_WORK_SUBNAV: readonly NavItem[] = [
   { href: '/work', label: 'Today', icon: 'clock' },
   { href: '/work/priorities', label: 'Priorities', icon: 'grid' },
+  { href: '/work/projects', label: 'Project desk', icon: 'building' },
   { href: '/work/weekly-update', label: 'My weekly update', icon: 'file' },
   { href: '/work/trends', label: 'Trends', icon: 'overview' },
   { href: '/work/history', label: 'History', icon: 'calendar' },
@@ -28,10 +28,12 @@ export const EMPLOYEE_WORK_SUBNAV: readonly NavItem[] = [
  * Personal employee tools for HR / GM / CSO / Finance sidebars.
  * Desktop: under the Employee major section. Mobile chips: after managerial links.
  */
+
 export const MY_WORK_WORK_NAV: readonly NavItem[] = [
   { href: '/dashboard', label: 'My dashboard', icon: 'dashboard' },
   { href: '/work', label: 'Today’s update', icon: 'clock' },
   { href: '/work/priorities', label: 'My priorities', icon: 'grid' },
+  { href: '/work/projects', label: 'Project desk', icon: 'building' },
   { href: '/work/weekly-update', label: 'My weekly update', icon: 'file' },
   { href: '/work/trends', label: 'My trends', icon: 'overview' },
   { href: '/work/history', label: 'Work history', icon: 'calendar' },
@@ -50,6 +52,7 @@ export const MY_WORK_DOCS_NAV: readonly NavItem[] = [
 ];
 
 export const MY_WORK_ACCOUNT_NAV: readonly NavItem[] = [
+  { href: '/more/profile', label: 'Profile details', icon: 'user' },
   { href: '/more/password', label: 'Password', icon: 'settings' },
 ];
 
@@ -187,5 +190,8 @@ export function isNavActive(pathname: string, href: string): boolean {
 }
 
 export function isWorkSubnavActive(pathname: string, href: string): boolean {
+  if (href === '/work/projects') {
+    return pathname === href || pathname.startsWith('/work/projects/');
+  }
   return pathname === href;
 }
