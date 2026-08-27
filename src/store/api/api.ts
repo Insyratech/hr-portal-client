@@ -2,12 +2,22 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { clientEnv } from '@/lib/env';
 import type {
   ApiSuccess,
-  AttendanceCorrection,
   AttendanceDaySummary,
+  AttendanceImport,
+  AttendanceImportDetail,
   AttendanceMe,
-  AttendanceRecord,
+  AttendanceReviewCard,
+  AttendanceReviewDay,
   AuditLog,
+  ConfirmedPayrollImport,
+  Company,
+  CompanyLogoUpload,
+  Compensation,
+  DirectoryEditRequest,
+  DirectoryEditRequestForEmployee,
+  DirectoryEditRequestStatus,
   Employee,
+  EmployeePayroll,
   Grievance,
   GrievanceCounts,
   GrievanceDetail,
@@ -19,17 +29,40 @@ import type {
   LeaveApplication,
   LeaveAllocation,
   LeaveBalance,
+  LeaveColleague,
   LeavePolicy,
   LeaveType,
   MeData,
   NamedEntity,
   OrganizationSettings,
+  PaymentDetails,
   PolicyAcknowledgementReport,
+  PayrollRun,
+  PayrollRunDetail,
   ReportsOverview,
   Role,
+  SalarySlip,
   Shift,
   ShiftAssignment,
+  WorkWeek,
+  WeeklyWorkBoard,
+  WorkOverview,
+  WorkBoard,
+  WorkAnalytics,
+  WorkSettings,
+  WorkPriority,
+  WorkProject,
+  EmployeeWorkProjects,
+  WorkProjectMember,
+  WorkDayBoard,
+  WorkHistoryMonth,
+  WeeklyWorkUpdateBoard,
+  WeeklyWorkUpdateUploadSession,
+  WeeklyPptAdminBoard,
+  WeeklyPptGmShares,
   NotificationItem,
+  WorkPermission,
+  WorkPermissionMine,
 } from '@/types/api';
 
 export const api = createApi({
@@ -47,6 +80,9 @@ export const api = createApi({
   tagTypes: [
     'Me',
     'Employees',
+    'Companies',
+    'Payroll',
+    'PayrollRuns',
     'Departments',
     'Designations',
     'Roles',
@@ -59,12 +95,16 @@ export const api = createApi({
     'LeaveApplications',
     'Holidays',
     'Attendance',
+    'AttendanceImports',
     'Shifts',
-    'Corrections',
+    'WorkWeeks',
     'Grievances',
     'Policies',
     'Notifications',
     'Reports',
+    'WorkPermissions',
+    'Work',
+    'DirectoryEditRequests',
   ],
   endpoints: (builder) => ({
     getHealth: builder.query<ApiSuccess<HealthData>, void>({
@@ -74,10 +114,16 @@ export const api = createApi({
       query: () => '/api/v1/me',
       providesTags: ['Me'],
     }),
-    getEmployees: builder.query<ApiSuccess<Employee[]>, { q?: string } | void>({
+    getEmployees: builder.query<ApiSuccess<Employee[]>, { q?: string; status?: 'active' | 'inactive' } | void>({
       query: (arg) => ({
         url: '/api/v1/employees',
-        params: arg && 'q' in arg && arg.q ? { q: arg.q } : undefined,
+        params:
+          arg && typeof arg === 'object'
+            ? {
+                ...(arg.q ? { q: arg.q } : {}),
+                ...(arg.status ? { status: arg.status } : {}),
+              }
+            : undefined,
       }),
       providesTags: ['Employees'],
     }),
@@ -92,18 +138,25 @@ export const api = createApi({
         fullName: string;
         email: string;
         phone?: string;
-        dateOfBirth?: string;
         departmentId?: string;
         designationId?: string;
         joiningDate: string;
         employmentType: Employee['employmentType'];
-        roleId?: string;
-        roleIds?: string[];
         password: string;
+        emailVerificationToken: string;
       }
     >({
       query: (body) => ({ url: '/api/v1/employees', method: 'POST', body }),
       invalidatesTags: ['Employees', 'Designations', 'Notifications'],
+    }),
+    sendWorkEmailOtp: builder.mutation<ApiSuccess<{ sent: true }>, { email: string }>({
+      query: (body) => ({ url: '/api/v1/employees/email-otp', method: 'POST', body }),
+    }),
+    verifyWorkEmailOtp: builder.mutation<
+      ApiSuccess<{ email: string; emailVerificationToken: string }>,
+      { email: string; code: string }
+    >({
+      query: (body) => ({ url: '/api/v1/employees/email-otp/verify', method: 'POST', body }),
     }),
     updateEmployee: builder.mutation<
       ApiSuccess<Employee>,
@@ -112,9 +165,150 @@ export const api = createApi({
       query: ({ id, body }) => ({ url: `/api/v1/employees/${id}`, method: 'PATCH', body }),
       invalidatesTags: ['Employees', 'Designations', 'Notifications'],
     }),
+    updateEmployeeRoles: builder.mutation<
+      ApiSuccess<Employee>,
+      { id: string; roleIds: string[] }
+    >({
+      query: ({ id, roleIds }) => ({
+        url: `/api/v1/employees/${id}/roles`,
+        method: 'PATCH',
+        body: { roleIds },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'Employees', id }, 'Employees', 'Notifications'],
+    }),
+    updateEmployeeCompany: builder.mutation<
+      ApiSuccess<Employee>,
+      { id: string; companyId: string }
+    >({
+      query: ({ id, companyId }) => ({
+        url: `/api/v1/employees/${id}/company`,
+        method: 'PATCH',
+        body: { companyId },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'Employees', id }, 'Employees', 'Notifications'],
+    }),
+    deactivateEmployee: builder.mutation<ApiSuccess<Employee>, string>({
+      query: (id) => ({ url: `/api/v1/employees/${id}/deactivate`, method: 'POST' }),
+      invalidatesTags: ['Employees', 'Notifications'],
+    }),
+    activateEmployee: builder.mutation<ApiSuccess<Employee>, string>({
+      query: (id) => ({ url: `/api/v1/employees/${id}/activate`, method: 'POST' }),
+      invalidatesTags: ['Employees', 'Notifications'],
+    }),
+    deleteEmployee: builder.mutation<ApiSuccess<{ deleted: boolean }>, string>({
+      query: (id) => ({ url: `/api/v1/employees/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Employees', 'Notifications'],
+    }),
     getEmployeeAudit: builder.query<ApiSuccess<AuditLog[]>, string>({
       query: (id) => `/api/v1/employees/${id}/audit`,
       providesTags: ['Audit'],
+    }),
+    getEmployeePayroll: builder.query<ApiSuccess<EmployeePayroll>, string>({
+      query: (id) => `/api/v1/employees/${id}/payroll`,
+      providesTags: (_result, _error, id) => [{ type: 'Payroll', id }],
+    }),
+    saveEmployeeCompensation: builder.mutation<
+      ApiSuccess<Compensation>,
+      { id: string; body: Record<string, number | string> }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/employees/${id}/compensation`, method: 'PUT', body }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'Payroll', id }],
+    }),
+    saveEmployeePayment: builder.mutation<
+      ApiSuccess<PaymentDetails>,
+      {
+        id: string;
+        body: { pan?: string; bankAccountNumber?: string; bankName?: string; ifsc?: string };
+      }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/employees/${id}/payment`, method: 'PUT', body }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'Payroll', id }, 'DirectoryEditRequests'],
+    }),
+    getDirectoryEditRequests: builder.query<
+      ApiSuccess<DirectoryEditRequest[]>,
+      { status?: DirectoryEditRequestStatus } | void
+    >({
+      query: (arg) => ({
+        url: '/api/v1/directory-edit-requests',
+        params: arg && 'status' in arg && arg.status ? { status: arg.status } : undefined,
+      }),
+      providesTags: ['DirectoryEditRequests'],
+    }),
+    getDirectoryEditRequestForEmployee: builder.query<ApiSuccess<DirectoryEditRequestForEmployee>, string>({
+      query: (employeeId) => `/api/v1/directory-edit-requests/for-employee/${employeeId}`,
+      providesTags: (_result, _error, employeeId) => [
+        'DirectoryEditRequests',
+        { type: 'DirectoryEditRequests', id: employeeId },
+      ],
+    }),
+    createDirectoryEditRequest: builder.mutation<
+      ApiSuccess<DirectoryEditRequest>,
+      { targetEmployeeId: string; reason: string; fieldHints?: string | null }
+    >({
+      query: (body) => ({ url: '/api/v1/directory-edit-requests', method: 'POST', body }),
+      invalidatesTags: ['DirectoryEditRequests', 'Notifications'],
+    }),
+    approveDirectoryEditRequest: builder.mutation<
+      ApiSuccess<DirectoryEditRequest>,
+      { id: string; body?: { note?: string | null; unlockHours?: number } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/directory-edit-requests/${id}/approve`,
+        method: 'POST',
+        body: body ?? {},
+      }),
+      invalidatesTags: ['DirectoryEditRequests', 'Notifications', 'Employees'],
+    }),
+    rejectDirectoryEditRequest: builder.mutation<
+      ApiSuccess<DirectoryEditRequest>,
+      { id: string; body?: { note?: string | null } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/directory-edit-requests/${id}/reject`,
+        method: 'POST',
+        body: body ?? {},
+      }),
+      invalidatesTags: ['DirectoryEditRequests', 'Notifications'],
+    }),
+    cancelDirectoryEditRequest: builder.mutation<ApiSuccess<DirectoryEditRequest>, string>({
+      query: (id) => ({ url: `/api/v1/directory-edit-requests/${id}/cancel`, method: 'POST' }),
+      invalidatesTags: ['DirectoryEditRequests', 'Notifications'],
+    }),
+    fulfillDirectoryEditRequest: builder.mutation<ApiSuccess<DirectoryEditRequest>, string>({
+      query: (id) => ({ url: `/api/v1/directory-edit-requests/${id}/fulfill`, method: 'POST' }),
+      invalidatesTags: ['DirectoryEditRequests', 'Employees', 'Notifications'],
+    }),
+    getEmployeeWorkWeek: builder.query<ApiSuccess<WorkWeek[]>, string>({
+      query: (id) => `/api/v1/employees/${id}/work-week`,
+      providesTags: (_result, _error, id) => [{ type: 'WorkWeeks', id }],
+    }),
+    saveEmployeeWorkWeek: builder.mutation<
+      ApiSuccess<WorkWeek>,
+      { id: string; body: { pattern: WorkWeek['pattern']; effectiveFrom: string } }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/employees/${id}/work-week`, method: 'PUT', body }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'WorkWeeks', id }],
+    }),
+    getCompanies: builder.query<ApiSuccess<Company[]>, void>({
+      query: () => '/api/v1/companies',
+      providesTags: ['Companies'],
+    }),
+    createCompany: builder.mutation<ApiSuccess<Company>, { name: string; address: string }>({
+      query: (body) => ({ url: '/api/v1/companies', method: 'POST', body }),
+      invalidatesTags: ['Companies'],
+    }),
+    updateCompany: builder.mutation<
+      ApiSuccess<Company>,
+      { id: string; body: { name?: string; address?: string; status?: 'active' | 'inactive' } }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/companies/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['Companies', 'Employees'],
+    }),
+    createCompanyLogo: builder.mutation<
+      ApiSuccess<CompanyLogoUpload>,
+      { id: string; fileName: string; contentType: string; sizeBytes: number }
+    >({
+      query: ({ id, ...body }) => ({ url: `/api/v1/companies/${id}/logo`, method: 'POST', body }),
     }),
     getDepartments: builder.query<ApiSuccess<NamedEntity[]>, void>({
       query: () => '/api/v1/departments',
@@ -163,6 +357,7 @@ export const api = createApi({
         requiresAttachment?: boolean;
         allowHalfDay?: boolean;
         allowMultipleDays?: boolean;
+        paid?: boolean;
         rules?: Record<string, unknown>;
       }
     >({
@@ -287,8 +482,17 @@ export const api = createApi({
       query: (id) => ({ url: `/api/v1/leaves/${id}/handover-accept`, method: 'POST' }),
       invalidatesTags: ['LeaveApplications', 'LeaveBalances', 'Notifications'],
     }),
-    getLeaveColleagues: builder.query<ApiSuccess<{ id: string; fullName: string }[]>, void>({
-      query: () => '/api/v1/leave-colleagues',
+    getLeaveColleagues: builder.query<
+      ApiSuccess<LeaveColleague[]>,
+      { startDate?: string; endDate?: string } | void
+    >({
+      query: (arg) => ({
+        url: '/api/v1/leave-colleagues',
+        params:
+          arg && (arg.startDate || arg.endDate)
+            ? { startDate: arg.startDate, endDate: arg.endDate ?? arg.startDate }
+            : undefined,
+      }),
     }),
     getHolidays: builder.query<ApiSuccess<Holiday[]>, void>({
       query: () => '/api/v1/holidays',
@@ -308,6 +512,32 @@ export const api = createApi({
       query: ({ id, body }) => ({ url: `/api/v1/holidays/${id}`, method: 'PATCH', body }),
       invalidatesTags: ['Holidays', 'Notifications'],
     }),
+    getMyWorkPermissions: builder.query<ApiSuccess<WorkPermissionMine>, void>({
+      query: () => '/api/v1/work-permissions/me',
+      providesTags: ['WorkPermissions'],
+    }),
+    getWorkPermissions: builder.query<ApiSuccess<WorkPermission[]>, { status?: WorkPermission['status'] } | void>({
+      query: (arg) => ({
+        url: '/api/v1/work-permissions',
+        params: arg?.status ? { status: arg.status } : undefined,
+      }),
+      providesTags: ['WorkPermissions'],
+    }),
+    applyWorkPermission: builder.mutation<
+      ApiSuccess<WorkPermission>,
+      { permissionDate: string; minutes: 60; slot: 'START' | 'END'; reason?: string }
+    >({
+      query: (body) => ({ url: '/api/v1/work-permissions', method: 'POST', body }),
+      invalidatesTags: ['WorkPermissions', 'Notifications'],
+    }),
+    approveWorkPermission: builder.mutation<ApiSuccess<WorkPermission>, string>({
+      query: (id) => ({ url: `/api/v1/work-permissions/${id}/approve`, method: 'POST' }),
+      invalidatesTags: ['WorkPermissions', 'Notifications'],
+    }),
+    rejectWorkPermission: builder.mutation<ApiSuccess<WorkPermission>, string>({
+      query: (id) => ({ url: `/api/v1/work-permissions/${id}/reject`, method: 'POST' }),
+      invalidatesTags: ['WorkPermissions', 'Notifications'],
+    }),
     updateLeaveType: builder.mutation<
       ApiSuccess<LeaveType>,
       {
@@ -321,23 +551,277 @@ export const api = createApi({
           requiresAttachment?: boolean;
           allowHalfDay?: boolean;
           allowMultipleDays?: boolean;
+          paid?: boolean;
         };
       }
     >({
       query: ({ id, body }) => ({ url: `/api/v1/leave-types/${id}`, method: 'PATCH', body }),
       invalidatesTags: ['LeaveTypes', 'LeavePolicies'],
     }),
-    getAttendanceMe: builder.query<ApiSuccess<AttendanceMe>, void>({
-      query: () => '/api/v1/attendance/me',
+    getAttendanceMe: builder.query<ApiSuccess<AttendanceMe>, { period?: string } | void>({
+      query: (arg) => ({
+        url: '/api/v1/attendance/me',
+        params: arg && 'period' in arg && arg.period ? { period: arg.period } : undefined,
+      }),
       providesTags: ['Attendance'],
     }),
-    punchIn: builder.mutation<ApiSuccess<AttendanceRecord>, { latitude?: number; longitude?: number } | void>({
-      query: (body) => ({ url: '/api/v1/attendance/punch-in', method: 'POST', body: body ?? {} }),
-      invalidatesTags: ['Attendance'],
+    getWorkDay: builder.query<ApiSuccess<WorkDayBoard>, string>({
+      query: (date) => `/api/v1/work/days/${date}`,
+      providesTags: ['Work'],
     }),
-    punchOut: builder.mutation<ApiSuccess<AttendanceRecord>, { latitude?: number; longitude?: number } | void>({
-      query: (body) => ({ url: '/api/v1/attendance/punch-out', method: 'POST', body: body ?? {} }),
-      invalidatesTags: ['Attendance'],
+    submitWorkDay: builder.mutation<
+      ApiSuccess<WorkDayBoard>,
+      {
+        date: string;
+        body: {
+          planned: { priorityId: string; description: string }[];
+          unplanned?: { description: string }[];
+          blocker?: { category: string; description: string } | null;
+          tomorrow?: string;
+        };
+      }
+    >({
+      query: ({ date, body }) => ({ url: `/api/v1/work/days/${date}`, method: 'PUT', body }),
+      invalidatesTags: ['Work'],
+    }),
+    getWorkHistory: builder.query<ApiSuccess<WorkHistoryMonth>, { month?: string; employeeId?: string } | void>({
+      query: (arg) => ({
+        url: '/api/v1/work/history',
+        params: arg
+          ? {
+              ...(arg.month ? { month: arg.month } : {}),
+              ...(arg.employeeId ? { employeeId: arg.employeeId } : {}),
+            }
+          : undefined,
+      }),
+      providesTags: ['Work'],
+    }),
+    getWorkOverview: builder.query<ApiSuccess<WorkOverview>, { employeeId?: string } | void>({
+      query: (arg) => ({
+        url: '/api/v1/work/overview',
+        params: arg && arg.employeeId ? { employeeId: arg.employeeId } : undefined,
+      }),
+      providesTags: ['Work'],
+    }),
+    getWorkBoard: builder.query<
+      ApiSuccess<WorkBoard>,
+      {
+        date?: string;
+        from?: string;
+        to?: string;
+        departmentId?: string;
+        employeeId?: string;
+        type?: string;
+        category?: string;
+        projectId?: string;
+      } | void
+    >({
+      query: (arg) => ({
+        url: '/api/v1/work/board',
+        params: arg || undefined,
+      }),
+      providesTags: ['Work'],
+    }),
+    getWorkAnalytics: builder.query<
+      ApiSuccess<WorkAnalytics>,
+      {
+        from?: string;
+        to?: string;
+        months?: number;
+        departmentId?: string;
+        employeeId?: string;
+      } | void
+    >({
+      query: (arg) => ({
+        url: '/api/v1/work/analytics',
+        params: arg || undefined,
+      }),
+      providesTags: ['Work'],
+    }),
+    getWorkSettings: builder.query<ApiSuccess<WorkSettings>, void>({
+      query: () => '/api/v1/work/settings',
+      providesTags: ['Work'],
+    }),
+    updateWorkSettings: builder.mutation<
+      ApiSuccess<WorkSettings>,
+      {
+        reminderHour?: number;
+        secondReminderHour?: number | null;
+        retentionDays?: 90 | 180 | 365;
+        archiveBeforeDelete?: boolean;
+        notifyBeforePurge?: boolean;
+        purgeNotifyDaysBefore?: number;
+        legalHold?: boolean;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/work/settings', method: 'PATCH', body }),
+      invalidatesTags: ['Work', 'Settings'],
+    }),
+    createWorkFeedback: builder.mutation<
+      ApiSuccess<WeeklyWorkBoard>,
+      { employeeId: string; type: string; comment: string }
+    >({
+      query: (body) => ({ url: '/api/v1/work/feedback', method: 'POST', body }),
+      invalidatesTags: ['Work'],
+    }),
+    getWorkWeek: builder.query<ApiSuccess<WeeklyWorkBoard>, { employeeId?: string } | void>({
+      query: (arg) => ({
+        url: '/api/v1/work/week',
+        params: arg && arg.employeeId ? { employeeId: arg.employeeId } : undefined,
+      }),
+      providesTags: ['Work'],
+    }),
+    getWorkProjects: builder.query<ApiSuccess<WorkProject[]>, void>({
+      query: () => '/api/v1/work/projects',
+      providesTags: ['Work'],
+    }),
+    getProjectMembers: builder.query<ApiSuccess<{ projectId: string; members: WorkProjectMember[] }>, string>({
+      query: (id) => `/api/v1/work/projects/${id}/members`,
+      providesTags: ['Work'],
+    }),
+    setProjectMembers: builder.mutation<
+      ApiSuccess<{ projectId: string; memberCount: number; members: WorkProjectMember[] }>,
+      { projectId: string; employeeIds: string[] }
+    >({
+      query: ({ projectId, employeeIds }) => ({
+        url: `/api/v1/work/projects/${projectId}/members`,
+        method: 'PUT',
+        body: { employeeIds },
+      }),
+      invalidatesTags: ['Work'],
+    }),
+    getEmployeeWorkProjects: builder.query<ApiSuccess<EmployeeWorkProjects>, string>({
+      query: (employeeId) => `/api/v1/work/employees/${employeeId}/projects`,
+      providesTags: ['Work'],
+    }),
+    setEmployeeWorkProjects: builder.mutation<
+      ApiSuccess<EmployeeWorkProjects>,
+      { employeeId: string; projectIds: string[] }
+    >({
+      query: ({ employeeId, projectIds }) => ({
+        url: `/api/v1/work/employees/${employeeId}/projects`,
+        method: 'PUT',
+        body: { projectIds },
+      }),
+      invalidatesTags: ['Work'],
+    }),
+    createWorkPriority: builder.mutation<
+      ApiSuccess<{ priority: WorkPriority; overCap: boolean; warning: string | null }>,
+      {
+        employeeId?: string;
+        type: WorkPriority['type'];
+        projectId?: string | null;
+        title: string;
+        description?: string;
+        expectedOutcome?: string;
+        successCriteria?: string;
+        level: WorkPriority['level'];
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/work/priorities', method: 'POST', body }),
+      invalidatesTags: ['Work'],
+    }),
+    updateWorkPriority: builder.mutation<
+      ApiSuccess<WorkPriority>,
+      {
+        id: string;
+        body: {
+          title?: string;
+          description?: string;
+          expectedOutcome?: string;
+          successCriteria?: string;
+          level?: WorkPriority['level'];
+          status?: WorkPriority['status'];
+          incompleteReason?: string | null;
+        };
+      }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/work/priorities/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['Work'],
+    }),
+    carryForwardWorkPriority: builder.mutation<
+      ApiSuccess<{ original: WorkPriority; next: WorkPriority; nextWeek: { start: string; end: string } }>,
+      { id: string; incompleteReason?: string | null }
+    >({
+      query: ({ id, incompleteReason }) => ({
+        url: `/api/v1/work/priorities/${id}/carry-forward`,
+        method: 'POST',
+        body: { incompleteReason: incompleteReason ?? null },
+      }),
+      invalidatesTags: ['Work'],
+    }),
+    submitWorkPriority: builder.mutation<ApiSuccess<WorkPriority>, string>({
+      query: (id) => ({ url: `/api/v1/work/priorities/${id}/submit`, method: 'POST' }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    submitAllWorkPriorities: builder.mutation<
+      ApiSuccess<{ submitted: WorkPriority[]; week: WeeklyWorkBoard }>,
+      void
+    >({
+      query: () => ({ url: '/api/v1/work/priorities/submit-all', method: 'POST' }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    approveWorkPriority: builder.mutation<ApiSuccess<WorkPriority>, string>({
+      query: (id) => ({ url: `/api/v1/work/priorities/${id}/approve`, method: 'POST' }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    requestWorkPriorityResubmit: builder.mutation<ApiSuccess<WorkPriority>, { id: string; comment: string }>({
+      query: ({ id, comment }) => ({
+        url: `/api/v1/work/priorities/${id}/request-resubmit`,
+        method: 'POST',
+        body: { comment },
+      }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    getWeeklyWorkUpdateBoard: builder.query<ApiSuccess<WeeklyWorkUpdateBoard>, void>({
+      query: () => '/api/v1/work/weekly-updates',
+      providesTags: ['Work'],
+    }),
+    getWeeklyPptAdminBoard: builder.query<ApiSuccess<WeeklyPptAdminBoard>, { weekStart?: string } | void>({
+      query: (arg) => ({
+        url: '/api/v1/work/weekly-updates/admin',
+        params: arg && 'weekStart' in arg && arg.weekStart ? { weekStart: arg.weekStart } : undefined,
+      }),
+      providesTags: ['Work'],
+    }),
+    getWeeklyPptGmShares: builder.query<ApiSuccess<WeeklyPptGmShares>, void>({
+      query: () => '/api/v1/work/weekly-updates/shares',
+      providesTags: ['Work'],
+    }),
+    shareWeeklyPptToGm: builder.mutation<
+      ApiSuccess<{ share: { id: string; weekStart: string; weekEnd: string; sharedAt: string; fileCount: number }; recipients: number }>,
+      { weekStart?: string } | void
+    >({
+      query: (body) => ({
+        url: '/api/v1/work/weekly-updates/share-to-gm',
+        method: 'POST',
+        body: body ?? {},
+      }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    createWeeklyWorkUpdateUpload: builder.mutation<
+      ApiSuccess<WeeklyWorkUpdateUploadSession>,
+      { fileName: string; contentType: string; sizeBytes: number }
+    >({
+      query: (body) => ({ url: '/api/v1/work/weekly-updates/upload', method: 'POST', body }),
+      invalidatesTags: ['Work'],
+    }),
+    getWeeklyWorkUpdateDownload: builder.query<
+      ApiSuccess<{ url: string; fileName: string }>,
+      { id: string; shareId?: string } | string
+    >({
+      query: (arg) => {
+        const id = typeof arg === 'string' ? arg : arg.id;
+        const shareId = typeof arg === 'string' ? undefined : arg.shareId;
+        return {
+          url: `/api/v1/work/weekly-updates/${id}/download`,
+          params: shareId ? { shareId } : undefined,
+        };
+      },
+    }),
+    createWorkProject: builder.mutation<ApiSuccess<WorkProject>, { name: string; code: string; employeeIds?: string[] }>({
+      query: (body) => ({ url: '/api/v1/work/projects', method: 'POST', body }),
+      invalidatesTags: ['Work'],
     }),
     getAttendanceDay: builder.query<ApiSuccess<AttendanceDaySummary>, { date?: string } | void>({
       query: (arg) => ({
@@ -346,27 +830,74 @@ export const api = createApi({
       }),
       providesTags: ['Attendance'],
     }),
-    getAttendanceCorrections: builder.query<ApiSuccess<AttendanceCorrection[]>, { status?: string } | void>({
-      query: (arg) => ({
-        url: '/api/v1/attendance/corrections',
-        params: arg && 'status' in arg && arg.status ? { status: arg.status } : undefined,
-      }),
-      providesTags: ['Corrections'],
+    getAttendanceImports: builder.query<ApiSuccess<AttendanceImport[]>, void>({
+      query: () => '/api/v1/attendance/imports',
+      providesTags: ['AttendanceImports'],
     }),
-    submitAttendanceCorrection: builder.mutation<
-      ApiSuccess<AttendanceCorrection>,
-      { date: string; proposedIn: string; proposedOut: string; reason: string }
+    getAttendanceImport: builder.query<ApiSuccess<AttendanceImportDetail>, string>({
+      query: (id) => `/api/v1/attendance/imports/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'AttendanceImports', id }],
+    }),
+    getAttendanceImportCard: builder.query<
+      ApiSuccess<{ import: AttendanceImport; card: AttendanceReviewCard }>,
+      { id: string; employeeId: string }
     >({
-      query: (body) => ({ url: '/api/v1/attendance/corrections', method: 'POST', body }),
-      invalidatesTags: ['Corrections', 'Attendance'],
+      query: ({ id, employeeId }) => `/api/v1/attendance/imports/${id}/employees/${employeeId}`,
+      providesTags: (_r, _e, arg) => [{ type: 'AttendanceImports', id: arg.id }],
     }),
-    approveAttendanceCorrection: builder.mutation<ApiSuccess<AttendanceCorrection>, string>({
-      query: (id) => ({ url: `/api/v1/attendance/corrections/${id}/approve`, method: 'POST' }),
-      invalidatesTags: ['Corrections', 'Attendance'],
+    uploadAttendanceImport: builder.mutation<
+      ApiSuccess<AttendanceImportDetail>,
+      { period: string; fileName: string; contentBase64: string }
+    >({
+      query: (body) => ({ url: '/api/v1/attendance/imports', method: 'POST', body }),
+      invalidatesTags: ['AttendanceImports', 'Attendance'],
     }),
-    rejectAttendanceCorrection: builder.mutation<ApiSuccess<AttendanceCorrection>, string>({
-      query: (id) => ({ url: `/api/v1/attendance/corrections/${id}/reject`, method: 'POST' }),
-      invalidatesTags: ['Corrections', 'Attendance'],
+    decideAttendanceReview: builder.mutation<
+      ApiSuccess<AttendanceReviewDay>,
+      { id: string; action: 'FULL_LOP' | 'HALF_LOP' | 'NO_LOP' | 'EXCLUDE'; reason?: string }
+    >({
+      query: ({ id, ...body }) => ({ url: `/api/v1/attendance/reviews/${id}/decide`, method: 'POST', body }),
+      invalidatesTags: ['AttendanceImports'],
+    }),
+    confirmAttendanceImport: builder.mutation<ApiSuccess<AttendanceImportDetail>, string>({
+      query: (id) => ({ url: `/api/v1/attendance/imports/${id}/confirm`, method: 'POST' }),
+      invalidatesTags: ['AttendanceImports', 'Attendance'],
+    }),
+    rejectAttendanceImport: builder.mutation<ApiSuccess<AttendanceImport>, string>({
+      query: (id) => ({ url: `/api/v1/attendance/imports/${id}/reject`, method: 'POST' }),
+      invalidatesTags: ['AttendanceImports', 'Attendance'],
+    }),
+    deleteAttendanceImport: builder.mutation<ApiSuccess<{ deleted: boolean }>, string>({
+      query: (id) => ({ url: `/api/v1/attendance/imports/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['AttendanceImports', 'Attendance'],
+    }),
+    getPayrollRuns: builder.query<ApiSuccess<PayrollRun[]>, void>({
+      query: () => '/api/v1/payroll/runs',
+      providesTags: ['PayrollRuns'],
+    }),
+    getPayrollImports: builder.query<ApiSuccess<ConfirmedPayrollImport[]>, void>({
+      query: () => '/api/v1/payroll/imports',
+      providesTags: ['PayrollRuns'],
+    }),
+    getPayrollRun: builder.query<ApiSuccess<PayrollRunDetail>, string>({
+      query: (id) => `/api/v1/payroll/runs/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'PayrollRuns', id }],
+    }),
+    calculatePayroll: builder.mutation<ApiSuccess<PayrollRunDetail>, { importId: string }>({
+      query: (body) => ({ url: '/api/v1/payroll/calculate', method: 'POST', body }),
+      invalidatesTags: ['PayrollRuns'],
+    }),
+    publishPayroll: builder.mutation<ApiSuccess<PayrollRunDetail>, string>({
+      query: (id) => ({ url: `/api/v1/payroll/runs/${id}/publish`, method: 'POST' }),
+      invalidatesTags: ['PayrollRuns', 'Notifications'],
+    }),
+    getMyPayslips: builder.query<ApiSuccess<SalarySlip[]>, void>({
+      query: () => '/api/v1/payroll/slips/me',
+      providesTags: ['PayrollRuns'],
+    }),
+    getPayslip: builder.query<ApiSuccess<SalarySlip>, string>({
+      query: (id) => `/api/v1/payroll/slips/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'PayrollRuns', id }],
     }),
     getShifts: builder.query<ApiSuccess<Shift[]>, void>({
       query: () => '/api/v1/shifts',
@@ -565,7 +1096,7 @@ export const api = createApi({
     }),
     getReportsOverview: builder.query<
       ApiSuccess<ReportsOverview>,
-      { from?: string; to?: string; period?: string } | void
+      { from?: string; to?: string; period?: string; companyId?: string } | void
     >({
       query: (arg) => ({
         url: '/api/v1/reports/overview',
@@ -582,8 +1113,29 @@ export const {
   useGetEmployeesQuery,
   useGetEmployeeQuery,
   useCreateEmployeeMutation,
+  useSendWorkEmailOtpMutation,
+  useVerifyWorkEmailOtpMutation,
   useUpdateEmployeeMutation,
+  useUpdateEmployeeRolesMutation,
+  useUpdateEmployeeCompanyMutation,
+  useDeactivateEmployeeMutation,
+  useActivateEmployeeMutation,
+  useDeleteEmployeeMutation,
   useGetEmployeeAuditQuery,
+  useGetEmployeePayrollQuery,
+  useSaveEmployeeCompensationMutation,
+  useSaveEmployeePaymentMutation,
+  useGetDirectoryEditRequestsQuery,
+  useGetDirectoryEditRequestForEmployeeQuery,
+  useCreateDirectoryEditRequestMutation,
+  useApproveDirectoryEditRequestMutation,
+  useRejectDirectoryEditRequestMutation,
+  useCancelDirectoryEditRequestMutation,
+  useFulfillDirectoryEditRequestMutation,
+  useGetCompaniesQuery,
+  useCreateCompanyMutation,
+  useUpdateCompanyMutation,
+  useCreateCompanyLogoMutation,
   useGetDepartmentsQuery,
   useCreateDepartmentMutation,
   useGetDesignationsQuery,
@@ -618,19 +1170,64 @@ export const {
   useGetHolidaysQuery,
   useCreateHolidayMutation,
   useUpdateHolidayMutation,
+  useGetMyWorkPermissionsQuery,
+  useGetWorkPermissionsQuery,
+  useApplyWorkPermissionMutation,
+  useApproveWorkPermissionMutation,
+  useRejectWorkPermissionMutation,
   useGetAttendanceMeQuery,
-  usePunchInMutation,
-  usePunchOutMutation,
+  useGetWorkDayQuery,
+  useSubmitWorkDayMutation,
+  useGetWorkHistoryQuery,
+  useGetWorkOverviewQuery,
+  useGetWorkBoardQuery,
+  useGetWorkAnalyticsQuery,
+  useGetWorkSettingsQuery,
+  useUpdateWorkSettingsMutation,
+  useCreateWorkFeedbackMutation,
+  useGetWorkWeekQuery,
+  useGetWorkProjectsQuery,
+  useGetProjectMembersQuery,
+  useSetProjectMembersMutation,
+  useGetEmployeeWorkProjectsQuery,
+  useSetEmployeeWorkProjectsMutation,
+  useCreateWorkPriorityMutation,
+  useUpdateWorkPriorityMutation,
+  useCarryForwardWorkPriorityMutation,
+  useSubmitWorkPriorityMutation,
+  useSubmitAllWorkPrioritiesMutation,
+  useApproveWorkPriorityMutation,
+  useRequestWorkPriorityResubmitMutation,
+  useGetWeeklyWorkUpdateBoardQuery,
+  useGetWeeklyPptAdminBoardQuery,
+  useGetWeeklyPptGmSharesQuery,
+  useShareWeeklyPptToGmMutation,
+  useCreateWeeklyWorkUpdateUploadMutation,
+  useLazyGetWeeklyWorkUpdateDownloadQuery,
+  useCreateWorkProjectMutation,
   useGetAttendanceDayQuery,
-  useGetAttendanceCorrectionsQuery,
-  useSubmitAttendanceCorrectionMutation,
-  useApproveAttendanceCorrectionMutation,
-  useRejectAttendanceCorrectionMutation,
+  useGetAttendanceImportsQuery,
+  useGetAttendanceImportQuery,
+  useGetAttendanceImportCardQuery,
+  useUploadAttendanceImportMutation,
+  useDecideAttendanceReviewMutation,
+  useConfirmAttendanceImportMutation,
+  useRejectAttendanceImportMutation,
+  useDeleteAttendanceImportMutation,
+  useGetPayrollRunsQuery,
+  useGetPayrollImportsQuery,
+  useGetPayrollRunQuery,
+  useCalculatePayrollMutation,
+  usePublishPayrollMutation,
+  useGetMyPayslipsQuery,
+  useGetPayslipQuery,
   useGetShiftsQuery,
   useCreateShiftMutation,
   useUpdateShiftMutation,
   useGetShiftAssignmentsQuery,
   useCreateShiftAssignmentMutation,
+  useGetEmployeeWorkWeekQuery,
+  useSaveEmployeeWorkWeekMutation,
   useGetGrievancesQuery,
   useGetGrievanceCountsQuery,
   useGetGrievanceHandlersQuery,

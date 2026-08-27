@@ -17,6 +17,7 @@ import {
 import { EditIconButton } from '@/components/ui/edit-icon-button';
 import { IconButton } from '@/components/ui/icon-button';
 import { latestPolicyRules } from '@/features/leave/leave-rule-form';
+import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
   useCreateLeaveAllocationMutation,
@@ -32,22 +33,21 @@ import type { LeaveAllocation } from '@/types/api';
 export function EmployeeLeavesPanel({
   employeeId,
   canManage,
+  forStaffManager = false,
 }: {
   employeeId: string;
   canManage: boolean;
+  /** When true, copy explains allocating leave for another manager (not self-serve). */
+  forStaffManager?: boolean;
 }) {
-  const { data: allocationsData, isFetching } = useGetLeaveAllocationsQuery(
-    { employeeId },
-    { skip: !canManage },
-  );
-  const { data: typesData } = useGetLeaveTypesQuery(undefined, { skip: !canManage });
-  const { data: policiesData } = useGetLeavePoliciesQuery(undefined, { skip: !canManage });
+  const toast = useToast();
+  const { data: allocationsData, isFetching } = useGetLeaveAllocationsQuery({ employeeId });
+  const { data: typesData } = useGetLeaveTypesQuery();
+  const { data: policiesData } = useGetLeavePoliciesQuery();
   const { data: applicationsData } = useGetLeaveApplicationsQuery();
   const [createAllocation, { isLoading: creating }] = useCreateLeaveAllocationMutation();
   const [setAllocation, { isLoading: updating }] = useSetLeaveAllocationMutation();
   const [deleteAllocation, { isLoading: removing }] = useDeleteLeaveAllocationMutation();
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [leaveTypeId, setLeaveTypeId] = useState('');
   const [allocated, setAllocated] = useState('');
   const [editing, setEditing] = useState<LeaveAllocation | null>(null);
@@ -69,8 +69,6 @@ export function EmployeeLeavesPanel({
 
   async function onAllocate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setMessage(null);
     const formEl = event.currentTarget;
     try {
       await createAllocation({
@@ -79,18 +77,17 @@ export function EmployeeLeavesPanel({
         allocated: Number(daysValue),
         period,
       }).unwrap();
-      setMessage('Leave type allocated to this employee.');
+      toast.success('Leave type allocated.');
       formEl.reset();
       setAllocated('');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to allocate leave.'));
+      toast.error(apiErrorMessage(cause, 'Unable to allocate leave.'));
     }
   }
 
   async function onSaveEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editing) return;
-    setError(null);
     const form = new FormData(event.currentTarget);
     try {
       await setAllocation({
@@ -98,17 +95,18 @@ export function EmployeeLeavesPanel({
         allocated: Number(form.get('allocated') ?? 0),
       }).unwrap();
       setEditing(null);
+      toast.success('Leave allocation updated.');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to update allocation.'));
+      toast.error(apiErrorMessage(cause, 'Unable to update allocation.'));
     }
   }
 
   async function onDelete(row: LeaveAllocation) {
-    setError(null);
     try {
       await deleteAllocation(row.id).unwrap();
+      toast.success('Leave type removed.');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to remove this leave type.'));
+      toast.error(apiErrorMessage(cause, 'Unable to remove this leave type.'));
     }
   }
 
@@ -119,7 +117,9 @@ export function EmployeeLeavesPanel({
           <div>
             <Meta className="mb-1">Leave entitlements</Meta>
             <p className="text-sm text-muted">
-              Days default from the published leave type. Change them for this employee if needed.
+              {forStaffManager
+                ? 'Staff managers cannot allocate their own leave here. Add types and days so they can apply.'
+                : 'Days default from the published leave type. Change them for this employee if needed.'}
             </p>
           </div>
           <DataTable
@@ -192,8 +192,6 @@ export function EmployeeLeavesPanel({
               <Label htmlFor="period">Period (year)</Label>
               <Input id="period" name="period" value={period} readOnly />
             </div>
-            {error && !editing ? <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p> : null}
-            {message ? <p className="text-sm text-muted">{message}</p> : null}
             <Button type="submit" disabled={creating || addableTypes.length === 0}>
               {creating ? 'Allocating…' : 'Allocate leave type'}
             </Button>
@@ -228,7 +226,6 @@ export function EmployeeLeavesPanel({
                 <Label htmlFor="edit-allocated">Days allocated</Label>
                 <Input id="edit-allocated" name="allocated" type="number" min={0} step={0.5} defaultValue={editing.allocated} required />
               </div>
-              {error ? <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p> : null}
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => setEditing(null)}>
                   Cancel

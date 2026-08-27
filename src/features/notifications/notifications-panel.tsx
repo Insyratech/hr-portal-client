@@ -78,7 +78,9 @@ export function NotificationsPanel() {
                 }}
               >
                 <p className={`text-sm ${item.unread ? 'font-medium text-foreground' : 'text-muted'}`}>{item.title}</p>
-                <p className="mt-1 text-sm text-foreground">{item.message}</p>
+                {item.message && item.message !== item.title ? (
+                  <p className="mt-1 text-sm text-foreground">{item.message}</p>
+                ) : null}
                 <Meta className="mt-2">{new Date(item.createdAt).toLocaleString()}</Meta>
               </button>
             </li>

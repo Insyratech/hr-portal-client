@@ -13,6 +13,8 @@ import { StatusMessage } from '@/components/ui/status-message';
 import { leaveJourneySteps } from '@/features/leave/leave-journey';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
+import { useAppSelector } from '@/store/hooks';
+import { PERMISSIONS } from '@/types/permissions';
 import {
   useApproveLeaveMutation,
   useGetLeaveApplicationQuery,
@@ -38,6 +40,9 @@ export function LeaveReviewPage({ listHref }: { listHref: string }) {
   const row = data?.data;
   const busy = approving || rejecting || requesting;
   const pending = row?.status === 'PENDING';
+  const canDecide = useAppSelector((state) =>
+    state.permissions.permissions.includes(PERMISSIONS.LEAVE_APPROVE),
+  );
   const waitingHandover = Boolean(row?.handoverEmployeeId && !row.handoverAccepted);
 
   async function onApprove(): Promise<void> {
@@ -110,10 +115,15 @@ export function LeaveReviewPage({ listHref }: { listHref: string }) {
               : 'Not required'}
           </p>
           <LeaveJourney steps={leaveJourneySteps(row)} />
-          {pending && waitingHandover ? (
+          {pending && waitingHandover && canDecide ? (
             <p className="text-sm text-muted">Waiting for handover acceptance before you can approve.</p>
           ) : null}
-          {pending ? (
+          {pending && !canDecide ? (
+            <p className="text-sm text-muted">
+              HR Manager reviews leave. You can read this request, but you cannot approve or decline it.
+            </p>
+          ) : null}
+          {pending && canDecide ? (
             <div>
               <Label htmlFor="review-comment">Comment</Label>
               <textarea
@@ -126,7 +136,7 @@ export function LeaveReviewPage({ listHref }: { listHref: string }) {
               />
             </div>
           ) : null}
-          {pending ? (
+          {pending && canDecide ? (
             <div className="flex flex-wrap gap-3">
               <Button type="button" disabled={busy || waitingHandover} onClick={() => void onApprove()}>
                 {approving ? 'Approving' : 'Approve'}

@@ -14,6 +14,7 @@ export type LeaveRuleFormDefaults = {
   allowNegativeBalance: boolean;
   allowMultipleDays: boolean;
   active: boolean;
+  paid: boolean;
 };
 
 export function latestPolicyRules(policy: { activeVersion?: { rules: PolicyRules } | null; versions: { versionNumber: number; rules: PolicyRules }[] } | null | undefined): PolicyRules | undefined {
@@ -25,7 +26,15 @@ export function latestPolicyRules(policy: { activeVersion?: { rules: PolicyRules
 
 export function leaveRuleDefaults(
   rules: PolicyRules | undefined,
-  flags?: { requiresApproval?: boolean; requiresHandover?: boolean; requiresAttachment?: boolean; allowHalfDay?: boolean; allowMultipleDays?: boolean; active?: boolean },
+  flags?: {
+    requiresApproval?: boolean;
+    requiresHandover?: boolean;
+    requiresAttachment?: boolean;
+    allowHalfDay?: boolean;
+    allowMultipleDays?: boolean;
+    active?: boolean;
+    paid?: boolean;
+  },
 ): LeaveRuleFormDefaults {
   return {
     noticeValue: String(rules?.noticePeriod.value ?? 24),
@@ -41,6 +50,7 @@ export function leaveRuleDefaults(
     allowNegativeBalance: rules?.allowNegativeBalance ?? false,
     allowMultipleDays: flags?.allowMultipleDays ?? true,
     active: flags?.active ?? true,
+    paid: flags?.paid ?? true,
   };
 }
 

@@ -16,6 +16,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
 import { apiErrorMessage } from '@/lib/api-error';
+import { useAppSelector } from '@/store/hooks';
+import { PERMISSIONS } from '@/types/permissions';
 import { useCreateHolidayMutation, useGetHolidaysQuery, useUpdateHolidayMutation } from '@/store/api/api';
 import type { Holiday } from '@/types/api';
 
@@ -24,6 +26,9 @@ function dateInputValue(value: string) {
 }
 
 export default function HolidaysPage() {
+  const canManage = useAppSelector((state) =>
+    state.permissions.permissions.includes(PERMISSIONS.SYSTEM_MANAGE),
+  );
   const { data, isLoading } = useGetHolidaysQuery();
   const [createHoliday, { isLoading: saving }] = useCreateHolidayMutation();
   const [updateHoliday, { isLoading: updating }] = useUpdateHolidayMutation();
@@ -77,6 +82,7 @@ export default function HolidaysPage() {
       <p className="mb-6 max-w-2xl text-sm text-muted">
         Public holidays are skipped when counting leave days. Optional holidays do not block leave.
       </p>
+      {canManage ? (
       <form onSubmit={onSubmit} className="mb-8 grid max-w-3xl gap-4 rounded border border-border bg-background p-6 shadow-card sm:grid-cols-2">
         <div>
           <Label htmlFor="name">Name</Label>
@@ -107,6 +113,9 @@ export default function HolidaysPage() {
           </Button>
         </div>
       </form>
+      ) : (
+        <p className="mb-6 text-sm text-muted">HR Manager maintains holidays. This list is read-only.</p>
+      )}
       {error && !editing ? (
         <div className="mb-4">
           <StatusMessage tone="danger">{error}</StatusMessage>
@@ -119,18 +128,24 @@ export default function HolidaysPage() {
           { id: 'type', header: 'Type', cell: (row) => row.type },
           { id: 'region', header: 'Region', cell: (row) => row.region },
           { id: 'optional', header: 'Optional', cell: (row) => (row.optional ? 'Yes' : 'No') },
-          {
-            id: 'edit',
-            header: 'Edit',
-            cell: (row) => <EditIconButton label={`Edit ${row.name}`} onClick={() => setEditing(row)} />,
-          },
+          ...(canManage
+            ? [
+                {
+                  id: 'edit',
+                  header: 'Edit',
+                  cell: (row: Holiday) => (
+                    <EditIconButton label={`Edit ${row.name}`} onClick={() => setEditing(row)} />
+                  ),
+                },
+              ]
+            : []),
         ]}
         rows={data?.data ?? []}
         emptyTitle={isLoading ? 'Loading' : 'No holidays'}
         emptyDescription="Public holidays are skipped when counting leave days."
       />
 
-      <Dialog open={Boolean(editing)} onOpenChange={(open) => { if (!open) setEditing(null); }}>
+      <Dialog open={Boolean(editing) && canManage} onOpenChange={(open) => { if (!open) setEditing(null); }}>
         <DialogContent>
           <DialogTitle>Edit holiday</DialogTitle>
           <DialogDescription>Change the name, date, type, region, or optional flag.</DialogDescription>

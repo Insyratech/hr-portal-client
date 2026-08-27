@@ -86,6 +86,9 @@ export function LeaveRuleFields({
           balance (LOP)
         </label>
         <label className="flex items-center gap-2">
+          <input type="checkbox" name="paid" defaultChecked={defaults.paid} /> Paid (uncheck for LOP)
+        </label>
+        <label className="flex items-center gap-2">
           <input type="checkbox" name="active" defaultChecked={defaults.active} /> Active
         </label>
       </div>

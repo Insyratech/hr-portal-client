@@ -10,8 +10,6 @@ type UiState = {
     body: string;
     leaveId: string | null;
     leaveStatus: string | null;
-    correctionId: string | null;
-    correctionStatus: string | null;
     grievanceId: string | null;
     handoverAccepted: boolean;
   };
@@ -33,8 +31,6 @@ const initialState: UiState = {
     body: '',
     leaveId: null,
     leaveStatus: null,
-    correctionId: null,
-    correctionStatus: null,
     grievanceId: null,
     handoverAccepted: true,
   },
@@ -60,8 +56,6 @@ const uiSlice = createSlice({
         body: string;
         leaveId?: string;
         leaveStatus?: string;
-        correctionId?: string;
-        correctionStatus?: string;
         grievanceId?: string;
         handoverAccepted?: boolean;
       }>,
@@ -72,8 +66,6 @@ const uiSlice = createSlice({
         body: action.payload.body,
         leaveId: action.payload.leaveId ?? null,
         leaveStatus: action.payload.leaveStatus ?? null,
-        correctionId: action.payload.correctionId ?? null,
-        correctionStatus: action.payload.correctionStatus ?? null,
         grievanceId: action.payload.grievanceId ?? null,
         handoverAccepted: action.payload.handoverAccepted ?? true,
       };

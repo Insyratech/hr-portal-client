@@ -16,6 +16,7 @@ export function NamedEntityManager({
   isLoading,
   isError,
   onCreate,
+  canManage = true,
 }: {
   kicker: string;
   title: string;
@@ -23,6 +24,7 @@ export function NamedEntityManager({
   isLoading: boolean;
   isError: boolean;
   onCreate: (input: { name: string; code: string }) => Promise<unknown>;
+  canManage?: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -53,6 +55,7 @@ export function NamedEntityManager({
   return (
     <>
       <PageHeader kicker={kicker} title={title} />
+      {canManage ? (
       <form onSubmit={onSubmit} className="mb-8 grid max-w-xl gap-4 sm:grid-cols-3">
         <div className="sm:col-span-1">
           <Label htmlFor="name">Name</Label>
@@ -68,6 +71,9 @@ export function NamedEntityManager({
           </Button>
         </div>
       </form>
+      ) : (
+        <p className="mb-6 text-sm text-muted">HR Manager maintains this list. This view is read-only.</p>
+      )}
       {error ? <p className="mb-4 text-sm">{error}</p> : null}
       {isError ? <p className="mb-4 text-sm">Unable to load records.</p> : null}
       <DataTable

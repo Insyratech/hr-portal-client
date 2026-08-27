@@ -16,6 +16,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
 import { apiErrorMessage } from '@/lib/api-error';
+import { useAppSelector } from '@/store/hooks';
+import { PERMISSIONS } from '@/types/permissions';
 import {
   useCreateShiftAssignmentMutation,
   useCreateShiftMutation,
@@ -31,6 +33,9 @@ function timeInputValue(value: string) {
 }
 
 export default function ShiftsPage() {
+  const canManage = useAppSelector((state) =>
+    state.permissions.permissions.includes(PERMISSIONS.SHIFTS_MANAGE),
+  );
   const { data: shifts, isLoading } = useGetShiftsQuery();
   const { data: assignments } = useGetShiftAssignmentsQuery();
   const { data: employees } = useGetEmployeesQuery();
@@ -107,6 +112,8 @@ export default function ShiftsPage() {
         Shift times live on the shift definition, not on the employee row. Assign employees below.
       </p>
 
+      {canManage ? (
+        <>
       <form onSubmit={onCreateShift} className="mb-10 grid max-w-3xl gap-4 rounded border border-border bg-background p-6 shadow-card sm:grid-cols-3">
         <div>
           <Label htmlFor="name">Name</Label>
@@ -169,6 +176,10 @@ export default function ShiftsPage() {
           </Button>
         </div>
       </form>
+        </>
+      ) : (
+        <p className="mb-6 text-sm text-muted">HR Manager maintains shifts and assignments. This list is read-only.</p>
+      )}
 
       {error && !editing ? (
         <div className="mb-4">
@@ -182,11 +193,17 @@ export default function ShiftsPage() {
           { id: 'window', header: 'Window', cell: (row) => `${timeInputValue(row.startTime)}–${timeInputValue(row.endTime)}` },
           { id: 'min', header: 'Required', cell: (row) => `${row.minimumDurationMinutes}m` },
           { id: 'flexible', header: 'Flexible', cell: (row) => (row.flexible ? 'Yes' : 'No') },
-          {
-            id: 'edit',
-            header: 'Edit',
-            cell: (row) => <EditIconButton label={`Edit ${row.name}`} onClick={() => setEditing(row)} />,
-          },
+          ...(canManage
+            ? [
+                {
+                  id: 'edit',
+                  header: 'Edit',
+                  cell: (row: Shift) => (
+                    <EditIconButton label={`Edit ${row.name}`} onClick={() => setEditing(row)} />
+                  ),
+                },
+              ]
+            : []),
         ]}
         rows={shifts?.data ?? []}
         emptyTitle={isLoading ? 'Loading' : 'No shifts'}
@@ -202,11 +219,11 @@ export default function ShiftsPage() {
           ]}
           rows={assignments?.data ?? []}
           emptyTitle="No assignments"
-          emptyDescription="Assign a shift so employees can punch."
+          emptyDescription="Assign a shift so attendance rules apply for this employee."
         />
       </div>
 
-      <Dialog open={Boolean(editing)} onOpenChange={(open) => { if (!open) setEditing(null); }}>
+      <Dialog open={Boolean(editing) && canManage} onOpenChange={(open) => { if (!open) setEditing(null); }}>
         <DialogContent>
           <DialogTitle>Edit shift</DialogTitle>
           <DialogDescription>Times belong to the shift definition. Existing assignments keep this shift.</DialogDescription>

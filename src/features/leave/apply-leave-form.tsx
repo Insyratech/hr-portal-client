@@ -25,27 +25,45 @@ function dateValue(value: string): string {
 export function ApplyLeaveForm({
   editing,
   onCancelEdit,
+  onApplied,
+  variant = 'page',
 }: {
   editing?: LeaveApplication | null;
   onCancelEdit?: () => void;
+  onApplied?: () => void;
+  variant?: 'page' | 'dialog';
 }) {
   const { data: types } = useGetLeaveTypesQuery();
   const { data: balances } = useGetLeaveBalancesQuery();
   const { data: policies } = useGetLeavePoliciesQuery();
-  const { data: colleagues } = useGetLeaveColleaguesQuery();
   const [applyLeave, { isLoading: applying }] = useApplyLeaveMutation();
   const [updateLeave, { isLoading: saving }] = useUpdateLeaveMutation();
   const [leaveTypeId, setLeaveTypeId] = useState(editing?.leaveTypeId ?? '');
   const [duration, setDuration] = useState<'full' | 'half'>(editing?.duration ?? 'full');
+  const [startDate, setStartDate] = useState(editing ? dateValue(editing.startDate) : '');
+  const [endDate, setEndDate] = useState(editing ? dateValue(editing.endDate) : '');
+  const [handoverEmployeeId, setHandoverEmployeeId] = useState(editing?.handoverEmployeeId ?? '');
   const [message, setMessage] = useState<{ tone: StatusTone; text: string } | null>(null);
   const toast = useToast();
   const isLoading = applying || saving;
+  const rangeEnd = duration === 'half' ? startDate : endDate || startDate;
+  const { data: colleagues } = useGetLeaveColleaguesQuery(startDate ? { startDate, endDate: rangeEnd } : undefined);
 
   useEffect(() => {
     if (!editing) return;
     setLeaveTypeId(editing.leaveTypeId);
     setDuration(editing.duration);
+    setStartDate(dateValue(editing.startDate));
+    setEndDate(dateValue(editing.endDate));
+    setHandoverEmployeeId(editing.handoverEmployeeId ?? '');
   }, [editing]);
+
+  useEffect(() => {
+    const selected = (colleagues?.data ?? []).find((item) => item.id === handoverEmployeeId);
+    if (selected && !selected.available) {
+      setHandoverEmployeeId('');
+    }
+  }, [colleagues, handoverEmployeeId]);
 
   const allocatedTypeIds = new Set((balances?.data ?? []).map((item) => item.leaveTypeId));
   const activeTypes = (types?.data ?? []).filter(
@@ -84,17 +102,17 @@ export function ApplyLeaveForm({
     setMessage(null);
     const formEl = event.currentTarget;
     const form = new FormData(formEl);
-    const startDate = String(form.get('startDate') ?? '');
-    const endDate = duration === 'half' ? startDate : String(form.get('endDate') ?? startDate);
+    const start = String(form.get('startDate') ?? startDate);
+    const end = duration === 'half' ? start : String(form.get('endDate') ?? (endDate || start));
     const body = {
       leaveTypeId: selectedType?.id ?? '',
-      startDate,
-      endDate,
+      startDate: start,
+      endDate: end,
       duration,
       reason: String(form.get('reason') ?? '') || undefined,
-      handoverEmployeeId: needsHandover ? String(form.get('handoverEmployeeId') ?? '') : undefined,
+      handoverEmployeeId: needsHandover ? handoverEmployeeId || undefined : undefined,
       handover: needsHandover
-        ? (colleagues?.data ?? []).find((item) => item.id === String(form.get('handoverEmployeeId') ?? ''))?.fullName
+        ? (colleagues?.data ?? []).find((item) => item.id === handoverEmployeeId)?.fullName
         : undefined,
       attachmentUrl: String(form.get('attachmentUrl') ?? '') || undefined,
     };
@@ -102,15 +120,28 @@ export function ApplyLeaveForm({
       toast.warning('Select a leave type first.');
       return;
     }
+    if (needsHandover) {
+      const colleague = (colleagues?.data ?? []).find((item) => item.id === handoverEmployeeId);
+      if (!colleague) {
+        toast.warning('Select a colleague to take handover.');
+        return;
+      }
+      if (!colleague.available) {
+        toast.warning('That colleague is on leave then. Choose someone who is at work.');
+        return;
+      }
+    }
     try {
       if (editing) {
         await updateLeave({ id: editing.id, body }).unwrap();
         toast.success('Leave request updated.');
         onCancelEdit?.();
+        onApplied?.();
       } else {
         await applyLeave(body).unwrap();
         toast.success('Leave request submitted.');
         formEl.reset();
+        onApplied?.();
       }
     } catch (error) {
       const text = apiErrorMessage(error, editing ? 'Unable to update leave.' : 'Unable to apply for leave.');
@@ -123,7 +154,9 @@ export function ApplyLeaveForm({
     <form
       key={editing?.id ?? 'new'}
       onSubmit={onSubmit}
-      className="max-w-md space-y-6 border border-border bg-background p-6 shadow-card"
+      className={
+        variant === 'dialog' ? 'space-y-6' : 'max-w-md space-y-6 border border-border bg-background p-6 shadow-card'
+      }
     >
       <p className="text-xs uppercase tracking-[0.2em] text-muted">{editing ? 'Edit leave' : ruleLine}</p>
       {activeTypes.length === 0 ? (
@@ -148,12 +181,26 @@ export function ApplyLeaveForm({
       </div>
       <div>
         <Label htmlFor="startDate">Start date</Label>
-        <Input id="startDate" name="startDate" type="date" required defaultValue={editing ? dateValue(editing.startDate) : ''} />
+        <Input
+          id="startDate"
+          name="startDate"
+          type="date"
+          required
+          value={startDate}
+          onChange={(event) => setStartDate(event.target.value)}
+        />
       </div>
       {duration === 'full' ? (
         <div>
           <Label htmlFor="endDate">End date</Label>
-          <Input id="endDate" name="endDate" type="date" required defaultValue={editing ? dateValue(editing.endDate) : ''} />
+          <Input
+            id="endDate"
+            name="endDate"
+            type="date"
+            required
+            value={endDate}
+            onChange={(event) => setEndDate(event.target.value)}
+          />
         </div>
       ) : null}
       <div>
@@ -183,17 +230,23 @@ export function ApplyLeaveForm({
             name="handoverEmployeeId"
             className="h-10 w-full rounded border border-border bg-background px-3 text-sm shadow-card outline-none"
             required
-            defaultValue={editing?.handoverEmployeeId ?? ''}
+            value={handoverEmployeeId}
+            onChange={(event) => setHandoverEmployeeId(event.target.value)}
           >
             <option value="" disabled>
-              Select colleague
+              {startDate ? 'Select colleague at work' : 'Pick leave dates first'}
             </option>
             {(colleagues?.data ?? []).map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.fullName}
+              <option key={item.id} value={item.id} disabled={!item.available}>
+                {item.available
+                  ? item.fullName
+                  : `${item.fullName} · on leave ${item.leaveDates ?? ''}`}
               </option>
             ))}
           </select>
+          {startDate ? (
+            <p className="mt-2 text-sm text-muted">Colleagues on leave for these dates cannot take handover.</p>
+          ) : null}
         </div>
       ) : null}
       {needsAttachment ? (

@@ -53,7 +53,7 @@ export function GrievanceDrawerPanel({ grievanceId }: { grievanceId: string }) {
     const form = event.currentTarget;
     const assigneeId = String(new FormData(form).get('assigneeId') ?? '');
     if (!assigneeId) {
-      toast.warning(canManage ? 'Select a person to assign.' : 'Select Admin or Super Admin to forward.');
+      toast.warning(canManage ? 'Select a person to assign.' : 'Select an HR Manager to forward.');
       return;
     }
     try {
@@ -121,7 +121,7 @@ export function GrievanceDrawerPanel({ grievanceId }: { grievanceId: string }) {
     ? (employees?.data ?? []).map((item) => ({ id: item.id, label: item.fullName }))
     : (handlers?.data ?? []).map((item) => ({
         id: item.employeeId,
-        label: `${item.fullName} (${item.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'})`,
+        label: `${item.fullName} (${item.role === 'HR_MANAGER' ? 'HR Manager' : item.role})`,
       }));
 
   return (
@@ -154,7 +154,7 @@ export function GrievanceDrawerPanel({ grievanceId }: { grievanceId: string }) {
 
       {staff ? (
         <form onSubmit={onAssign} className="space-y-3 border-t border-border pt-4">
-          <Label htmlFor="assigneeId">{canManage ? 'Assign investigator' : 'Escalate to Admin or Super Admin'}</Label>
+          <Label htmlFor="assigneeId">{canManage ? 'Assign investigator' : 'Escalate to HR Manager'}</Label>
           <select
             id="assigneeId"
             name="assigneeId"
@@ -168,9 +168,9 @@ export function GrievanceDrawerPanel({ grievanceId }: { grievanceId: string }) {
               </option>
             ))}
           </select>
-          {handlersFailed ? <StatusMessage tone="danger">Unable to load Admin / Super Admin list.</StatusMessage> : null}
+          {handlersFailed ? <StatusMessage tone="danger">Unable to load HR Manager list.</StatusMessage> : null}
           {assignOptions.length === 0 && !handlersFailed ? (
-            <p className="text-sm text-muted">No Admin or Super Admin is available to forward to.</p>
+            <p className="text-sm text-muted">No HR Manager is available to forward to.</p>
           ) : null}
           <Button type="submit" size="sm" disabled={assigning || assignOptions.length === 0}>
             {canManage ? 'Assign' : 'Forward'}
@@ -200,7 +200,7 @@ export function GrievanceDrawerPanel({ grievanceId }: { grievanceId: string }) {
         {staff ? (
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="visibility" value="INTERNAL" />
-            Internal note (Admin / Super Admin only)
+            Internal note (HR Manager only)
           </label>
         ) : null}
         <p className="text-xs text-muted">

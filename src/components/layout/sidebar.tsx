@@ -2,15 +2,27 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { ReactNode } from 'react';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import {
-  ADMIN_NAV,
-  MY_WORK_NAV,
-  SUPER_ADMIN_ATTENDANCE_NAV,
-  SUPER_ADMIN_GRIEVANCE_NAV,
-  SUPER_ADMIN_LEAVE_NAV,
+  CSO_OVERVIEW_NAV,
+  CSO_WORK_NAV,
+  FINANCE_OVERVIEW_NAV,
+  GM_ATTENDANCE_NAV,
+  GM_LEAVE_NAV,
+  GM_OVERVIEW_NAV,
+  GM_WORK_NAV,
+  HR_LEAVE_NAV,
+  HR_OPS_NAV,
+  HR_ORG_NAV,
+  HR_OVERVIEW_NAV,
+  HR_WORK_NAV,
+  MY_WORK_ACCOUNT_NAV,
+  MY_WORK_DOCS_NAV,
+  MY_WORK_TIME_NAV,
+  MY_WORK_WORK_NAV,
   SUPER_ADMIN_ORG_NAV,
   SUPER_ADMIN_OVERVIEW_NAV,
   SUPER_ADMIN_POLICIES_NAV,
@@ -19,12 +31,13 @@ import {
   type NavItem,
 } from '@/constants/nav';
 import { cn } from '@/lib/utils';
+import type { ShellVariant } from '@/features/auth/role-access';
+import { isWorkLoopNavHref, skipsWorkApprovalLoop } from '@/features/work/work-loop';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toggleSidebar } from '@/store/slices/ui-slice';
 
 function NavLinks({ items, collapsed }: { items: readonly NavItem[]; collapsed: boolean }) {
   const pathname = usePathname();
-
   return (
     <ul className="space-y-1">
       {items.map((item) => {
@@ -35,9 +48,7 @@ function NavLinks({ items, collapsed }: { items: readonly NavItem[]; collapsed: 
               href={item.href}
               className={cn(
                 'flex items-center gap-3 rounded px-3 py-2.5 text-sm transition-colors',
-                active
-                  ? 'bg-foreground text-background'
-                  : 'text-foreground hover:bg-surface',
+                active ? 'bg-foreground text-background' : 'text-foreground hover:bg-surface',
                 collapsed && 'justify-center px-2',
               )}
               title={item.label}
@@ -61,6 +72,7 @@ function NavGroup({
   items: readonly NavItem[];
   collapsed: boolean;
 }) {
+  if (items.length === 0) return null;
   return (
     <div className="space-y-2">
       {collapsed ? null : <Meta className="px-3">{label}</Meta>}
@@ -69,7 +81,84 @@ function NavGroup({
   );
 }
 
-export function Sidebar({ variant }: { variant: 'admin' | 'super-admin' }) {
+/** Major sidebar block: Managerial responsibility vs Employee. */
+function NavSection({
+  title,
+  collapsed,
+  children,
+}: {
+  title: string;
+  collapsed: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-5">
+      {collapsed ? (
+        <div className="mx-auto h-px w-6 bg-border" aria-hidden />
+      ) : (
+        <p className="px-3 text-[11px] font-medium uppercase tracking-[0.16em] text-foreground">{title}</p>
+      )}
+      <div className="space-y-5">{children}</div>
+    </section>
+  );
+}
+
+function EmployeeNavGroups({ collapsed }: { collapsed: boolean }) {
+  const roles = useAppSelector((state) => state.auth.user?.roles ?? []);
+  const skipLoop = skipsWorkApprovalLoop(roles);
+  const workItems = skipLoop
+    ? MY_WORK_WORK_NAV.filter((item) => !isWorkLoopNavHref(item.href))
+    : MY_WORK_WORK_NAV;
+  return (
+    <>
+      <NavGroup label="My work" items={workItems} collapsed={collapsed} />
+      <NavGroup label="Time off" items={MY_WORK_TIME_NAV} collapsed={collapsed} />
+      <NavGroup label="Pay & docs" items={MY_WORK_DOCS_NAV} collapsed={collapsed} />
+      <NavGroup label="Account" items={MY_WORK_ACCOUNT_NAV} collapsed={collapsed} />
+    </>
+  );
+}
+
+function ManagerialNavGroups({
+  variant,
+  collapsed,
+}: {
+  variant: Exclude<ShellVariant, 'employee' | 'super-admin'>;
+  collapsed: boolean;
+}) {
+  if (variant === 'hr') {
+    return (
+      <>
+        <NavGroup label="Overview" items={HR_OVERVIEW_NAV} collapsed={collapsed} />
+        <NavGroup label="Organization" items={HR_ORG_NAV} collapsed={collapsed} />
+        <NavGroup label="Leave" items={HR_LEAVE_NAV} collapsed={collapsed} />
+        <NavGroup label="Operations" items={HR_OPS_NAV} collapsed={collapsed} />
+        <NavGroup label="Work" items={HR_WORK_NAV} collapsed={collapsed} />
+      </>
+    );
+  }
+  if (variant === 'gm' || variant === 'admin') {
+    return (
+      <>
+        <NavGroup label="Overview" items={GM_OVERVIEW_NAV} collapsed={collapsed} />
+        <NavGroup label="Attendance" items={GM_ATTENDANCE_NAV} collapsed={collapsed} />
+        <NavGroup label="Leave" items={GM_LEAVE_NAV} collapsed={collapsed} />
+        <NavGroup label="Work" items={GM_WORK_NAV} collapsed={collapsed} />
+      </>
+    );
+  }
+  if (variant === 'cso') {
+    return (
+      <>
+        <NavGroup label="Overview" items={CSO_OVERVIEW_NAV} collapsed={collapsed} />
+        <NavGroup label="Work" items={CSO_WORK_NAV} collapsed={collapsed} />
+      </>
+    );
+  }
+  return <NavGroup label="Overview" items={FINANCE_OVERVIEW_NAV} collapsed={collapsed} />;
+}
+
+export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'> }) {
   const collapsed = useAppSelector((state) => state.ui.sidebarCollapsed);
   const dispatch = useAppDispatch();
 
@@ -98,19 +187,22 @@ export function Sidebar({ variant }: { variant: 'admin' | 'super-admin' }) {
           <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} />
         </Button>
       </div>
-      <nav className="flex-1 space-y-8 overflow-y-auto px-2 py-6">
-        <NavGroup label="My work" items={MY_WORK_NAV} collapsed={collapsed} />
-        {variant === 'admin' ? (
-          <NavGroup label="Admin" items={ADMIN_NAV} collapsed={collapsed} />
-        ) : (
+      <nav className="flex-1 space-y-10 overflow-y-auto px-2 py-6">
+        {variant === 'super-admin' ? (
           <>
             <NavGroup label="Overview" items={SUPER_ADMIN_OVERVIEW_NAV} collapsed={collapsed} />
-            <NavGroup label="Leave" items={SUPER_ADMIN_LEAVE_NAV} collapsed={collapsed} />
-            <NavGroup label="Grievances" items={SUPER_ADMIN_GRIEVANCE_NAV} collapsed={collapsed} />
-            <NavGroup label="Attendance" items={SUPER_ADMIN_ATTENDANCE_NAV} collapsed={collapsed} />
             <NavGroup label="Organization" items={SUPER_ADMIN_ORG_NAV} collapsed={collapsed} />
             <NavGroup label="Policies" items={SUPER_ADMIN_POLICIES_NAV} collapsed={collapsed} />
             <NavGroup label="System" items={SUPER_ADMIN_SYSTEM_NAV} collapsed={collapsed} />
+          </>
+        ) : (
+          <>
+            <NavSection title="Managerial responsibility" collapsed={collapsed}>
+              <ManagerialNavGroups variant={variant} collapsed={collapsed} />
+            </NavSection>
+            <NavSection title="Employee" collapsed={collapsed}>
+              <EmployeeNavGroups collapsed={collapsed} />
+            </NavSection>
           </>
         )}
       </nav>

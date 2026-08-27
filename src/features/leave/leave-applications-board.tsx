@@ -8,6 +8,8 @@ import { StatusBadge } from '@/components/dashboard/status-badge';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import { useGetLeaveApplicationsQuery } from '@/store/api/api';
+import { useAppSelector } from '@/store/hooks';
+import { PERMISSIONS } from '@/types/permissions';
 
 const STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] as const;
 
@@ -26,6 +28,9 @@ function LeaveApplicationsBoardBody({ kicker, reviewBase }: { kicker: string; re
     ? (statusParam as (typeof STATUSES)[number])
     : 'PENDING';
   const { data, isLoading } = useGetLeaveApplicationsQuery({ status });
+  const canDecide = useAppSelector((state) =>
+    state.permissions.permissions.includes(PERMISSIONS.LEAVE_APPROVE),
+  );
   const rows = data?.data ?? [];
 
   useEffect(() => {
@@ -62,10 +67,10 @@ function LeaveApplicationsBoardBody({ kicker, reviewBase }: { kicker: string; re
           },
           {
             id: 'review',
-            header: 'Review',
+            header: canDecide ? 'Review' : 'View',
             cell: (row) => (
               <Button asChild size="sm" variant="outline">
-                <Link href={`${reviewBase}/${row.id}`}>Review</Link>
+                <Link href={`${reviewBase}/${row.id}`}>{canDecide ? 'Review' : 'View'}</Link>
               </Button>
             ),
           },

@@ -2,16 +2,50 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ADMIN_NAV, MY_WORK_NAV, SUPER_ADMIN_CONFIG_NAV, SUPER_ADMIN_OVERVIEW_NAV, isNavActive } from '@/constants/nav';
+import {
+  CSO_NAV,
+  FINANCE_NAV,
+  GM_NAV,
+  HR_NAV,
+  MY_WORK_ACCOUNT_NAV,
+  MY_WORK_DOCS_NAV,
+  MY_WORK_TIME_NAV,
+  MY_WORK_WORK_NAV,
+  SUPER_ADMIN_CONFIG_NAV,
+  SUPER_ADMIN_OVERVIEW_NAV,
+  isNavActive,
+  type NavItem,
+} from '@/constants/nav';
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
+import type { ShellVariant } from '@/features/auth/role-access';
+import { isWorkLoopNavHref, skipsWorkApprovalLoop } from '@/features/work/work-loop';
+import { useAppSelector } from '@/store/hooks';
 
-export function MobileSectionNav({ variant }: { variant: 'admin' | 'super-admin' }) {
+function personalNav(roles: string[]): NavItem[] {
+  const work = skipsWorkApprovalLoop(roles)
+    ? MY_WORK_WORK_NAV.filter((item) => !isWorkLoopNavHref(item.href))
+    : MY_WORK_WORK_NAV;
+  return [...work, ...MY_WORK_TIME_NAV, ...MY_WORK_DOCS_NAV, ...MY_WORK_ACCOUNT_NAV];
+}
+
+function itemsFor(variant: Exclude<ShellVariant, 'employee'>, roles: string[]) {
+  if (variant === 'super-admin') {
+    return [...SUPER_ADMIN_OVERVIEW_NAV, ...SUPER_ADMIN_CONFIG_NAV];
+  }
+  // Managerial tools first, then personal employee tools (matches desktop sidebar).
+  const personal = personalNav(roles);
+  if (variant === 'hr') return [...HR_NAV, ...personal];
+  if (variant === 'gm' || variant === 'admin') return [...GM_NAV, ...personal];
+  if (variant === 'cso') return [...CSO_NAV, ...personal];
+  if (variant === 'finance') return [...FINANCE_NAV, ...personal];
+  return [...SUPER_ADMIN_OVERVIEW_NAV, ...SUPER_ADMIN_CONFIG_NAV];
+}
+
+export function MobileSectionNav({ variant }: { variant: Exclude<ShellVariant, 'employee'> }) {
   const pathname = usePathname();
-  const items =
-    variant === 'admin'
-      ? [...MY_WORK_NAV, ...ADMIN_NAV]
-      : [...MY_WORK_NAV, ...SUPER_ADMIN_OVERVIEW_NAV, ...SUPER_ADMIN_CONFIG_NAV];
+  const roles = useAppSelector((state) => state.auth.user?.roles ?? []);
+  const items = itemsFor(variant, roles);
 
   return (
     <nav className="border-b border-border bg-background md:hidden">

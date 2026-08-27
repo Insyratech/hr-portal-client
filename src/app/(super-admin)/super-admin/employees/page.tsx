@@ -14,13 +14,17 @@ export default function SuperAdminEmployeesPage() {
     <>
       <PageHeader
         kicker="Organization"
-        title="Employees"
+        title="Accounts"
         actions={
           <Button asChild>
-            <Link href="/super-admin/employees/new">Add employee</Link>
+            <Link href="/super-admin/employees/new">New employee</Link>
           </Button>
         }
       />
+      <p className="mb-4 max-w-2xl text-sm text-muted">
+        Create people as employees first (personal details + login). HR sets company, shift, leave, and pay. Assign
+        HR / GM / CSO / Finance on their profile when needed. Personal details stay locked until HR requests an edit.
+      </p>
       {isError ? <p className="mb-4 text-sm">Unable to load employees.</p> : null}
       <DataTable
         columns={[
@@ -41,12 +45,13 @@ export default function SuperAdminEmployeesPage() {
             cell: (row) => row.roleCodes.join(', ') || '—',
           },
           { id: 'department', header: 'Department', cell: (row) => row.departmentName ?? '—' },
+          { id: 'company', header: 'Company', cell: (row) => row.companyName ?? '—' },
           { id: 'status', header: 'Status', cell: (row) => row.status },
         ]}
         rows={rows}
         emptyTitle={isFetching ? 'Loading' : 'No employees'}
         emptyDescription={
-          isFetching ? 'Fetching the directory.' : 'Onboard the first employee with a temporary login password.'
+          isFetching ? 'Fetching the directory.' : 'Create the first person with New employee.'
         }
       />
     </>

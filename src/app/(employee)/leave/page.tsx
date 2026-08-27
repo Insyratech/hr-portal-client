@@ -1,24 +1,30 @@
 'use client';
 
 import { useState, Suspense, useEffect, useRef } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ApplyLeaveForm } from '@/features/leave/apply-leave-form';
 import { HandoverReviewCard } from '@/features/leave/handover-review-card';
+import { HandoversTakenList } from '@/features/leave/handovers-taken';
+import { takenHandovers } from '@/features/leave/leave-presence';
 import { leaveJourneySteps } from '@/features/leave/leave-journey';
+import { LeaveStats } from '@/features/leave/leave-stats';
 import { LeaveJourney } from '@/components/leave/leave-journey';
+import { LeaveBalanceCard } from '@/components/leave/leave-balance-card';
 import { DataTable } from '@/components/dashboard/data-table';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import {
   useCancelLeaveMutation,
   useGetLeaveApplicationsQuery,
+  useGetLeaveBalancesQuery,
   useGetMeQuery,
 } from '@/store/api/api';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
+import type { LeaveApplication } from '@/types/api';
 
 function tone(status: string): 'pending' | 'approved' | 'rejected' {
   if (status === 'APPROVED') return 'approved';
@@ -32,9 +38,11 @@ function LeavePageBody() {
   const focusId = searchParams.get('applicationId');
   const { data: me } = useGetMeQuery();
   const { data } = useGetLeaveApplicationsQuery();
+  const { data: balanceData } = useGetLeaveBalancesQuery();
   const [cancelLeave, { isLoading }] = useCancelLeaveMutation();
   const toast = useToast();
   const [editing, setEditing] = useState<LeaveApplication | null>(null);
+  const [applyOpen, setApplyOpen] = useState(false);
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const myId = me?.data.employeeId;
 
@@ -51,15 +59,27 @@ function LeavePageBody() {
     if (!focusId) return;
     rowRefs.current[focusId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [focusId, data]);
+
+  useEffect(() => {
+    if (searchParams.get('apply') !== '1') return;
+    setApplyOpen(true);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete('apply');
+    const query = next.toString();
+    router.replace(query ? `/leave?${query}` : '/leave');
+  }, [router, searchParams]);
+
   const mine = (data?.data ?? []).filter((row) => row.employeeId === myId);
   const openMine = mine.filter((row) => row.status === 'PENDING' || row.status === 'APPROVED');
   const handoverInbox = (data?.data ?? []).filter(
     (row) => row.handoverEmployeeId === myId && !row.handoverAccepted && row.status === 'PENDING',
   );
+  const covering = takenHandovers(data?.data ?? [], myId);
+  const balances = (balanceData?.data ?? []).map((item) => ({ code: item.code, days: item.available }));
 
   return (
     <>
-      <PageHeader kicker="Leave" title="Apply leave" />
+      <PageHeader kicker="Leave" title="Leave" />
       {handoverInbox.length > 0 ? (
         <section className="mb-10 space-y-4">
           <Meta>Handover requests</Meta>
@@ -75,6 +95,7 @@ function LeavePageBody() {
           ))}
         </section>
       ) : null}
+      <HandoversTakenList items={covering} />
       {openMine.length > 0 ? (
         <section className="mb-10 space-y-4">
           <Meta>Leave status</Meta>
@@ -106,82 +127,102 @@ function LeavePageBody() {
                   {row.reviewerComment}
                 </p>
               ) : null}
-              {editing?.id === row.id ? (
-                <div className="mt-6">
-                  <ApplyLeaveForm editing={row} onCancelEdit={() => setEditing(null)} />
-                </div>
-              ) : null}
             </div>
           ))}
         </section>
       ) : null}
-      {editing ? null : <ApplyLeaveForm />}
-      <div className="mt-10">
-        <DataTable
-          columns={[
-            { id: 'type', header: 'Type', cell: (row) => row.leaveTypeCode ?? '—' },
-            { id: 'dates', header: 'Dates', cell: (row) => `${row.startDate} – ${row.endDate}` },
-            { id: 'qty', header: 'Days', cell: (row) => row.quantity },
-            {
-              id: 'status',
-              header: 'Status',
-              cell: (row) => <StatusBadge status={tone(row.status)} label={row.status} />,
-            },
-            {
-              id: 'handover',
-              header: 'Handover',
-              cell: (row) =>
-                row.handoverEmployeeId === myId && !row.handoverAccepted && row.status === 'PENDING' ? (
-                  <Button asChild size="sm">
-                    <Link href={`/leave/handover/${row.id}`}>Review and accept</Link>
-                  </Button>
-                ) : row.handoverEmployeeName ? (
-                  `${row.handoverEmployeeName}${row.handoverAccepted ? ' · accepted' : ' · waiting'}`
-                ) : (
-                  '—'
-                ),
-            },
-            {
-              id: 'edit',
-              header: 'Edit',
-              cell: (row) =>
-                row.status === 'PENDING' && row.employeeId === myId ? (
-                  <Button type="button" size="sm" variant="outline" onClick={() => setEditing(row)}>
-                    Edit
-                  </Button>
-                ) : (
-                  '—'
-                ),
-            },
-            {
-              id: 'cancel',
-              header: 'Cancel',
-              cell: (row) =>
-                (row.status === 'PENDING' || row.status === 'APPROVED') && row.employeeId === myId ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={isLoading}
-                    onClick={() => {
-                      void cancelLeave(row.id)
-                        .unwrap()
-                        .then(() => toast.success('Leave cancelled.'))
-                        .catch((cause) => toast.error(apiErrorMessage(cause, 'Unable to cancel leave.')));
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                ) : (
-                  '—'
-                ),
-            },
-          ]}
-          rows={data?.data ?? []}
-          emptyTitle="No applications"
-          emptyDescription="Your leave requests will appear here."
-        />
+      <LeaveStats items={mine} />
+      <div className="mb-10">
+        <LeaveBalanceCard items={balances} />
       </div>
+      <Button type="button" className="mb-10" onClick={() => setApplyOpen(true)}>
+        Apply leave
+      </Button>
+      <DataTable
+        columns={[
+          { id: 'type', header: 'Type', cell: (row) => row.leaveTypeCode ?? '—' },
+          { id: 'dates', header: 'Dates', cell: (row) => `${row.startDate} – ${row.endDate}` },
+          { id: 'qty', header: 'Days', cell: (row) => row.quantity },
+          {
+            id: 'status',
+            header: 'Status',
+            cell: (row) => <StatusBadge status={tone(row.status)} label={row.status} />,
+          },
+          {
+            id: 'handover',
+            header: 'Handover',
+            cell: (row) =>
+              row.handoverEmployeeName ? (
+                `${row.handoverEmployeeName}${row.handoverAccepted ? ' · accepted' : ' · waiting'}`
+              ) : (
+                '—'
+              ),
+          },
+          {
+            id: 'edit',
+            header: 'Edit',
+            cell: (row) =>
+              row.status === 'PENDING' && row.employeeId === myId ? (
+                <Button type="button" size="sm" variant="outline" onClick={() => setEditing(row)}>
+                  Edit
+                </Button>
+              ) : (
+                '—'
+              ),
+          },
+          {
+            id: 'cancel',
+            header: 'Cancel',
+            cell: (row) =>
+              (row.status === 'PENDING' || row.status === 'APPROVED') && row.employeeId === myId ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isLoading}
+                  onClick={() => {
+                    void cancelLeave(row.id)
+                      .unwrap()
+                      .then(() => toast.success('Leave cancelled.'))
+                      .catch((cause) => toast.error(apiErrorMessage(cause, 'Unable to cancel leave.')));
+                  }}
+                >
+                  Cancel
+                </Button>
+              ) : (
+                '—'
+              ),
+          },
+        ]}
+        rows={mine}
+        emptyTitle="No applications"
+        emptyDescription="Your leave requests will appear here."
+      />
+      <Dialog open={applyOpen} onOpenChange={setApplyOpen}>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+          <DialogTitle>Apply leave</DialogTitle>
+          <DialogDescription className="sr-only">Submit a new leave request.</DialogDescription>
+          <div className="mt-4">
+            <ApplyLeaveForm variant="dialog" onApplied={() => setApplyOpen(false)} />
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={Boolean(editing)} onOpenChange={(open) => { if (!open) setEditing(null); }}>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+          <DialogTitle>Edit leave</DialogTitle>
+          <DialogDescription className="sr-only">Update this leave request.</DialogDescription>
+          <div className="mt-4">
+            {editing ? (
+              <ApplyLeaveForm
+                variant="dialog"
+                editing={editing}
+                onCancelEdit={() => setEditing(null)}
+                onApplied={() => setEditing(null)}
+              />
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

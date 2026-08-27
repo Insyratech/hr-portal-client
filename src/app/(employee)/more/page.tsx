@@ -3,6 +3,8 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
 
 const MORE_LINKS = [
+  { href: '/work/history', label: 'Work history' },
+  { href: '/payslips', label: 'Payslips' },
   { href: '/grievance', label: 'Grievance' },
   { href: '/policies', label: 'Policies' },
   { href: '/more/password', label: 'Change password' },

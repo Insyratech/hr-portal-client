@@ -8,12 +8,13 @@ import { CommandPalette } from '@/components/layout/command-palette';
 import { MobileSectionNav } from '@/components/layout/mobile-section-nav';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
+import type { ShellVariant } from '@/features/auth/role-access';
 
 export function AppShell({
   variant,
   children,
 }: {
-  variant: 'employee' | 'admin' | 'super-admin';
+  variant: ShellVariant;
   children: ReactNode;
 }) {
   if (variant === 'employee') {

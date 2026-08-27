@@ -7,30 +7,28 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { GrievanceDrawerPanel } from '@/features/grievances/grievance-drawer-panel';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
-import {
-  useApproveAttendanceCorrectionMutation,
-  useApproveLeaveMutation,
-  useRejectAttendanceCorrectionMutation,
-  useRejectLeaveMutation,
-} from '@/store/api/api';
+import { useApproveLeaveMutation, useRejectLeaveMutation } from '@/store/api/api';
 import { closeEntityDrawer } from '@/store/slices/ui-slice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { PERMISSIONS } from '@/types/permissions';
 
 export function EntityDrawer() {
   const dispatch = useAppDispatch();
-  const { open, title, body, leaveId, leaveStatus, correctionId, correctionStatus, grievanceId, handoverAccepted } =
-    useAppSelector((state) => state.ui.entityDrawer);
+  const { open, title, body, leaveId, leaveStatus, grievanceId, handoverAccepted } = useAppSelector(
+    (state) => state.ui.entityDrawer,
+  );
+  const canDecideLeave = useAppSelector((state) =>
+    state.permissions.permissions.includes(PERMISSIONS.LEAVE_APPROVE),
+  );
   const [approveLeave, { isLoading: approvingLeave }] = useApproveLeaveMutation();
   const [rejectLeave, { isLoading: rejectingLeave }] = useRejectLeaveMutation();
-  const [approveCorrection, { isLoading: approvingCorrection }] = useApproveAttendanceCorrectionMutation();
-  const [rejectCorrection, { isLoading: rejectingCorrection }] = useRejectAttendanceCorrectionMutation();
-  const correctionPending = correctionId && correctionStatus === 'PENDING';
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
+  const busy = approvingLeave || rejectingLeave;
 
   useEffect(() => {
     setError(null);
-  }, [leaveId, correctionId, grievanceId, open]);
+  }, [leaveId, grievanceId, open]);
 
   async function decideLeave(action: 'approve' | 'reject'): Promise<void> {
     if (!leaveId) return;
@@ -51,27 +49,6 @@ export function EntityDrawer() {
     }
   }
 
-  async function decideCorrection(action: 'approve' | 'reject'): Promise<void> {
-    if (!correctionId) return;
-    setError(null);
-    try {
-      if (action === 'approve') {
-        await approveCorrection(correctionId).unwrap();
-        toast.success('Correction approved.');
-      } else {
-        await rejectCorrection(correctionId).unwrap();
-        toast.success('Correction declined.');
-      }
-      dispatch(closeEntityDrawer());
-    } catch (cause) {
-      const text = apiErrorMessage(cause, 'Unable to update this correction.');
-      toast.error(text);
-      setError(text);
-    }
-  }
-
-  const busy = approvingLeave || rejectingLeave || approvingCorrection || rejectingCorrection;
-
   return (
     <Sheet
       open={open}
@@ -90,30 +67,15 @@ export function EntityDrawer() {
                 <StatusMessage tone="danger">{error}</StatusMessage>
               </div>
             ) : null}
-            {leaveId && leaveStatus === 'PENDING' && !handoverAccepted ? (
+            {leaveId && leaveStatus === 'PENDING' && canDecideLeave && !handoverAccepted ? (
               <p className="mt-4 text-sm text-muted">Waiting for the handover colleague to accept before you can approve.</p>
             ) : null}
-            {leaveId && leaveStatus === 'PENDING' ? (
+            {leaveId && leaveStatus === 'PENDING' && canDecideLeave ? (
               <div className="mt-8 flex gap-3">
                 <Button type="button" disabled={busy || !handoverAccepted} onClick={() => void decideLeave('approve')}>
                   Approve
                 </Button>
                 <Button type="button" variant="outline" disabled={busy} onClick={() => void decideLeave('reject')}>
-                  Reject
-                </Button>
-              </div>
-            ) : null}
-            {correctionPending ? (
-              <div className="mt-8 flex gap-3">
-                <Button type="button" disabled={busy} onClick={() => void decideCorrection('approve')}>
-                  Approve
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => void decideCorrection('reject')}
-                >
                   Reject
                 </Button>
               </div>

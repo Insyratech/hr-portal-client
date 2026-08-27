@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { isHrManager, isSuperAdmin } from '@/features/auth/role-access';
 import { PERMISSIONS } from '@/types/permissions';
 import { useLazyGetEmployeesQuery } from '@/store/api/api';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -15,8 +16,15 @@ export function CommandPalette() {
   const router = useRouter();
   const open = useAppSelector((state) => state.ui.commandPaletteOpen);
   const permissions = useAppSelector((state) => state.permissions.permissions);
+  const roles = useAppSelector((state) => state.auth.user?.roles ?? []);
+  const directoryBase = isSuperAdmin(roles)
+    ? '/super-admin/employees'
+    : isHrManager(roles)
+      ? '/hr/employees'
+      : null;
   const canSearchEmployees =
-    permissions.includes(PERMISSIONS.USERS_VIEW) || permissions.includes(PERMISSIONS.USERS_MANAGE);
+    Boolean(directoryBase) &&
+    (permissions.includes(PERMISSIONS.USERS_VIEW) || permissions.includes(PERMISSIONS.USERS_MANAGE));
   const [query, setQuery] = useState('');
   const [search, { data }] = useLazyGetEmployeesQuery();
 
@@ -63,11 +71,11 @@ export function CommandPalette() {
             results.map((employee) => (
               <li key={employee.id}>
                 <Link
-                  href={`/admin/employees/${employee.id}`}
+                  href={`${directoryBase!}/${employee.id}`}
                   className="block px-2 py-2 text-sm hover:bg-surface"
                   onClick={() => {
                     dispatch(setCommandPaletteOpen(false));
-                    router.push(`/admin/employees/${employee.id}`);
+                    router.push(`${directoryBase!}/${employee.id}`);
                   }}
                 >
                   {employee.fullName}
@@ -76,7 +84,7 @@ export function CommandPalette() {
               </li>
             ))
           ) : (
-            <li className="px-2 py-2 text-sm text-muted">Employee search is available to Admin.</li>
+            <li className="px-2 py-2 text-sm text-muted">Employee search is available to Super Admin and HR Manager.</li>
           )}
           {canSearchEmployees && results.length === 0 ? (
             <li className="px-2 py-2 text-sm text-muted">No employees match.</li>

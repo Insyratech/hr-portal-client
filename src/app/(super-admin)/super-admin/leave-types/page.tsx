@@ -18,6 +18,8 @@ import { StatusMessage } from '@/components/ui/status-message';
 import { LeaveRuleFields } from '@/features/leave/leave-rule-fields';
 import { latestPolicyRules, leaveRuleDefaults, rulesFromForm } from '@/features/leave/leave-rule-form';
 import { apiErrorMessage } from '@/lib/api-error';
+import { useAppSelector } from '@/store/hooks';
+import { PERMISSIONS } from '@/types/permissions';
 import {
   useAddLeavePolicyVersionMutation,
   useCreateLeavePolicyMutation,
@@ -32,6 +34,9 @@ import type { LeavePolicy, LeaveType } from '@/types/api';
 type CatalogRow = LeaveType & { policy: LeavePolicy | null };
 
 export default function LeaveTypesPage() {
+  const canManage = useAppSelector((state) =>
+    state.permissions.permissions.includes(PERMISSIONS.LEAVE_TYPES_MANAGE),
+  );
   const { data: types, isLoading } = useGetLeaveTypesQuery();
   const { data: policies } = useGetLeavePoliciesQuery();
   const [createLeaveType, { isLoading: creating }] = useCreateLeaveTypeMutation();
@@ -63,6 +68,7 @@ export default function LeaveTypesPage() {
         requiresAttachment: form.get('requiresAttachment') === 'on',
         allowHalfDay: form.get('allowHalfDay') === 'on',
         allowMultipleDays: form.get('allowMultipleDays') === 'on',
+        paid: form.get('paid') === 'on',
         rules: rulesFromForm(form),
       }).unwrap();
       formEl.reset();
@@ -89,6 +95,7 @@ export default function LeaveTypesPage() {
           requiresAttachment: form.get('requiresAttachment') === 'on',
           allowHalfDay: form.get('allowHalfDay') === 'on',
           allowMultipleDays: form.get('allowMultipleDays') === 'on',
+          paid: form.get('paid') === 'on',
           active: form.get('active') === 'on',
         },
       }).unwrap();
@@ -118,6 +125,7 @@ export default function LeaveTypesPage() {
         Days, notice, and approval rules are part of the leave. Saving publishes a new policy version; existing
         applications keep the version they were approved against.
       </p>
+      {canManage ? (
       <form onSubmit={onSubmit} className="mb-8 max-w-3xl space-y-4 rounded border border-border bg-background p-6 shadow-card">
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
@@ -139,10 +147,14 @@ export default function LeaveTypesPage() {
           Add leave
         </Button>
       </form>
+      ) : (
+        <p className="mb-6 text-sm text-muted">HR Manager maintains leave types. This list is read-only.</p>
+      )}
       <DataTable
         columns={[
           { id: 'name', header: 'Name', cell: (row) => row.name },
           { id: 'code', header: 'Code', cell: (row) => row.code },
+          { id: 'paid', header: 'Paid', cell: (row) => (row.paid ? 'Yes' : 'No') },
           {
             id: 'days',
             header: 'Days / year',
@@ -162,18 +174,24 @@ export default function LeaveTypesPage() {
             },
           },
           { id: 'active', header: 'Active', cell: (row) => (row.active ? 'Yes' : 'No') },
-          {
-            id: 'edit',
-            header: 'Edit',
-            cell: (row) => <EditIconButton label={`Edit ${row.name}`} onClick={() => setEditing(row)} />,
-          },
+          ...(canManage
+            ? [
+                {
+                  id: 'edit',
+                  header: 'Edit',
+                  cell: (row: CatalogRow) => (
+                    <EditIconButton label={`Edit ${row.name}`} onClick={() => setEditing(row)} />
+                  ),
+                },
+              ]
+            : []),
         ]}
         rows={rows}
         emptyTitle={isLoading ? 'Loading' : 'No leave types'}
         emptyDescription="Add a leave with days and rules in one form."
       />
 
-      <Dialog open={Boolean(editing)} onOpenChange={(open) => { if (!open) setEditing(null); }}>
+      <Dialog open={Boolean(editing) && canManage} onOpenChange={(open) => { if (!open) setEditing(null); }}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogTitle>Edit leave</DialogTitle>
           <DialogDescription>

@@ -21,6 +21,17 @@ export const PERMISSIONS = {
   SYSTEM_MANAGE: 'system.manage',
   AUDIT_VIEW: 'audit.view',
   PROFILE_VIEW: 'profile.view',
+  PAYROLL_VIEW: 'payroll.view',
+  PAYROLL_MANAGE: 'payroll.manage',
+  WORK_PERMISSION_APPLY: 'work_permission.apply',
+  WORK_PERMISSION_APPROVE: 'work_permission.approve',
+  COMPANIES_MANAGE: 'companies.manage',
+  WORK_OWN: 'work.own',
+  WORK_VIEW: 'work.view',
+  WORK_ASSIGN: 'work.assign',
+  WORK_FEEDBACK: 'work.feedback',
+  WORK_SETTINGS: 'work.settings',
+  PROJECTS_MANAGE: 'projects.manage',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

@@ -10,6 +10,10 @@ export default function RolesPage() {
   return (
     <>
       <PageHeader kicker="Organization" title="Roles" />
+      <p className="mb-4 max-w-2xl text-sm text-muted">
+        Catalog of portal roles. To grant or remove HR / GM / CSO / Finance for a person, open their employee profile
+        and use Access roles.
+      </p>
       {isError ? <p className="mb-4 text-sm">Unable to load roles.</p> : null}
       <DataTable
         columns={[

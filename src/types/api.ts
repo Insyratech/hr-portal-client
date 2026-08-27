@@ -36,15 +36,68 @@ export type Employee = {
   dateOfBirth: string | null;
   departmentId: string | null;
   designationId: string | null;
+  companyId: string | null;
   joiningDate: string;
   employmentType: 'full_time' | 'part_time' | 'contract' | 'intern';
   managerId: string | null;
   status: 'active' | 'inactive';
+  deletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   departmentName: string | null;
   designationName: string | null;
+  companyName: string | null;
   roleCodes: string[];
+};
+
+export type Company = {
+  id: string;
+  name: string;
+  address: string;
+  logoStoragePath: string | null;
+  logoUrl: string | null;
+  status: 'active' | 'inactive';
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CompanyLogoUpload = {
+  path: string;
+  token: string;
+  uploadUrl: string;
+};
+
+export type Compensation = {
+  id: string;
+  employeeId: string;
+  basic: number;
+  da: number;
+  hra: number;
+  fuel: number;
+  incentives: number;
+  other: number;
+  professionalTax: number;
+  tds: number;
+  employeeWelfare: number;
+  kpi: number;
+  otherDeductions: number;
+  effectiveFrom: string;
+  createdAt: string;
+};
+
+export type PaymentDetails = {
+  employeeId: string;
+  pan: string | null;
+  bankAccountNumber: string | null;
+  bankName: string | null;
+  ifsc: string | null;
+  updatedAt: string;
+};
+
+export type EmployeePayroll = {
+  current: Compensation | null;
+  history: Compensation[];
+  payment: PaymentDetails | null;
 };
 
 export type NamedEntity = {
@@ -60,9 +113,345 @@ export type Role = {
   name: string;
 };
 
+/** Working-day calendar only. Slip letterhead comes from the employee’s company, not this record. */
 export type OrganizationSettings = {
   id: string;
   workingDays: string[];
+  workUpdateReminderHour: number;
+};
+
+/** Super Admin work reminder + retention policy (Phase 8). */
+export type WorkSettings = {
+  id: string;
+  /** IANA zone for reminder hours — Asia/Kolkata (IST). */
+  timeZone?: string;
+  reminderHour: number;
+  secondReminderHour: number | null;
+  retentionDays: 90 | 180 | 365;
+  archiveBeforeDelete: boolean;
+  notifyBeforePurge: boolean;
+  purgeNotifyDaysBefore: number;
+  legalHold: boolean;
+};
+
+export type WorkDayContext = {
+  isoDate: string;
+  required: boolean;
+  status: 'COMPLETED' | 'MISSING' | 'ON_LEAVE' | 'HOLIDAY' | 'WEEKEND' | 'NOT_REQUIRED';
+  onApprovedLeave: boolean;
+  submitted: boolean;
+};
+
+export type WorkDayPriority = {
+  id: string;
+  title: string;
+  type: string;
+  projectId: string | null;
+  projectName: string | null;
+  status: string;
+  approvalStatus?: WorkPriorityApprovalStatus;
+};
+
+export type WorkDayBoard = {
+  context: WorkDayContext;
+  formOpen: boolean;
+  skipReason: string | null;
+  approvalBlockReason?: string | null;
+  prioritiesApproved?: boolean;
+  week: { start: string; end: string };
+  priorities: WorkDayPriority[];
+  submitted: {
+    dayId: string;
+    entries: { id: string; category: string; priorityId: string | null; projectId: string | null; description: string }[];
+    tomorrow: string;
+    blocker: { id: string; category: string; description: string; priorityId: string | null } | null;
+  } | null;
+};
+
+export type WorkHistoryMonth = {
+  month: string;
+  days: { isoDate: string; status: WorkDayContext['status']; required: boolean; mark: string }[];
+  submitted: { date: string; status: string; entries: { category: string; description: string; priorityId: string | null }[] }[];
+};
+
+export type WorkProjectMember = {
+  employeeId: string;
+  fullName: string;
+};
+
+export type WorkProject = {
+  id: string;
+  name: string;
+  code: string;
+  status: string;
+  memberCount?: number;
+  members?: WorkProjectMember[];
+};
+
+export type EmployeeWorkProjects = {
+  employeeId: string;
+  projects: WorkProject[];
+};
+
+export type WeeklyWorkUpdate = {
+  id: string;
+  employeeId: string;
+  weekStart: string;
+  weekEnd: string;
+  originalFileName: string;
+  systemFileName: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadCount: number;
+  submittedAt: string;
+  late: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WeeklyWorkUpdateBoard = {
+  week: {
+    start: string;
+    end: string;
+    saturday: string;
+    deadlineLabel: string;
+    lateAfterLabel: string;
+  };
+  current: WeeklyWorkUpdate | null;
+  uploadsRemaining: number;
+  maxUploads: number;
+  maxBytes: number;
+  stats: { onTime: number; late: number; missing: number; weeksTracked: number };
+  weeks: {
+    weekStart: string;
+    weekEnd: string;
+    status: 'on_time' | 'late' | 'missing' | 'pending';
+    update: WeeklyWorkUpdate | null;
+  }[];
+};
+
+export type WeeklyWorkUpdateUploadSession = {
+  update: WeeklyWorkUpdate;
+  uploadUrl: string;
+  token: string;
+  path: string;
+  bucket: string;
+};
+
+export type WeeklyPptPersonStatus = 'on_time' | 'late' | 'missing' | 'pending';
+
+export type WeeklyPptAdminBoard = {
+  week: {
+    start: string;
+    end: string;
+    saturday: string;
+    deadlineLabel: string;
+    lateAfterLabel: string;
+  };
+  counts: {
+    expected: number;
+    onTime: number;
+    late: number;
+    missing: number;
+    pending: number;
+    submitted: number;
+  };
+  people: {
+    employeeId: string;
+    fullName: string;
+    email: string;
+    status: WeeklyPptPersonStatus;
+    update: WeeklyWorkUpdate | null;
+  }[];
+  shares: {
+    id: string;
+    weekStart: string;
+    weekEnd: string;
+    sharedBy: string;
+    sharedByName: string;
+    sharedAt: string;
+    fileCount: number;
+    note: string;
+  }[];
+};
+
+export type WeeklyPptSharePackage = {
+  id: string;
+  weekStart: string;
+  weekEnd: string;
+  sharedBy: string;
+  sharedByName: string;
+  sharedAt: string;
+  fileCount: number;
+  note: string;
+  files: {
+    updateId: string;
+    systemFileName: string;
+    late: boolean;
+    employeeName: string;
+  }[];
+};
+
+export type WeeklyPptGmShares = {
+  count: number;
+  shares: WeeklyPptSharePackage[];
+};
+
+export type WorkPriorityApprovalStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'RESUBMIT_REQUESTED';
+
+export type WorkPriority = {
+  id: string;
+  planId: string;
+  employeeId: string;
+  type: 'PROJECT' | 'REGULAR' | 'SKILL';
+  projectId: string | null;
+  projectName: string | null;
+  projectCode: string | null;
+  title: string;
+  description: string;
+  expectedOutcome: string;
+  successCriteria: string;
+  level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  status:
+    | 'NOT_STARTED'
+    | 'IN_PROGRESS'
+    | 'COMPLETED'
+    | 'PARTIALLY_COMPLETED'
+    | 'BLOCKED'
+    | 'CANCELLED'
+    | 'CARRIED_FORWARD';
+  incompleteReason: string | null;
+  assignedBy: string | null;
+  carriedFromId: string | null;
+  approvalStatus: WorkPriorityApprovalStatus;
+  csoComment: string;
+  submittedAt: string | null;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  resubmitRequestedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WorkOverview = {
+  today: string;
+  planning: { start: string; end: string };
+  wrapUp: boolean;
+  actions: { setPriorities: boolean; todayUpdate: boolean };
+  indicators: {
+    completionPct: number;
+    compliancePct: number;
+    plannedCount: number;
+    unplannedCount: number;
+    carryForwardCount: number;
+  };
+  friday: {
+    done: number;
+    total: number;
+    unplanned: string[];
+    blockers: string[];
+    carried: number;
+  } | null;
+  blockers: { description: string }[];
+};
+
+export type WorkWeekFeedback = {
+  id: string;
+  type: string;
+  comment: string;
+  actorId: string;
+  actorName: string;
+  createdAt: string;
+};
+
+export type WorkBoard = {
+  date: string;
+  range: { start: string; end: string };
+  week: { start: string; end: string };
+  today: { expected: number; submitted: number; missing: number; onLeave: number };
+  weekCompletionPct: number;
+  unplannedVolume: number;
+  openBlockers: { id: string; employeeId: string; employeeName: string; description: string }[];
+  people: {
+    id: string;
+    name: string;
+    departmentName: string | null;
+    todayStatus: string;
+    todayLabel: string;
+    weekCompletionPct: number;
+    approvalStatus: 'none' | 'draft' | 'awaiting' | 'needs_resubmit' | 'approved';
+    approvalLabel: string;
+    pptStatus: 'on_time' | 'late' | 'missing' | 'pending';
+    pptLabel: string;
+  }[];
+};
+
+export type WorkAnalyticsTrend = {
+  month: string;
+  compliancePct: number;
+  weeksWithPlanPct: number;
+  weeksWithPlan: number;
+  weeksTotal: number;
+  requiredDays: number;
+  submittedDays: number;
+  completed: number;
+  carriedForward: number;
+  blocked: number;
+  plannedEntries: number;
+  unplannedEntries: number;
+  unplannedSharePct: number;
+  skillEntries: number;
+  skillPrioritiesCompleted: number;
+  skillPrioritiesTotal: number;
+};
+
+export type WorkAttentionLabel = {
+  code: 'LOW_COMPLIANCE' | 'NO_WEEK_PLAN' | 'OPEN_BLOCKER' | 'PRIORITIES_BLOCKED' | 'HEAVY_CARRY';
+  label: string;
+  detail: string;
+};
+
+export type WorkAnalytics = {
+  range: { from: string; to: string; start: string; end: string };
+  attentionMonth: string;
+  note: string;
+  reliability: {
+    compliancePct: number;
+    weeksWithPlanPct: number;
+    weeksWithPlan: number;
+    weeksTotal: number;
+    requiredDays: number;
+    submittedDays: number;
+  };
+  execution: { completed: number; carriedForward: number; blocked: number };
+  adaptability: { plannedEntries: number; unplannedEntries: number; unplannedSharePct: number };
+  development: {
+    skillEntries: number;
+    skillPrioritiesCompleted: number;
+    skillPrioritiesTotal: number;
+  };
+  trends: WorkAnalyticsTrend[];
+  needsAttention: {
+    employeeId: string;
+    employeeName: string;
+    departmentName: string | null;
+    labels: WorkAttentionLabel[];
+  }[];
+};
+
+export type WeeklyWorkBoard = {
+  week: {
+    planId: string;
+    start: string;
+    end: string;
+    label: string;
+    isLastWorkingDay: boolean;
+  };
+  priorities: WorkPriority[];
+  projects: WorkProject[];
+  feedback: WorkWeekFeedback[];
+  softCap: number;
+  overCap: boolean;
 };
 
 export type AuditLog = {
@@ -87,6 +476,7 @@ export type LeaveType = {
   requiresAttachment: boolean;
   allowHalfDay: boolean;
   allowMultipleDays: boolean;
+  paid: boolean;
 };
 
 export type PolicyRules = {
@@ -171,6 +561,13 @@ export type LeaveApplication = {
   createdAt: string;
 };
 
+export type LeaveColleague = {
+  id: string;
+  fullName: string;
+  available: boolean;
+  leaveDates: string | null;
+};
+
 export type Holiday = {
   id: string;
   name: string;
@@ -178,6 +575,27 @@ export type Holiday = {
   type: string;
   region: string;
   optional: boolean;
+};
+
+export type WorkPermission = {
+  id: string;
+  employeeId: string;
+  employeeName: string | null;
+  permissionDate: string;
+  minutes: number;
+  slot: 'START' | 'END';
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  actorId: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+  remainingMinutes: number;
+  monthLabel: string;
+};
+
+export type WorkPermissionMine = {
+  quotaMinutes: number;
+  items: WorkPermission[];
 };
 
 export type Shift = {
@@ -212,9 +630,18 @@ export type AttendanceRecord = {
 };
 
 export type AttendanceMe = {
-  today: AttendanceRecord;
-  shift: Shift | null;
-  history: AttendanceRecord[];
+  published: boolean;
+  period: string;
+  monthLabel: string;
+  message: string | null;
+  records: {
+    id: string;
+    attendanceDate: string;
+    actualIn: string | null;
+    actualOut: string | null;
+    status: string;
+    workedMinutes: number | null;
+  }[];
 };
 
 export type AttendanceDaySummary = {
@@ -229,16 +656,67 @@ export type AttendanceDaySummary = {
   records: AttendanceRecord[];
 };
 
-export type AttendanceCorrection = {
+export type AttendanceImport = {
+  id: string;
+  period: string;
+  fileName: string;
+  storagePath: string | null;
+  status: string;
+  uploadedBy: string;
+  confirmedAt: string | null;
+  createdAt: string;
+};
+
+export type AttendanceReviewDay = {
   id: string;
   employeeId: string;
-  employeeName: string | null;
   attendanceDate: string;
-  proposedIn: string;
-  proposedOut: string;
-  reason: string;
   status: string;
-  createdAt: string;
+  actualIn: string | null;
+  actualOut: string | null;
+  workedMinutes: number | null;
+  lateMinutes: number;
+  permissionMinutes: number;
+  permissionCovered: boolean;
+  leaveTypeName: string | null;
+  leavePaid: boolean | null;
+  leaveDuration: string | null;
+  proposedLop: number | null;
+  finalLop: number | null;
+  hrAction: 'FULL_LOP' | 'HALF_LOP' | 'NO_LOP' | 'EXCLUDE' | null;
+  reason: string | null;
+  needsHrDecision: boolean;
+  skippedFromLop: boolean;
+  shiftName: string | null;
+};
+
+export type AttendanceReviewCard = {
+  id: string;
+  employeeId: string;
+  employeeCode: string;
+  fullName: string;
+  companyName: string | null;
+  shiftName: string | null;
+  remainingLabel: string;
+  permissionTakenMinutes: number;
+  quotaMinutes: number;
+  leaves: { date: string; typeName: string | null; paid: boolean | null; duration: string | null }[];
+  permissions: { date: string; minutes: number }[];
+  days: AttendanceReviewDay[];
+  proposedLop: number;
+  finalLop: number;
+  payableDays: number;
+  workingDaysCount: number;
+  openFlags: number;
+  needsDecision: boolean;
+};
+
+export type AttendanceImportDetail = {
+  import: AttendanceImport;
+  exceptions: { id: string; employeeCode: string; name: string; date: string; reason: string }[];
+  openFlags: number;
+  canConfirm: boolean;
+  cards: AttendanceReviewCard[];
 };
 
 export type ShiftAssignment = {
@@ -247,6 +725,14 @@ export type ShiftAssignment = {
   employeeName: string | null;
   shiftId: string;
   shiftName: string | null;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+};
+
+export type WorkWeek = {
+  id: string;
+  employeeId: string;
+  pattern: 'SUNDAY_OFF' | 'WEEKEND_OFF' | 'SECOND_FOURTH_SATURDAY';
   effectiveFrom: string;
   effectiveTo: string | null;
 };
@@ -389,6 +875,38 @@ export type NotificationItem = {
   unread: boolean;
 };
 
+export type DirectoryEditRequestStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'FULFILLED'
+  | 'CANCELLED';
+
+export type DirectoryEditRequest = {
+  id: string;
+  targetEmployeeId: string;
+  targetName: string;
+  targetCode: string;
+  requesterId: string;
+  requesterName: string;
+  reason: string;
+  fieldHints: string | null;
+  status: DirectoryEditRequestStatus;
+  decidedBy: string | null;
+  decisionNote: string | null;
+  unlockedUntil: string | null;
+  createdAt: string;
+  updatedAt: string;
+  decidedAt: string | null;
+  fulfilledAt: string | null;
+};
+
+export type DirectoryEditRequestForEmployee = {
+  open: DirectoryEditRequest | null;
+  canRequest: boolean;
+  canEdit: boolean;
+};
+
 export type ReportsOverview = {
   period: string;
   attendanceRange: { from: string; to: string };
@@ -415,9 +933,12 @@ export type ReportsOverview = {
     absent: number;
     late: number;
     missingPunches: number;
+    lop: number;
     halfDay: number;
     onLeave: number;
     overtimeMinutes: number;
+    published: boolean;
+    companyId: string | null;
     byStatus: { status: string; count: number }[];
   };
   grievances: {
@@ -426,5 +947,83 @@ export type ReportsOverview = {
     averageResolutionHours: number | null;
     byCategory: { category: string; count: number }[];
   };
+};
+
+export type LeaveParticulars = {
+  cl: number;
+  sl: number;
+  ml: number;
+  el: number;
+  maternityPaternity: number;
+  missPunch: number;
+  permissionsCount: number;
+  permissionHours: number;
+  lateDays: number;
+  absent: number;
+  totalLop: number;
+};
+
+export type PayrollRun = {
+  id: string;
+  period: string;
+  attendanceImportId: string | null;
+  status: string;
+  calculatedAt: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+};
+
+export type ConfirmedPayrollImport = {
+  importId: string;
+  period: string;
+  fileName: string;
+  confirmedAt: string | null;
+  payrollStatus: string | null;
+  payrollLocked: boolean;
+};
+
+export type SalarySlip = {
+  id: string;
+  runId: string;
+  employeeId: string;
+  period: string;
+  monthLabel: string;
+  employeeCode: string;
+  employeeName: string;
+  designationName: string | null;
+  departmentName: string | null;
+  companyName: string;
+  companyAddress: string;
+  companyLogoPath: string | null;
+  companyLogoUrl: string | null;
+  panMasked: string | null;
+  bankAccountMasked: string | null;
+  bankNameMasked: string | null;
+  ifscMasked: string | null;
+  basic: number;
+  da: number;
+  hra: number;
+  fuel: number;
+  incentives: number;
+  other: number;
+  professionalTax: number;
+  tds: number;
+  employeeWelfare: number;
+  kpi: number;
+  otherDeductions: number;
+  calendarDays: number;
+  gross: number;
+  dailyRate: number;
+  lopDays: number;
+  lopAmount: number;
+  net: number;
+  particulars: LeaveParticulars;
+};
+
+export type PayrollRunDetail = {
+  run: PayrollRun;
+  companies: string[];
+  slips: SalarySlip[];
+  skipped?: { employeeId: string; name: string; reason: string }[];
 };
 

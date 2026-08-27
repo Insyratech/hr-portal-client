@@ -1,5 +1,10 @@
+import { Suspense } from 'react';
 import { EmployeeProfile } from '@/features/employees/employee-profile';
 
 export default function SuperAdminEmployeeDetailPage() {
-  return <EmployeeProfile basePath="/super-admin/employees" />;
+  return (
+    <Suspense fallback={<p className="text-sm text-muted">Loading</p>}>
+      <EmployeeProfile basePath="/super-admin/employees" />
+    </Suspense>
+  );
 }

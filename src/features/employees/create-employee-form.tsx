@@ -1,43 +1,66 @@
 'use client';
 
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Meta } from '@/components/layout/meta';
-import { AssignableRoleChecks } from '@/features/employees/onboarding-roles';
+import { isSuperAdmin } from '@/features/auth/role-access';
 import { DesignationField, resolveDesignationId } from '@/features/employees/designation-field';
+import { WorkEmailOtpField } from '@/features/employees/work-email-otp';
+import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
+import { useAppSelector } from '@/store/hooks';
 import {
   useCreateDesignationMutation,
   useCreateEmployeeMutation,
   useGetDepartmentsQuery,
   useGetDesignationsQuery,
-  useGetRolesQuery,
 } from '@/store/api/api';
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="space-y-4 rounded border border-border bg-background p-5 shadow-card">
+      <Meta>{title}</Meta>
+      {children}
+    </section>
+  );
+}
 
 export function CreateEmployeeForm({
   basePath = '/super-admin/employees',
 }: {
   basePath?: string;
+  /** @deprecated All account creation is Super Admin only (Phase 1). */
+  kind?: 'employee' | 'hr-admin' | 'account';
 }) {
   const router = useRouter();
+  const actorRoles = useAppSelector((state) => state.auth.user?.roles ?? []);
   const { data: departments } = useGetDepartmentsQuery();
   const { data: designations } = useGetDesignationsQuery();
-  const { data: roles } = useGetRolesQuery();
   const [createEmployee, { isLoading }] = useCreateEmployeeMutation();
   const [createDesignation] = useCreateDesignationMutation();
+  const toast = useToast();
   const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
+  const [emailVerificationToken, setEmailVerificationToken] = useState<string | null>(null);
+  const allowed = isSuperAdmin(actorRoles);
+
+  if (!allowed) {
+    return <p className="text-sm text-muted">Only Super Admin can create employees.</p>;
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     const form = new FormData(event.currentTarget);
-    const roleIds = form.getAll('roleIds').map(String).filter(Boolean);
-    if (roleIds.length === 0) {
-      setError('Select at least one access role.');
+
+    if (!emailVerificationToken) {
+      const message = 'Confirm the work email with the 4-digit code first.';
+      setError(message);
+      toast.error(message);
       return;
     }
 
@@ -46,9 +69,9 @@ export function CreateEmployeeForm({
       const result = await createEmployee({
         employeeCode: String(form.get('employeeCode') ?? ''),
         fullName: String(form.get('fullName') ?? ''),
-        email: String(form.get('email') ?? ''),
+        email: email.trim(),
+        emailVerificationToken,
         phone: String(form.get('phone') ?? '') || undefined,
-        dateOfBirth: String(form.get('dateOfBirth') ?? '') || undefined,
         departmentId: String(form.get('departmentId') ?? '') || undefined,
         designationId,
         joiningDate: String(form.get('joiningDate') ?? ''),
@@ -57,83 +80,106 @@ export function CreateEmployeeForm({
           | 'part_time'
           | 'contract'
           | 'intern',
-        roleIds,
         password: String(form.get('password') ?? ''),
       }).unwrap();
-      router.replace(`${basePath}/${result.data.id}`);
+      toast.success('Employee created.');
+      router.replace(`${basePath}/${result.data.id}?created=1`);
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to create employee.'));
+      const message = apiErrorMessage(cause, 'Unable to create employee.');
+      setError(message);
+      toast.error(message);
     }
   }
 
   return (
-    <form onSubmit={onSubmit} className="max-w-xl space-y-5">
+    <form onSubmit={onSubmit} className="max-w-3xl space-y-6">
       <p className="text-sm text-muted">
-        Creates a login and employee profile. Share the temporary password securely; the person can change it after signing in.
+        Create the person and login first. HR Manager sets company, shift, leave, and pay on their profile. Grant HR /
+        GM / CSO / Finance access later if needed.
       </p>
-      <div>
-        <Label htmlFor="fullName">Full name</Label>
-        <Input id="fullName" name="fullName" required autoComplete="name" />
-      </div>
-      <div>
-        <Label htmlFor="employeeCode">Employee ID</Label>
-        <Input id="employeeCode" name="employeeCode" required />
-      </div>
-      <div>
-        <Label htmlFor="email">Work email</Label>
-        <Input id="email" name="email" type="email" required autoComplete="email" />
-      </div>
-      <div>
-        <Label htmlFor="password">Temporary password</Label>
-        <Input id="password" name="password" type="password" minLength={8} required autoComplete="new-password" />
-        <Meta className="mt-1">Minimum 8 characters. Used for first login.</Meta>
-      </div>
-      <AssignableRoleChecks roles={roles?.data ?? []} selectedCodes={['EMPLOYEE']} />
-      <div>
-        <Label htmlFor="phone">Phone</Label>
-        <Input id="phone" name="phone" />
-      </div>
-      <div>
-        <Label htmlFor="dateOfBirth">Date of birth</Label>
-        <Input id="dateOfBirth" name="dateOfBirth" type="date" />
-      </div>
-      <div>
-        <Label htmlFor="joiningDate">Joining date</Label>
-        <Input id="joiningDate" name="joiningDate" type="date" required />
-      </div>
-      <div>
-        <Label htmlFor="employmentType">Employment type</Label>
-        <select
-          id="employmentType"
-          name="employmentType"
-          className="h-10 w-full border border-border bg-background px-3 text-sm"
-          defaultValue="full_time"
-        >
-          <option value="full_time">Full time</option>
-          <option value="part_time">Part time</option>
-          <option value="contract">Contract</option>
-          <option value="intern">Intern</option>
-        </select>
-      </div>
-      <div>
-        <Label htmlFor="departmentId">Department</Label>
-        <select
-          id="departmentId"
-          name="departmentId"
-          className="h-10 w-full border border-border bg-background px-3 text-sm"
-          defaultValue=""
-        >
-          <option value="">None</option>
-          {(departments?.data ?? []).map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <DesignationField items={designations?.data ?? []} />
-      {error ? <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p> : null}
-      <Button type="submit" disabled={isLoading}>
+
+      <Section title="Identity">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <Label htmlFor="fullName">Full name</Label>
+            <Input id="fullName" name="fullName" required autoComplete="name" />
+          </div>
+          <div>
+            <Label htmlFor="employeeCode">Staff ID</Label>
+            <Input id="employeeCode" name="employeeCode" required />
+          </div>
+          <div>
+            <Label htmlFor="phone">Phone</Label>
+            <Input id="phone" name="phone" />
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Employment">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="joiningDate">Joining date</Label>
+            <Input id="joiningDate" name="joiningDate" type="date" required />
+          </div>
+          <div>
+            <Label htmlFor="employmentType">Employment type</Label>
+            <select
+              id="employmentType"
+              name="employmentType"
+              className="h-10 w-full border border-border bg-background px-3 text-sm"
+              defaultValue="full_time"
+            >
+              <option value="full_time">Full time</option>
+              <option value="part_time">Part time</option>
+              <option value="contract">Contract</option>
+              <option value="intern">Intern</option>
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="departmentId">Department</Label>
+            <select
+              id="departmentId"
+              name="departmentId"
+              className="h-10 w-full border border-border bg-background px-3 text-sm"
+              defaultValue=""
+            >
+              <option value="">None</option>
+              {(departments?.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <DesignationField items={designations?.data ?? []} />
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Login">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <WorkEmailOtpField
+            email={email}
+            onEmailChange={setEmail}
+            verificationToken={emailVerificationToken}
+            onVerified={setEmailVerificationToken}
+            onReset={() => setEmailVerificationToken(null)}
+          />
+          <div>
+            <Label htmlFor="password">Temporary password</Label>
+            <Input id="password" name="password" type="password" minLength={8} required autoComplete="new-password" />
+            <Meta className="mt-1">Minimum 8 characters. Used for first login.</Meta>
+          </div>
+        </div>
+      </Section>
+
+      {error ? (
+        <p className="text-sm" style={{ color: 'var(--danger)' }}>
+          {error}
+        </p>
+      ) : null}
+      <Button type="submit" disabled={isLoading || !emailVerificationToken}>
         {isLoading ? 'Creating…' : 'Create employee'}
       </Button>
     </form>

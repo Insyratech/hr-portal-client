@@ -3,66 +3,45 @@
 import { useRouter } from 'next/navigation';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { PageHeader } from '@/components/layout/page-header';
-import { Meta } from '@/components/layout/meta';
-import {
-  useGetDepartmentsQuery,
-  useGetEmployeesQuery,
-  useGetGrievanceCountsQuery,
-  useGetLeavePoliciesQuery,
-  useGetShiftsQuery,
-} from '@/store/api/api';
-
-const GRIEVANCE_STATUSES = ['OPEN', 'UNDER_REVIEW', 'INVESTIGATING', 'RESOLVED', 'CLOSED'] as const;
+import { useGetEmployeesQuery } from '@/store/api/api';
 
 export default function SuperAdminOverviewPage() {
   const router = useRouter();
   const { data: employees } = useGetEmployeesQuery();
-  const { data: departments } = useGetDepartmentsQuery();
-  const { data: policies } = useGetLeavePoliciesQuery();
-  const { data: shifts } = useGetShiftsQuery();
-  const { data: grievanceCounts } = useGetGrievanceCountsQuery();
-  const byStatus = grievanceCounts?.data.byStatus;
 
   return (
     <>
       <PageHeader kicker="Super admin" title="Overview" />
+      <p className="mb-6 max-w-2xl text-sm text-muted">
+        Oversee accounts, access roles, policies, and system settings. Leave, attendance, payroll, and work desks live
+        in the HR, General Manager, CSO, and Finance portals.
+      </p>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
         <StatCard
           value={String(employees?.data.length ?? 0)}
-          label="Employees"
+          label="Accounts"
           icon="users"
           onClick={() => router.push('/super-admin/employees')}
         />
         <StatCard
-          value={String(departments?.data.length ?? 0)}
-          label="Departments"
-          icon="building"
-          onClick={() => router.push('/super-admin/departments')}
+          value="Settings"
+          label="System"
+          icon="settings"
+          onClick={() => router.push('/super-admin/settings')}
         />
         <StatCard
-          value={String(policies?.data.length ?? 0)}
-          label="Leave"
-          icon="leave"
-          onClick={() => router.push('/super-admin/leave-types')}
+          value="Requests"
+          label="Edit unlocks"
+          icon="audit"
+          onClick={() => router.push('/super-admin/edit-requests')}
         />
+        <StatCard value="Log" label="Audit" icon="audit" onClick={() => router.push('/super-admin/audit')} />
         <StatCard
-          value={String(shifts?.data.length ?? 0)}
-          label="Shifts"
-          icon="clock"
-          onClick={() => router.push('/super-admin/shifts')}
+          value="Policies"
+          label="HR policies"
+          icon="file"
+          onClick={() => router.push('/super-admin/hr-policies')}
         />
-      </div>
-      <Meta className="mb-4 mt-10">Grievances</Meta>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5 lg:gap-6">
-        {GRIEVANCE_STATUSES.map((status) => (
-          <StatCard
-            key={status}
-            value={String(byStatus?.[status] ?? 0)}
-            label={status.replaceAll('_', ' ')}
-            icon="shield"
-            onClick={() => router.push(`/super-admin/grievances?status=${status}`)}
-          />
-        ))}
       </div>
     </>
   );
