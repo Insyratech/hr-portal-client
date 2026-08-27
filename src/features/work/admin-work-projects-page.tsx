@@ -59,7 +59,7 @@ function ProjectUpdatesDialog({
         </DialogDescription>
         <div className="mt-6">
           {isLoading ? <PageLoading compact message="Loading updates…" /> : null}
-          {isError ? <p className="text-sm text-muted">Could not load status updates.</p> : null}
+          {isError ? <PageLoading compact message="Could not load status updates." /> : null}
           {!isLoading && !isError ? (
             <ProjectStatusUpdateList
               updates={updates}

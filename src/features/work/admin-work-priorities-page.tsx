@@ -239,11 +239,11 @@ function PrioritiesDesk({ canApprove }: { canApprove: boolean }) {
         <div>
           <Meta>Awaiting review</Meta>
           <p className="mt-1 text-sm text-muted">
-            {queue ? `${queueRows.length} waiting` : 'Loading…'}
+            {queue ? `${queueRows.length} waiting` : '…'}
             {weekLabel ? ` · ${weekLabel}` : null}
           </p>
         </div>
-        {queueLoading ? <p className="text-sm text-muted">Loading review queue…</p> : null}
+        {queueLoading ? <PageLoading compact message="Loading review queue…" /> : null}
         {!queueLoading ? (
           <DataTable
             columns={[
@@ -281,11 +281,11 @@ function PrioritiesDesk({ canApprove }: { canApprove: boolean }) {
         <div>
           <Meta>Approved priorities</Meta>
           <p className="mt-1 text-sm text-muted">
-            {approved ? `${approvedRows.length} with approved lines` : 'Loading…'}
+            {approved ? `${approvedRows.length} with approved lines` : '…'}
             {weekLabel ? ` · ${weekLabel}` : null}
           </p>
         </div>
-        {approvedLoading ? <p className="text-sm text-muted">Loading approved priorities…</p> : null}
+        {approvedLoading ? <PageLoading compact message="Loading approved priorities…" /> : null}
         {!approvedLoading ? (
           <DataTable
             columns={[

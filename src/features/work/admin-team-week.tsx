@@ -146,7 +146,7 @@ function TeamWeekBoard({
         </div>
       </div>
 
-      {isLoading ? <p className="mb-6 text-sm text-muted">Loading the board…</p> : null}
+      {isLoading ? <PageLoading compact message="Loading the board…" /> : null}
       {board ? (
         <>
           <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">

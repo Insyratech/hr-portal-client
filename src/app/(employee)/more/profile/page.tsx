@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { PageLoading } from '@/components/ui/page-loading';
 import { useState, type FormEvent } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
@@ -65,7 +66,7 @@ export default function ProfileDetailsPage() {
       </p>
 
       {isLoading || !employee ? (
-        <p className="text-sm text-muted">Loading your profile…</p>
+        <PageLoading compact message="Loading your profile…" />
       ) : (
         <dl className="grid max-w-2xl gap-6 border border-border bg-background p-5 shadow-card sm:grid-cols-2">
           <Field label="Name" value={employee.fullName} />

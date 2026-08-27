@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { PageLoading } from '@/components/ui/page-loading';
 import { useParams, useSearchParams } from 'next/navigation';
 import { ActivityTimeline } from '@/components/dashboard/activity-timeline';
 import { EmptyState } from '@/components/dashboard/empty-state';
@@ -100,7 +101,7 @@ export function EmployeeProfile({ basePath = '/hr/employees' }: { basePath?: str
   });
 
   if (isFetching && !employee) {
-    return <p className="text-sm text-muted">Loading</p>;
+    return <PageLoading compact message="Loading" />;
   }
 
   if (isError || !employee) {

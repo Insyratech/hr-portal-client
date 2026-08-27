@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { PageLoading } from '@/components/ui/page-loading';
 import Link from 'next/link';
 import { LeaveJourney } from '@/components/leave/leave-journey';
 import { StatusBadge } from '@/components/dashboard/status-badge';
@@ -68,7 +69,7 @@ export function AttendanceReviewCardPage({
           Back to month
         </Link>
       </p>
-      {isLoading ? <p className="text-sm text-muted">Loading card…</p> : null}
+      {isLoading ? <PageLoading compact message="Loading card…" /> : null}
       {isError ? <StatusMessage tone="danger">{apiErrorMessage(error, 'Unable to load this card.')}</StatusMessage> : null}
       {card ? (
         <div className="max-w-3xl space-y-8">

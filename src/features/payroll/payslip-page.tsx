@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { PageLoading } from '@/components/ui/page-loading';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import { StatusMessage } from '@/components/ui/status-message';
@@ -33,7 +34,7 @@ export function PayslipPage({
           </Button>
         ) : null}
       </div>
-      {isLoading ? <p className="text-sm text-muted">Loading slip…</p> : null}
+      {isLoading ? <PageLoading compact message="Loading slip…" /> : null}
       {isError ? <StatusMessage tone="danger">{apiErrorMessage(error, 'Unable to load this slip.')}</StatusMessage> : null}
       {slip ? <SalarySlipDocument slip={slip} /> : null}
     </>

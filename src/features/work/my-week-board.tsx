@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { PageLoading } from '@/components/ui/page-loading';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
@@ -316,7 +317,7 @@ export function MyWeekBoard({
         </div>
       ) : null}
       {skip ? <p className="text-sm text-muted">Choose an employee to see their week.</p> : null}
-      {isLoading ? <p className="text-sm text-muted">Loading this week…</p> : null}
+      {isLoading ? <PageLoading compact message="Loading this week…" /> : null}
 
       {board && !readOnly ? <MyPrioritiesWizard board={board} /> : null}
 

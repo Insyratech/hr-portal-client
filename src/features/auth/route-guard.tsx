@@ -31,7 +31,7 @@ export function RouteGuard({ children }: { children: ReactNode }) {
 
   if (!hydrated || !user || !isPathAllowed(user.roles, pathname)) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-white dark:bg-black">
         <LoadingOverlay open message="We are almost there…" />
       </div>
     );

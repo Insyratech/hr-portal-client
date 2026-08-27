@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { PageLoading } from '@/components/ui/page-loading';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -270,7 +271,7 @@ export function EmployeeWorkPanel({ employeeId }: { employeeId: string }) {
               />
             </div>
           ) : (
-            <p className="text-sm text-muted">Loading calendar…</p>
+            <PageLoading compact message="Loading calendar…" />
           )
         }
       >
@@ -304,7 +305,7 @@ export function EmployeeWorkPanel({ employeeId }: { employeeId: string }) {
         <p className="mb-4 text-sm text-muted">
           Weekly priorities and skill development for this employee. Read-only here — employees set their own plan.
         </p>
-        <Suspense fallback={<p className="text-sm text-muted">Loading week…</p>}>
+        <Suspense fallback={<PageLoading compact message="Loading week…" />}>
           <MyWeekBoard mode="view" fixedEmployeeId={employeeId} showHeader={false} showWeekSummary={false} compact />
         </Suspense>
       </WorkSection>

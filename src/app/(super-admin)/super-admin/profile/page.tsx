@@ -1,6 +1,7 @@
 'use client';
 
 import { PageHeader } from '@/components/layout/page-header';
+import { PageLoading } from '@/components/ui/page-loading';
 import { Meta } from '@/components/layout/meta';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +17,7 @@ export default function SuperAdminProfilePage() {
     return (
       <>
         <PageHeader kicker="Account" title="Profile" />
-        <p className="text-sm text-muted">Loading your profile…</p>
+        <PageLoading compact message="Loading your profile…" />
       </>
     );
   }

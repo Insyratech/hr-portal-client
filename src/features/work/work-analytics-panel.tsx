@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { PageLoading } from '@/components/ui/page-loading';
 import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/dashboard/data-table';
 import { StatCard } from '@/components/dashboard/stat-card';
@@ -131,7 +132,7 @@ export function WorkAnalyticsPanel({
         ) : null}
       </div>
 
-      {isLoading ? <p className="text-sm text-muted">Loading insights…</p> : null}
+      {isLoading ? <PageLoading compact message="Loading insights…" /> : null}
       {!analytics ? null : (
         <>
           {teamMode ? <p className="text-sm text-muted">{analytics.note}</p> : null}

@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
+import { PageLoading } from '@/components/ui/page-loading';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DataTable } from '@/components/dashboard/data-table';
@@ -153,7 +154,7 @@ function EditRequestsBody() {
 
 export function DirectoryEditRequestsQueue() {
   return (
-    <Suspense fallback={<p className="text-sm text-muted">Loading</p>}>
+    <Suspense fallback={<PageLoading compact message="Loading…" />}>
       <EditRequestsBody />
     </Suspense>
   );

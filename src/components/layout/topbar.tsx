@@ -21,7 +21,8 @@ function isProjectDeskPath(pathname: string): boolean {
 
 function EmployeeWorkMenu() {
   const pathname = usePathname();
-  const workActive = isNavActive(pathname, '/work') && !isProjectDeskPath(pathname);
+  const workActive =
+    (pathname === '/work' || pathname.startsWith('/work/')) && !isProjectDeskPath(pathname);
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

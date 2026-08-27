@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { PageLoading } from '@/components/ui/page-loading';
 import Link from 'next/link';
 import { DataTable } from '@/components/dashboard/data-table';
 import { StatusBadge } from '@/components/dashboard/status-badge';
@@ -52,7 +53,7 @@ export function PayrollRunPreview({
           Back to payroll
         </Link>
       </p>
-      {isLoading ? <p className="text-sm text-muted">Loading slips…</p> : null}
+      {isLoading ? <PageLoading compact message="Loading slips…" /> : null}
       {isError ? <StatusMessage tone="danger">{apiErrorMessage(error, 'Unable to load this run.')}</StatusMessage> : null}
       {bundle ? (
         <div className="space-y-6">

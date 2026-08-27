@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { PageLoading } from '@/components/ui/page-loading';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/dashboard/data-table';
@@ -74,7 +75,7 @@ export function AttendanceImportReview({
           Back to imports
         </Link>
       </p>
-      {isLoading ? <p className="text-sm text-muted">Loading import…</p> : null}
+      {isLoading ? <PageLoading compact message="Loading import…" /> : null}
       {isError ? <StatusMessage tone="danger">{apiErrorMessage(error, 'Unable to load this import.')}</StatusMessage> : null}
       {bundle ? (
         <div className="space-y-8">

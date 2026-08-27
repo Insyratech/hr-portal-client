@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { PageLoading } from '@/components/ui/page-loading';
 import Link from 'next/link';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
@@ -56,7 +57,7 @@ export function CsoEmployeeDetailPage({ employeeId }: { employeeId: string }) {
   }
 
   if (employeeLoading) {
-    return <p className="text-sm text-muted">Loading employee…</p>;
+    return <PageLoading compact message="Loading employee…" />;
   }
   if (employeeError || !employee) {
     return <p className="text-sm">Unable to load this employee.</p>;
@@ -92,7 +93,7 @@ export function CsoEmployeeDetailPage({ employeeId }: { employeeId: string }) {
         <p className="text-sm text-muted">
           One employee can join many projects; one project can include many employees. Saving replaces the full set.
         </p>
-        {assignedLoading ? <p className="text-sm text-muted">Loading assignments…</p> : null}
+        {assignedLoading ? <PageLoading compact message="Loading assignments…" /> : null}
         <CheckboxIdPicker
           options={options}
           selectedIds={selectedIds}

@@ -132,7 +132,8 @@ function GrievancePageBody() {
         <DataTable
           columns={columns}
           rows={assignedData?.data ?? []}
-          emptyTitle={assignedLoading ? 'Loading' : 'No assigned cases'}
+          loading={assignedLoading}
+          emptyTitle="No assigned cases"
           emptyDescription="When HR assigns you as investigator, those cases appear here."
         />
       </section>
@@ -143,7 +144,7 @@ function GrievancePageBody() {
           columns={columns}
           rows={data?.data ?? []}
           loading={isLoading}
-        emptyTitle="No grievances"
+          emptyTitle="No grievances"
           emptyDescription="Your filed concerns appear here."
         />
       </section>

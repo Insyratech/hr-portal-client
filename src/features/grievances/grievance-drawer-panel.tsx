@@ -1,6 +1,7 @@
 'use client';
 
 import type { FormEvent } from 'react';
+import { PageLoading } from '@/components/ui/page-loading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -114,7 +115,7 @@ export function GrievanceDrawerPanel({ grievanceId }: { grievanceId: string }) {
     }
   }
 
-  if (isLoading) return <p className="text-sm text-muted">Loading</p>;
+  if (isLoading) return <PageLoading compact message="Loading" />;
   if (isError || !detail) return <p className="text-sm">Unable to load grievance.</p>;
 
   const assignOptions = canManage

@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { PageLoading } from '@/components/ui/page-loading';
 import { PageHeader } from '@/components/layout/page-header';
 import { HandoverReviewCard } from '@/features/leave/handover-review-card';
 import { StatusMessage } from '@/components/ui/status-message';
@@ -15,7 +16,7 @@ export default function LeaveHandoverPage() {
   return (
     <>
       <PageHeader kicker="Leave" title="Review and accept" />
-      {isLoading ? <p className="text-sm text-muted">Loading handover request…</p> : null}
+      {isLoading ? <PageLoading compact message="Loading handover request…" /> : null}
       {isError ? <StatusMessage tone="danger">{apiErrorMessage(error, 'Unable to load this leave request.')}</StatusMessage> : null}
       {data?.data ? <HandoverReviewCard application={data.data} highlight /> : null}
     </>

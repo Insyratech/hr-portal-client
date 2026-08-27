@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { PageLoading } from '@/components/ui/page-loading';
 import { DataTable, type DataTableColumn } from '@/components/dashboard/data-table';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { Meta } from '@/components/layout/meta';
@@ -30,7 +31,7 @@ export function ReportsOverviewPage({ kicker }: { kicker: string }) {
     return (
       <>
         <PageHeader kicker={kicker} title="Analytics" />
-        <p className="text-sm text-muted">Loading reports…</p>
+        <PageLoading compact message="Loading reports…" />
       </>
     );
   }

@@ -8,6 +8,7 @@ import {
   GM_NAV,
   HR_NAV,
   MY_WORK_ACCOUNT_NAV,
+  MY_WORK_DASHBOARD,
   MY_WORK_DOCS_NAV,
   MY_WORK_TIME_NAV,
   MY_WORK_WORK_NAV,
@@ -26,7 +27,7 @@ function personalNav(roles: string[]): NavItem[] {
   const work = skipsWorkApprovalLoop(roles)
     ? MY_WORK_WORK_NAV.filter((item) => !isWorkLoopNavHref(item.href))
     : MY_WORK_WORK_NAV;
-  return [...work, ...MY_WORK_TIME_NAV, ...MY_WORK_DOCS_NAV, ...MY_WORK_ACCOUNT_NAV];
+  return [MY_WORK_DASHBOARD, ...work, ...MY_WORK_TIME_NAV, ...MY_WORK_DOCS_NAV, ...MY_WORK_ACCOUNT_NAV];
 }
 
 function itemsFor(variant: Exclude<ShellVariant, 'employee'>, roles: string[]) {

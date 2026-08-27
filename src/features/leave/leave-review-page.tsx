@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { PageLoading } from '@/components/ui/page-loading';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { LeaveJourney } from '@/components/leave/leave-journey';
@@ -89,7 +90,7 @@ export function LeaveReviewPage({ listHref }: { listHref: string }) {
           Back to applications
         </Link>
       </p>
-      {isLoading ? <p className="text-sm text-muted">Loading leave request…</p> : null}
+      {isLoading ? <PageLoading compact message="Loading leave request…" /> : null}
       {isError ? <StatusMessage tone="danger">{apiErrorMessage(error, 'Unable to load this leave request.')}</StatusMessage> : null}
       {row ? (
         <div className="max-w-2xl space-y-6 border border-border bg-background p-6 shadow-card">

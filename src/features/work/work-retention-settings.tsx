@@ -1,6 +1,7 @@
 'use client';
 
 import type { FormEvent } from 'react';
+import { PageLoading } from '@/components/ui/page-loading';
 import { useEffect, useState } from 'react';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
@@ -86,7 +87,7 @@ export function WorkRetentionSettings() {
 
       {isError ? <p className="text-sm">Unable to load work settings.</p> : null}
       {isLoading || !form ? (
-        <p className="text-sm text-muted">Loading…</p>
+        <PageLoading compact message="Loading…" />
       ) : (
         <form onSubmit={onSubmit} className="space-y-5">
           <div>

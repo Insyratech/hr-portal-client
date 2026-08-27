@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { PageLoading } from '@/components/ui/page-loading';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
@@ -85,7 +86,7 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
   }
 
   if (isLoading) {
-    return <p className="text-sm text-muted">Loading project desk…</p>;
+    return <PageLoading compact message="Loading project desk…" />;
   }
 
   if (forbidden || isError || !desk) {
