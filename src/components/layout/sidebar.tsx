@@ -103,25 +103,16 @@ function NavSection({
   );
 }
 
-function isPersonalWorkPath(pathname: string): boolean {
-  return pathname === '/work' || pathname.startsWith('/work/');
-}
-
 function EmployeeNavGroups({ collapsed }: { collapsed: boolean }) {
-  const pathname = usePathname();
   const roles = useAppSelector((state) => state.auth.user?.roles ?? []);
-  const skipLoop = skipsWorkApprovalLoop(roles);
-  /** Inner Work sidebar already lists these — hide duplicates from the main rail. */
-  const onPersonalWork = isPersonalWorkPath(pathname);
-  const workItems = skipLoop
-    ? MY_WORK_WORK_NAV.filter((item) => !isWorkLoopNavHref(item.href))
-    : MY_WORK_WORK_NAV;
-  const myWorkItems = onPersonalWork ? [] : workItems;
+  /** HR / GM / Finance skip the personal work loop — no My work entry. */
+  const personalTop = skipsWorkApprovalLoop(roles)
+    ? [MY_WORK_DASHBOARD]
+    : [MY_WORK_DASHBOARD, MY_WORK_ENTRY];
 
   return (
     <>
-      <NavLinks items={[MY_WORK_DASHBOARD]} collapsed={collapsed} />
-      <NavGroup label="My work" items={myWorkItems} collapsed={collapsed} />
+      <NavLinks items={personalTop} collapsed={collapsed} />
       <NavGroup label="Time off" items={MY_WORK_TIME_NAV} collapsed={collapsed} />
       <NavGroup label="Pay & docs" items={MY_WORK_DOCS_NAV} collapsed={collapsed} />
       <NavGroup label="Account" items={MY_WORK_ACCOUNT_NAV} collapsed={collapsed} />

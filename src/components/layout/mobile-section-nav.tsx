@@ -10,8 +10,8 @@ import {
   MY_WORK_ACCOUNT_NAV,
   MY_WORK_DASHBOARD,
   MY_WORK_DOCS_NAV,
+  MY_WORK_ENTRY,
   MY_WORK_TIME_NAV,
-  MY_WORK_WORK_NAV,
   SUPER_ADMIN_CONFIG_NAV,
   SUPER_ADMIN_OVERVIEW_NAV,
   isNavActive,
@@ -20,14 +20,14 @@ import {
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import type { ShellVariant } from '@/features/auth/role-access';
-import { isWorkLoopNavHref, skipsWorkApprovalLoop } from '@/features/work/work-loop';
+import { skipsWorkApprovalLoop } from '@/features/work/work-loop';
 import { useAppSelector } from '@/store/hooks';
 
 function personalNav(roles: string[]): NavItem[] {
-  const work = skipsWorkApprovalLoop(roles)
-    ? MY_WORK_WORK_NAV.filter((item) => !isWorkLoopNavHref(item.href))
-    : MY_WORK_WORK_NAV;
-  return [MY_WORK_DASHBOARD, ...work, ...MY_WORK_TIME_NAV, ...MY_WORK_DOCS_NAV, ...MY_WORK_ACCOUNT_NAV];
+  const top = skipsWorkApprovalLoop(roles)
+    ? [MY_WORK_DASHBOARD]
+    : [MY_WORK_DASHBOARD, MY_WORK_ENTRY];
+  return [...top, ...MY_WORK_TIME_NAV, ...MY_WORK_DOCS_NAV, ...MY_WORK_ACCOUNT_NAV];
 }
 
 function itemsFor(variant: Exclude<ShellVariant, 'employee'>, roles: string[]) {
