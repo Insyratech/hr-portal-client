@@ -15,6 +15,7 @@ import { EditIconButton } from '@/components/ui/edit-icon-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
+import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import { uploadCompanyLogo } from '@/features/companies/upload-logo';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useAppSelector } from '@/store/hooks';
@@ -88,6 +89,7 @@ export function CompaniesPage() {
 
   return (
     <>
+      <DelayedLoadingOverlay active={creating || updating} />
       <PageHeader
         kicker="Organization"
         title="Companies"
@@ -140,7 +142,8 @@ export function CompaniesPage() {
             : []),
         ]}
         rows={data?.data ?? []}
-        emptyTitle={isLoading ? 'Loading' : 'No companies'}
+        loading={isLoading}
+        emptyTitle="No companies"
         emptyDescription="Add 30M Genomics and Insyra so you can assign employees."
       />
 
@@ -172,7 +175,7 @@ export function CompaniesPage() {
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={creating}>
+              <Button type="submit" loading={creating}>
                 {creating ? 'Saving…' : 'Add company'}
               </Button>
             </div>
@@ -215,7 +218,7 @@ export function CompaniesPage() {
                 <Button type="button" variant="outline" onClick={() => setEditing(null)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={updating}>
+                <Button type="submit" loading={updating}>
                   {updating ? 'Saving…' : 'Save'}
                 </Button>
               </div>

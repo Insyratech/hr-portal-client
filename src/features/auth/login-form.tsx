@@ -7,9 +7,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { PasswordInput } from '@/components/ui/password-input';
 import { StatusMessage, type StatusTone } from '@/components/ui/status-message';
 import { Meta } from '@/components/layout/meta';
+import { ThreeDotsSpinner } from '@/components/ui/three-dots-spinner';
 import { destinationAfterLogin } from '@/features/auth/role-access';
 import { isSupabaseBrowserConfigured } from '@/lib/env';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
@@ -96,54 +98,61 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6" autoComplete="off">
-      <div>
-        <Meta className="mb-3">HR Portal</Meta>
-        <h1 className="text-3xl font-semibold tracking-tight">LOGIN</h1>
-      </div>
-      <div className="sr-only" aria-hidden="true">
-        <input type="text" name="fake-user" autoComplete="username" tabIndex={-1} />
-        <input type="password" name="fake-pass" autoComplete="current-password" tabIndex={-1} />
-      </div>
-      <div>
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="off"
-          placeholder="name@company.com"
-          readOnly
-          onFocus={(event) => {
-            event.currentTarget.readOnly = false;
-          }}
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="password">Password</Label>
-        <PasswordInput
-          id="password"
-          name="password"
-          autoComplete="new-password"
-          placeholder="Password"
-          readOnly
-          onFocus={(event) => {
-            event.currentTarget.readOnly = false;
-          }}
-          required
-        />
-      </div>
-      {message ? <StatusMessage tone={message.tone}>{message.text}</StatusMessage> : null}
-      <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? 'Signing in' : 'Sign in'}
-      </Button>
-      <p className="text-center text-sm text-muted">
-        <Link href="/forgot-password" className="hover:text-foreground">
-          Forgot password
-        </Link>
-      </p>
-      <p className="text-xs uppercase tracking-[0.2em] text-muted">API · {apiLabel}</p>
-    </form>
+    <>
+      <LoadingOverlay open={pending || Boolean(user)} message="We are almost there…" />
+      <form onSubmit={onSubmit} className="space-y-6" autoComplete="off">
+        <div>
+          <Meta className="mb-3">HR Portal</Meta>
+          <h1 className="text-3xl font-semibold tracking-tight">LOGIN</h1>
+        </div>
+        <div className="sr-only" aria-hidden="true">
+          <input type="text" name="fake-user" autoComplete="username" tabIndex={-1} />
+          <input type="password" name="fake-pass" autoComplete="current-password" tabIndex={-1} />
+        </div>
+        <div>
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="off"
+            placeholder="name@company.com"
+            readOnly
+            onFocus={(event) => {
+              event.currentTarget.readOnly = false;
+            }}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="password">Password</Label>
+          <PasswordInput
+            id="password"
+            name="password"
+            autoComplete="new-password"
+            placeholder="Password"
+            readOnly
+            onFocus={(event) => {
+              event.currentTarget.readOnly = false;
+            }}
+            required
+          />
+        </div>
+        {message ? <StatusMessage tone={message.tone}>{message.text}</StatusMessage> : null}
+        <Button type="submit" className="w-full" loading={pending}>
+          {pending ? 'Signing in' : 'Sign in'}
+        </Button>
+        <p className="text-center text-sm text-muted">
+          <Link href="/forgot-password" className="hover:text-foreground">
+            Forgot password
+          </Link>
+        </p>
+        <p className="flex items-center justify-center gap-2 text-xs uppercase tracking-[0.2em] text-muted">
+          API · {apiLabel}
+          {isFetching ? <ThreeDotsSpinner size="sm" label="Checking API" /> : null}
+        </p>
+      </form>
+    </>
   );
 }
+

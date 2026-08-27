@@ -67,7 +67,8 @@ export default function PoliciesPage() {
           },
         ]}
         rows={data?.data ?? []}
-        emptyTitle={isLoading ? 'Loading' : 'No policies'}
+        loading={isLoading}
+        emptyTitle="No policies"
         emptyDescription="Published policies appear here after Super Admin publishes them."
       />
 

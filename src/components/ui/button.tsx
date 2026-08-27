@@ -1,6 +1,7 @@
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 import type { ButtonHTMLAttributes } from 'react';
+import { ThreeDotsSpinner } from '@/components/ui/three-dots-spinner';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
@@ -28,9 +29,40 @@ const buttonVariants = cva(
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
+    /** Shows three-dot spinner and disables the control while true. */
+    loading?: boolean;
   };
 
-export function Button({ className, variant, size, asChild = false, ...props }: ButtonProps) {
+export function Button({
+  className,
+  variant,
+  size,
+  asChild = false,
+  loading = false,
+  disabled,
+  children,
+  ...props
+}: ButtonProps) {
   const Comp = asChild ? Slot : 'button';
-  return <Comp className={cn(buttonVariants({ variant, size }), className)} {...props} />;
+  const isDisabled = Boolean(disabled || loading);
+
+  if (asChild) {
+    return (
+      <Comp className={cn(buttonVariants({ variant, size }), className)} disabled={isDisabled} {...props}>
+        {children}
+      </Comp>
+    );
+  }
+
+  return (
+    <Comp
+      className={cn(buttonVariants({ variant, size }), className)}
+      disabled={isDisabled}
+      aria-busy={loading || undefined}
+      {...props}
+    >
+      {loading ? <ThreeDotsSpinner size="sm" label="Working" /> : null}
+      {children}
+    </Comp>
+  );
 }

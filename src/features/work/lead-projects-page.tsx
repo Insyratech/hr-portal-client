@@ -18,7 +18,6 @@ export function LeadProjectsPage() {
         priorities, and related daily work. CSO still approves weekly priorities. Leave approvals for your projects
         appear under Leave.
       </p>
-      {isLoading ? <p className="text-sm text-muted">Loading your lead projects…</p> : null}
       <DataTable
         columns={[
           { id: 'code', header: 'Code', cell: (row) => row.code },
@@ -35,6 +34,7 @@ export function LeadProjectsPage() {
           },
         ]}
         rows={projects.map((row) => ({ ...row, id: row.id }))}
+        loading={isLoading}
         emptyTitle="No lead projects"
         emptyDescription="When CSO assigns you as a project lead, those projects appear here."
       />

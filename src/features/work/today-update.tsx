@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PageLoading } from '@/components/ui/page-loading';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useGetWorkDayQuery, useSubmitWorkDayMutation } from '@/store/api/api';
@@ -273,8 +274,7 @@ export function TodayUpdate() {
   if (isLoading) {
     return (
       <section className="border border-border bg-background p-5 shadow-card">
-        <Meta>Today</Meta>
-        <p className="mt-2 text-sm text-muted">Checking whether an update is needed…</p>
+        <PageLoading compact message="Checking today’s update…" />
       </section>
     );
   }

@@ -1,5 +1,6 @@
 'use client';
 
+import { PageLoading } from '@/components/ui/page-loading';
 import { Suspense, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
@@ -58,7 +59,7 @@ function GmWeeklyUpdatesInner() {
         Packages CSO shared with you. Only shared weeks appear here — not the full team archive.
       </p>
 
-      {isLoading ? <p className="text-sm text-muted">Loading…</p> : null}
+      {isLoading ? <PageLoading compact message="Loading…" /> : null}
       {isError ? <p className="text-sm">Unable to load shared weekly updates.</p> : null}
 
       {board ? (
@@ -139,7 +140,7 @@ function GmWeeklyUpdatesInner() {
 
 export function GmWeeklyUpdatesPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+    <Suspense fallback={<PageLoading compact message="Loading…" />}>
       <GmWeeklyUpdatesInner />
     </Suspense>
   );

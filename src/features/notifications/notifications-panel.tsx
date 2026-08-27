@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
+import { ThreeDotsSpinner } from '@/components/ui/three-dots-spinner';
 import { pathForNotification } from '@/features/notifications/notification-path';
 import {
   useGetNotificationsQuery,
@@ -51,6 +52,7 @@ export function NotificationsPanel() {
             variant="ghost"
             size="sm"
             disabled={markingAll || items.length === 0}
+            loading={markingAll}
             onClick={() => void markAll()}
           >
             {markingAll ? 'Marking' : 'Mark all read'}
@@ -62,7 +64,9 @@ export function NotificationsPanel() {
       </div>
       <ul className="max-h-96 overflow-y-auto">
         {isLoading ? (
-          <li className="px-4 py-10 text-center text-sm text-muted">Loading…</li>
+          <li className="flex justify-center px-4 py-10">
+            <ThreeDotsSpinner label="Loading notifications" />
+          </li>
         ) : items.length === 0 ? (
           <li className="px-4 py-10 text-center text-sm text-muted">No unread notifications.</li>
         ) : (

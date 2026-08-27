@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { PageLoading } from '@/components/ui/page-loading';
 import { Suspense } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import { TodayUpdate } from '@/features/work/today-update';
@@ -49,7 +50,7 @@ function WorkToday() {
 
 export default function WorkPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+    <Suspense fallback={<PageLoading compact message="Loading…" />}>
       <WorkToday />
     </Suspense>
   );

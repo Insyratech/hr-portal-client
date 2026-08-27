@@ -161,7 +161,8 @@ export function EmployeeLeavesPanel({
               },
             ]}
             rows={allocations}
-            emptyTitle={isFetching ? 'Loading' : 'No leave types assigned'}
+            loading={isFetching}
+        emptyTitle="No leave types assigned"
             emptyDescription={
               isFetching
                 ? 'Loading allocations.'

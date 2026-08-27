@@ -167,7 +167,8 @@ export default function ShiftsPage() {
             : []),
         ]}
         rows={shifts?.data ?? []}
-        emptyTitle={isLoading ? 'Loading' : 'No shifts'}
+        loading={isLoading}
+        emptyTitle="No shifts"
         emptyDescription="Seeded shifts appear after the Phase 3 SQL migration."
       />
 

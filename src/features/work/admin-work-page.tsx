@@ -1,5 +1,6 @@
 'use client';
 
+import { PageLoading } from '@/components/ui/page-loading';
 import { Suspense } from 'react';
 import { AdminTeamWeek } from '@/features/work/admin-team-week';
 
@@ -11,7 +12,7 @@ export function AdminWorkPage({
   employeeHref?: (employeeId: string) => string;
 }) {
   return (
-    <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+    <Suspense fallback={<PageLoading compact message="Loading…" />}>
       <AdminTeamWeek employeeBasePath={employeeBasePath} employeeHref={employeeHref} />
     </Suspense>
   );

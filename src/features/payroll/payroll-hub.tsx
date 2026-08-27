@@ -99,7 +99,8 @@ export function PayrollHub({
           },
         ]}
         rows={runData?.data ?? []}
-        emptyTitle={isLoading ? 'Loading' : 'No payroll runs'}
+        loading={isLoading}
+        emptyTitle="No payroll runs"
         emptyDescription={canManage ? 'Calculate a confirmed month to create slips.' : 'Published payroll appears here.'}
       />
     </>

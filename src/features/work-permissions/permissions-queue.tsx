@@ -116,7 +116,8 @@ function PermissionsQueueBody() {
             : []),
         ]}
         rows={data?.data ?? []}
-        emptyTitle={isLoading ? 'Loading' : 'No permission requests'}
+        loading={isLoading}
+        emptyTitle="No permission requests"
         emptyDescription="1-hour start or end of shift requests appear here."
       />
     </>

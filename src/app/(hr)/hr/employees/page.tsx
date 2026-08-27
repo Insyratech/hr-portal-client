@@ -49,7 +49,8 @@ export default function Page() {
           },
         ]}
         rows={rows}
-        emptyTitle={isFetching ? 'Loading' : 'No employees'}
+        loading={isFetching}
+        emptyTitle="No employees"
         emptyDescription={isFetching ? 'Fetching the directory.' : 'Ask Super Admin to create accounts.'}
       />
     </>

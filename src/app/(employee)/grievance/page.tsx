@@ -142,7 +142,8 @@ function GrievancePageBody() {
         <DataTable
           columns={columns}
           rows={data?.data ?? []}
-          emptyTitle={isLoading ? 'Loading' : 'No grievances'}
+          loading={isLoading}
+        emptyTitle="No grievances"
           emptyDescription="Your filed concerns appear here."
         />
       </section>

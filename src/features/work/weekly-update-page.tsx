@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { PageLoading } from '@/components/ui/page-loading';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
@@ -98,7 +99,7 @@ export function WeeklyUpdatePage() {
         upload is flagged late. You can replace once (2 uploads max; the second deletes the first).
       </p>
 
-      {isLoading ? <p className="text-sm text-muted">Loading…</p> : null}
+      {isLoading ? <PageLoading compact message="Loading…" /> : null}
       {isError ? <p className="text-sm">Unable to load weekly updates.</p> : null}
 
       {board ? (

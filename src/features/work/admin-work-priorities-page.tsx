@@ -1,5 +1,6 @@
 'use client';
 
+import { PageLoading } from '@/components/ui/page-loading';
 import { Suspense, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { DataTable } from '@/components/dashboard/data-table';
@@ -366,7 +367,7 @@ function PrioritiesDesk({ canApprove }: { canApprove: boolean }) {
 
 export function AdminWorkPrioritiesPage({ canApprove = false }: { canApprove?: boolean }) {
   return (
-    <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+    <Suspense fallback={<PageLoading compact message="Loading…" />}>
       <PrioritiesDesk canApprove={canApprove} />
     </Suspense>
   );

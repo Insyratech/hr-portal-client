@@ -64,7 +64,8 @@ export default function SuperAdminEmployeesPage() {
           },
         ]}
         rows={rows}
-        emptyTitle={isFetching ? 'Loading' : 'No employees'}
+        loading={isFetching}
+        emptyTitle="No employees"
         emptyDescription={
           isFetching ? 'Fetching the directory.' : 'Create the first person with New employee.'
         }

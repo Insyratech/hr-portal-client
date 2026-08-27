@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { PageLoading } from '@/components/ui/page-loading';
 import { PageHeader } from '@/components/layout/page-header';
 import { ProjectLeadReviewCard } from '@/features/leave/project-lead-review-card';
 import { useGetLeaveApplicationQuery } from '@/store/api/api';
@@ -13,7 +14,7 @@ export default function Page() {
   return (
     <div className="space-y-6">
       <PageHeader kicker="Leave" title="Project lead review" />
-      {isLoading ? <p className="text-sm text-muted">Loading…</p> : null}
+      {isLoading ? <PageLoading compact message="Loading…" /> : null}
       {isError || (!isLoading && !data?.data) ? (
         <p className="text-sm text-muted">This leave request is not available for project-lead review.</p>
       ) : null}

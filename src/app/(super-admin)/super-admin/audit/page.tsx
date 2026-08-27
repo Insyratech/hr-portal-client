@@ -18,7 +18,8 @@ export default function AuditPage() {
           { id: 'entity', header: 'Entity', cell: (row) => row.entityType },
         ]}
         rows={data?.data ?? []}
-        emptyTitle={isFetching ? 'Loading' : 'No audit events'}
+        loading={isFetching}
+        emptyTitle="No audit events"
         emptyDescription="Sensitive writes will appear here."
       />
     </>

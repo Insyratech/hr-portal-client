@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Meta } from '@/components/layout/meta';
+import { TableSkeleton } from '@/components/ui/skeleton';
 
 export type DataTableColumn<T> = {
   id: string;
@@ -12,12 +13,18 @@ export function DataTable<T extends { id: string }>({
   rows,
   emptyTitle,
   emptyDescription,
+  loading = false,
 }: {
   columns: DataTableColumn<T>[];
   rows: T[];
   emptyTitle: string;
   emptyDescription: string;
+  loading?: boolean;
 }) {
+  if (loading) {
+    return <TableSkeleton columns={Math.max(columns.length, 3)} rows={6} />;
+  }
+
   return (
     <div className="overflow-hidden rounded border border-border bg-background shadow-card">
       <div className="overflow-x-auto">

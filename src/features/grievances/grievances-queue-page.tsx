@@ -108,7 +108,8 @@ export function GrievancesQueuePage() {
           },
         ]}
         rows={rows}
-        emptyTitle={isLoading ? 'Loading' : 'No grievances'}
+        loading={isLoading}
+        emptyTitle="No grievances"
         emptyDescription="Grievances for this status appear here."
       />
     </>

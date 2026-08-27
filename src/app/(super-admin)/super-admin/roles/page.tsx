@@ -21,7 +21,8 @@ export default function RolesPage() {
           { id: 'code', header: 'Code', cell: (row) => row.code },
         ]}
         rows={data?.data ?? []}
-        emptyTitle={isFetching ? 'Loading' : 'No roles'}
+        loading={isFetching}
+        emptyTitle="No roles"
         emptyDescription="Seed roles from the Phase 1 migration."
       />
     </>

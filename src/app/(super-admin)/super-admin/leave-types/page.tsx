@@ -177,7 +177,8 @@ export default function LeaveTypesPage() {
             : []),
         ]}
         rows={rows}
-        emptyTitle={isLoading ? 'Loading' : 'No leave types'}
+        loading={isLoading}
+        emptyTitle="No leave types"
         emptyDescription="Add a leave with days and rules in one form."
       />
 

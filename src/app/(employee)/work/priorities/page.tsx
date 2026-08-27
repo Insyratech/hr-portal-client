@@ -1,5 +1,6 @@
 'use client';
 
+import { PageLoading } from '@/components/ui/page-loading';
 import { Suspense } from 'react';
 import { MyWeekBoard } from '@/features/work/my-week-board';
 import { useSkipsWorkLoop, WorkLoopExcludedNotice } from '@/features/work/work-loop-excluded';
@@ -12,7 +13,7 @@ function PrioritiesBody() {
 
 export default function WorkPrioritiesPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+    <Suspense fallback={<PageLoading compact message="Loading…" />}>
       <PrioritiesBody />
     </Suspense>
   );

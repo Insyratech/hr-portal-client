@@ -38,7 +38,7 @@ function LeavePageBody() {
   const searchParams = useSearchParams();
   const focusId = searchParams.get('applicationId');
   const { data: me } = useGetMeQuery();
-  const { data } = useGetLeaveApplicationsQuery();
+  const { data, isFetching: leaveLoading } = useGetLeaveApplicationsQuery();
   const { data: balanceData } = useGetLeaveBalancesQuery();
   const [cancelLeave, { isLoading }] = useCancelLeaveMutation();
   const toast = useToast();
@@ -213,7 +213,7 @@ function LeavePageBody() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  disabled={isLoading}
+                  loading={isLoading}
                   onClick={() => {
                     void cancelLeave(row.id)
                       .unwrap()
@@ -229,6 +229,7 @@ function LeavePageBody() {
           },
         ]}
         rows={mine}
+        loading={leaveLoading}
         emptyTitle="No applications"
         emptyDescription="Your leave requests will appear here."
       />

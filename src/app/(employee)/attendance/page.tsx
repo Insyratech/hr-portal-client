@@ -51,7 +51,8 @@ function AttendancePageBody() {
             },
           ]}
           rows={rows}
-          emptyTitle={isLoading ? 'Loading' : 'No days'}
+          loading={isLoading}
+        emptyTitle="No days"
           emptyDescription="Published attendance appears here after HR confirms the month."
         />
       )}

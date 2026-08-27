@@ -83,7 +83,7 @@ export function WorkEmailOtpField({
         <p className="text-sm text-muted">This email is confirmed. Updates will go here.</p>
       ) : (
         <>
-          <Button type="button" size="sm" variant="outline" disabled={sending || !emailOk} onClick={() => void send()}>
+          <Button type="button" size="sm" variant="outline" loading={sending} disabled={!emailOk} onClick={() => void send()}>
             {sending ? 'Sending…' : sent ? 'Send again' : 'Send 4-digit code'}
           </Button>
           {sent ? (
@@ -98,7 +98,7 @@ export function WorkEmailOtpField({
                   value={code}
                   onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 4))}
                 />
-                <Button type="button" size="sm" disabled={verifying || code.length !== 4} onClick={() => void verify()}>
+                <Button type="button" size="sm" loading={verifying} disabled={code.length !== 4} onClick={() => void verify()}>
                   {verifying ? 'Checking…' : 'Confirm'}
                 </Button>
               </div>

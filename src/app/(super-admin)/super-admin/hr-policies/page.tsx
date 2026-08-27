@@ -192,7 +192,8 @@ export default function HrPoliciesPage() {
           },
         ]}
         rows={policies}
-        emptyTitle={isLoading ? 'Loading' : 'No HR policies'}
+        loading={isLoading}
+        emptyTitle="No HR policies"
         emptyDescription="Create a draft, then publish it. New versions never rewrite old ones."
       />
     </>

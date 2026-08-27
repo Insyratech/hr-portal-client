@@ -29,7 +29,8 @@ export default function EmployeePayslipsPage() {
           },
         ]}
         rows={data?.data ?? []}
-        emptyTitle={isLoading ? 'Loading' : 'No payslips yet'}
+        loading={isLoading}
+        emptyTitle="No payslips yet"
         emptyDescription="HR publishes a month after attendance is confirmed. Your slip will appear here."
       />
     </>

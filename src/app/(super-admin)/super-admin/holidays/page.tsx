@@ -122,7 +122,8 @@ export default function HolidaysPage() {
             : []),
         ]}
         rows={data?.data ?? []}
-        emptyTitle={isLoading ? 'Loading' : 'No holidays'}
+        loading={isLoading}
+        emptyTitle="No holidays"
         emptyDescription="Public holidays are skipped when counting leave days."
       />
 

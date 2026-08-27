@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PageLoading } from '@/components/ui/page-loading';
 import { CheckboxIdPicker } from '@/features/work/checkbox-id-picker';
 import { ProjectStatusUpdateList } from '@/features/work/project-status-updates';
 import { useToast } from '@/hooks/use-toast';
@@ -57,7 +58,7 @@ function ProjectUpdatesDialog({
             : 'Read-only project status history.'}
         </DialogDescription>
         <div className="mt-6">
-          {isLoading ? <p className="text-sm text-muted">Loading updates…</p> : null}
+          {isLoading ? <PageLoading compact message="Loading updates…" /> : null}
           {isError ? <p className="text-sm text-muted">Could not load status updates.</p> : null}
           {!isLoading && !isError ? (
             <ProjectStatusUpdateList
@@ -255,7 +256,7 @@ export function AdminWorkProjectsPage() {
         <p className="mb-8 text-sm text-muted">You can view projects. Creating them needs projects.manage.</p>
       ) : null}
 
-      {isLoading ? <p className="text-sm text-muted">Loading projects…</p> : null}
+      {isLoading ? <PageLoading compact message="Loading projects…" /> : null}
       <DataTable
         columns={[
           { id: 'code', header: 'Code', cell: (row) => row.code },

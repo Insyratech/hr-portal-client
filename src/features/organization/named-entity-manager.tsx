@@ -86,7 +86,8 @@ export function NamedEntityManager({
           { id: 'status', header: 'Status', cell: (row) => row.status },
         ]}
         rows={items}
-        emptyTitle={isLoading ? 'Loading' : `No ${title.toLowerCase()}`}
+        loading={isLoading}
+        emptyTitle={`No ${title.toLowerCase()}`}
         emptyDescription={`Use Add ${singular.toLowerCase()} to create the first record.`}
       />
 

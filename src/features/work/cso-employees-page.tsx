@@ -92,7 +92,8 @@ export function CsoEmployeesPage() {
           { id: 'ppt', header: 'Weekly PPT', cell: (row) => row.pptLabel },
         ]}
         rows={rows}
-        emptyTitle={isFetching ? 'Loading' : 'No active employees'}
+        loading={isFetching}
+        emptyTitle="No active employees"
         emptyDescription={isFetching ? 'Fetching the directory.' : 'Ask Super Admin to create accounts.'}
       />
     </>

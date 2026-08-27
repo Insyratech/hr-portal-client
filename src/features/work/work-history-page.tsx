@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { PageLoading } from '@/components/ui/page-loading';
 import { useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
@@ -43,7 +44,7 @@ export function WorkHistoryPage() {
         </Link>
       </div>
       <p className="mb-4 text-sm text-muted">✓ done · L leave · H holiday · M missing</p>
-      {isLoading ? <p className="text-sm text-muted">Loading…</p> : null}
+      {isLoading ? <PageLoading compact message="Loading…" /> : null}
       {history ? (
         <div className="space-y-8">
           <div className="grid grid-cols-7 gap-1 text-center text-xs">

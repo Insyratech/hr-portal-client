@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
+import { CardSkeleton } from '@/components/ui/skeleton';
 import { useGetLeadProjectsQuery } from '@/store/api/api';
 
 /** Compact lead-project list for the employee dashboard. */
@@ -11,12 +12,7 @@ export function DashboardMyProjectsCard() {
   const projects = data?.data ?? [];
 
   if (isLoading) {
-    return (
-      <section className="border border-border bg-background p-5 shadow-card">
-        <Meta>My projects</Meta>
-        <p className="mt-2 text-sm text-muted">Checking your lead projects…</p>
-      </section>
-    );
+    return <CardSkeleton />;
   }
 
   if (projects.length === 0) return null;

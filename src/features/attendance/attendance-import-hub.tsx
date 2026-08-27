@@ -156,7 +156,8 @@ export function AttendanceImportHub({
           },
         ]}
         rows={data?.data ?? []}
-        emptyTitle={isLoading ? 'Loading' : 'No imports'}
+        loading={isLoading}
+        emptyTitle="No imports"
         emptyDescription="HR uploads a biometric Excel file to start a month."
       />
       <Dialog open={Boolean(pendingDelete)} onOpenChange={(open) => !open && setPendingDelete(null)}>

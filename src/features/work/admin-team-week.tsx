@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { PageLoading } from '@/components/ui/page-loading';
 import { Suspense, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { DataTable } from '@/components/dashboard/data-table';
@@ -275,7 +276,7 @@ export function AdminTeamWeek({
   employeeHref?: (employeeId: string) => string;
 }) {
   return (
-    <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+    <Suspense fallback={<PageLoading compact message="Loading…" />}>
       <TeamWeekBoard employeeBasePath={employeeBasePath} employeeHref={employeeHref} />
     </Suspense>
   );

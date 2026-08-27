@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { homePathForRoles, isPathAllowed } from '@/features/auth/role-access';
 import { useAppSelector } from '@/store/hooks';
 
@@ -30,8 +31,8 @@ export function RouteGuard({ children }: { children: ReactNode }) {
 
   if (!hydrated || !user || !isPathAllowed(user.roles, pathname)) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-xs uppercase tracking-[0.2em] text-muted">
-        Loading
+      <div className="min-h-screen bg-background">
+        <LoadingOverlay open message="We are almost there…" />
       </div>
     );
   }

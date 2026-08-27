@@ -143,7 +143,8 @@ function EditRequestsBody() {
           },
         ]}
         rows={data?.data ?? []}
-        emptyTitle={isLoading ? 'Loading' : 'No edit requests'}
+        loading={isLoading}
+        emptyTitle="No edit requests"
         emptyDescription="When HR requests a directory change, it appears here."
       />
     </>

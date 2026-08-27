@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Meta } from '@/components/layout/meta';
+import { PageLoading } from '@/components/ui/page-loading';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
@@ -109,7 +110,7 @@ export function EmployeePayrollPanel({
   }
 
   if (isLoading) {
-    return <p className="text-sm text-muted">Loading payroll</p>;
+    return <PageLoading compact message="Loading payroll…" />;
   }
   if (isError) {
     return <p className="text-sm">Unable to load payroll details.</p>;

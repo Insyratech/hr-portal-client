@@ -1,5 +1,6 @@
 'use client';
 
+import { PageLoading } from '@/components/ui/page-loading';
 import { Suspense, useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
@@ -91,7 +92,7 @@ function CsoWeeklyUpdatesInner() {
         General Manager in one click. Re-share anytime — each share is kept on the timeline.
       </p>
 
-      {isLoading ? <p className="text-sm text-muted">Loading…</p> : null}
+      {isLoading ? <PageLoading compact message="Loading…" /> : null}
       {isError ? <p className="text-sm">Unable to load the weekly PPT desk.</p> : null}
 
       {board ? (
@@ -233,7 +234,7 @@ function CsoWeeklyUpdatesInner() {
 
 export function CsoWeeklyUpdatesPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+    <Suspense fallback={<PageLoading compact message="Loading…" />}>
       <CsoWeeklyUpdatesInner />
     </Suspense>
   );

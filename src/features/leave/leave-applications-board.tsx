@@ -76,7 +76,8 @@ function LeaveApplicationsBoardBody({ kicker, reviewBase }: { kicker: string; re
           },
         ]}
         rows={rows}
-        emptyTitle={isLoading ? 'Loading' : 'No applications'}
+        loading={isLoading}
+        emptyTitle="No applications"
         emptyDescription="Leave applications for this status will appear here."
       />
     </>
