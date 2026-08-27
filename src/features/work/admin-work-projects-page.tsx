@@ -37,7 +37,7 @@ export function AdminWorkProjectsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editMemberIds, setEditMemberIds] = useState<string[]>([]);
 
-  const projects = data?.data ?? [];
+  const projects = useMemo(() => data?.data ?? [], [data?.data]);
   const people = useMemo(
     () =>
       (employees?.data ?? [])

@@ -45,13 +45,9 @@ export function WeeklyUpdatePage() {
   const [dragging, setDragging] = useState(false);
   const board = data?.data;
 
-  if (excluded) {
-    return <WorkLoopExcludedNotice title="My weekly update" />;
-  }
-
   const onFile = useCallback(
     async (file: File | null) => {
-      if (!file || !board) return;
+      if (excluded || !file || !board) return;
       const lower = file.name.toLowerCase();
       if (!lower.endsWith('.ppt') && !lower.endsWith('.pptx')) {
         toast.error('Upload a .ppt or .pptx file only.');
@@ -77,8 +73,12 @@ export function WeeklyUpdatePage() {
         toast.error(apiErrorMessage(error, 'Could not upload the weekly PPT.'));
       }
     },
-    [board, createUpload, refetch, toast],
+    [board, createUpload, excluded, refetch, toast],
   );
+
+  if (excluded) {
+    return <WorkLoopExcludedNotice title="My weekly update" />;
+  }
 
   async function onDownload(id: string) {
     try {

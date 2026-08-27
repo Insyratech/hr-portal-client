@@ -25,7 +25,6 @@ export function CsoEmployeeDetailPage({ employeeId }: { employeeId: string }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const employee = employeeData?.data;
-  const catalog = catalogData?.data ?? [];
   const assignedIds = useMemo(
     () => (assignedData?.data.projects ?? []).map((project) => project.id),
     [assignedData?.data.projects],
@@ -37,12 +36,12 @@ export function CsoEmployeeDetailPage({ employeeId }: { employeeId: string }) {
 
   const options = useMemo(
     () =>
-      catalog.map((project) => ({
+      (catalogData?.data ?? []).map((project) => ({
         id: project.id,
         label: `${project.code} · ${project.name}`,
         hint: `${project.memberCount ?? project.members?.length ?? 0} member(s)`,
       })),
-    [catalog],
+    [catalogData?.data],
   );
 
   const dirty = [...selectedIds].sort().join(',') !== [...assignedIds].sort().join(',');
