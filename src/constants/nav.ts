@@ -44,6 +44,7 @@ export const MY_WORK_LINK: NavItem = {
 
 export const MY_WORK_TIME_NAV: readonly NavItem[] = [
   { href: '/leave', label: 'My leave', icon: 'leave' },
+  { href: '/leave/holidays', label: 'Holidays', icon: 'calendar' },
   { href: '/permission', label: 'My permission', icon: 'clock' },
   { href: '/attendance', label: 'Attendance', icon: 'clock' },
 ];
@@ -149,6 +150,7 @@ export const GM_ATTENDANCE_NAV: readonly NavItem[] = [
 
 export const GM_LEAVE_NAV: readonly NavItem[] = [
   { href: '/gm/leave-status', label: 'Who’s out', icon: 'leave' },
+  { href: '/gm/holidays', label: 'Holidays', icon: 'calendar' },
 ];
 
 export const GM_WORK_NAV: readonly NavItem[] = [

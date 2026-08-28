@@ -9,7 +9,6 @@ const nextConfig: NextConfig = {
       'designations',
       'leave-types',
       'leave-policies',
-      'holidays',
       'shifts',
       'attendance',
       'payroll',
@@ -27,14 +26,13 @@ const nextConfig: NextConfig = {
       'departments',
       'designations',
       'leave-types',
-      'holidays',
       'shifts',
       'settings',
       'leaves',
       'permissions',
       'grievances',
     ];
-    const adminToGm = ['attendance', 'payroll', 'reports', 'leave-status'];
+    const adminToGm = ['attendance', 'payroll', 'reports', 'leave-status', 'holidays'];
     const adminToCso = ['work'];
 
     return [

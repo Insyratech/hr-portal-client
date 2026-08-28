@@ -1,1 +1,5 @@
-export { default } from '../../../(super-admin)/super-admin/holidays/page';
+import { HolidaysPage } from '@/features/holidays/holidays-page';
+
+export default function HrHolidaysPage() {
+  return <HolidaysPage />;
+}

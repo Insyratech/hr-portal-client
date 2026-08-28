@@ -159,14 +159,13 @@ export function rewriteLegacyAdminPath(pathname: string): string {
     'departments',
     'designations',
     'leave-types',
-    'holidays',
     'shifts',
     'settings',
     'leaves',
     'permissions',
     'grievances',
   ]);
-  const gmOwned = new Set(['attendance', 'payroll', 'reports', 'leave-status']);
+  const gmOwned = new Set(['attendance', 'payroll', 'reports', 'leave-status', 'holidays']);
   const csoOwned = new Set(['work']);
 
   if (segment === 'leave-policies') return '/hr/leave-types';

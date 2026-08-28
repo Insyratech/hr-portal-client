@@ -1,4 +1,4 @@
-import { homePathForRoles } from '@/features/auth/role-access';
+import { homePathForRoles, isGeneralManager } from '@/features/auth/role-access';
 import type { NotificationItem } from '@/types/api';
 
 export function leaveApprovalPath(roles: string[], id: string): string {
@@ -41,7 +41,10 @@ export function pathForNotification(item: NotificationItem, roles: string[]): st
   }
 
   if (item.referenceType === 'holiday') {
-    return hrManager ? '/hr/holidays' : superAdmin ? '/super-admin/settings' : '/dashboard';
+    if (isGeneralManager(roles)) return '/gm/holidays';
+    if (hrManager) return '/hr/holidays';
+    if (superAdmin) return '/super-admin/holidays';
+    return '/leave/holidays';
   }
   if (item.referenceType === 'leave_allocation') {
     return '/leave';

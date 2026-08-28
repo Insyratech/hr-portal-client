@@ -1,5 +1,5 @@
 import { HolidaysPage } from '@/features/holidays/holidays-page';
 
-export default function SuperAdminHolidaysPage() {
+export default function EmployeeHolidaysPage() {
   return <HolidaysPage />;
 }
