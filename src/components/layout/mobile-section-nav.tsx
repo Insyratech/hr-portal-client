@@ -10,7 +10,7 @@ import {
   MY_WORK_ACCOUNT_NAV,
   MY_WORK_DASHBOARD,
   MY_WORK_DOCS_NAV,
-  MY_WORK_ENTRY,
+  MY_WORK_LINK,
   MY_WORK_TIME_NAV,
   SUPER_ADMIN_CONFIG_NAV,
   SUPER_ADMIN_OVERVIEW_NAV,
@@ -20,22 +20,17 @@ import {
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import type { ShellVariant } from '@/features/auth/role-access';
-import { skipsWorkApprovalLoop } from '@/features/work/work-loop';
-import { useAppSelector } from '@/store/hooks';
 
-function personalNav(roles: string[]): NavItem[] {
-  const top = skipsWorkApprovalLoop(roles)
-    ? [MY_WORK_DASHBOARD]
-    : [MY_WORK_DASHBOARD, MY_WORK_ENTRY];
-  return [...top, ...MY_WORK_TIME_NAV, ...MY_WORK_DOCS_NAV, ...MY_WORK_ACCOUNT_NAV];
+function personalNav(): NavItem[] {
+  return [MY_WORK_DASHBOARD, MY_WORK_LINK, ...MY_WORK_TIME_NAV, ...MY_WORK_DOCS_NAV, ...MY_WORK_ACCOUNT_NAV];
 }
 
-function itemsFor(variant: Exclude<ShellVariant, 'employee'>, roles: string[]) {
+function itemsFor(variant: Exclude<ShellVariant, 'employee'>) {
   if (variant === 'super-admin') {
     return [...SUPER_ADMIN_OVERVIEW_NAV, ...SUPER_ADMIN_CONFIG_NAV];
   }
   // Managerial tools first, then personal employee tools (matches desktop sidebar).
-  const personal = personalNav(roles);
+  const personal = personalNav();
   if (variant === 'hr') return [...HR_NAV, ...personal];
   if (variant === 'gm' || variant === 'admin') return [...GM_NAV, ...personal];
   if (variant === 'cso') return [...CSO_NAV, ...personal];
@@ -45,8 +40,7 @@ function itemsFor(variant: Exclude<ShellVariant, 'employee'>, roles: string[]) {
 
 export function MobileSectionNav({ variant }: { variant: Exclude<ShellVariant, 'employee'> }) {
   const pathname = usePathname();
-  const roles = useAppSelector((state) => state.auth.user?.roles ?? []);
-  const items = itemsFor(variant, roles);
+  const items = itemsFor(variant);
 
   return (
     <nav className="border-b border-border bg-background md:hidden">

@@ -147,10 +147,13 @@ export function LoginForm() {
             Forgot password
           </Link>
         </p>
-        <p className="flex items-center justify-center gap-2 text-xs uppercase tracking-[0.2em] text-muted">
+        <div
+          className="flex items-center justify-center gap-2 text-xs uppercase tracking-[0.2em] text-muted"
+          aria-live="polite"
+        >
           API · {apiLabel}
           {isFetching ? <ThreeDotsSpinner size="sm" label="Checking API" /> : null}
-        </p>
+        </div>
       </form>
     </>
   );

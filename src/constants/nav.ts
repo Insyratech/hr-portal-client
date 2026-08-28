@@ -27,7 +27,7 @@ export const EMPLOYEE_WORK_SUBNAV: readonly NavItem[] = [
 /**
  * Personal employee tools for HR / GM / CSO / Finance sidebars.
  * Desktop: under the Employee major section. Mobile chips: after managerial links.
- * Work sub-routes live only in the Work page sidebar (EMPLOYEE_WORK_SUBNAV).
+ * Dashboard and My work sit at the top; work sub-pages use the inner sidebar on /work/*.
  */
 export const MY_WORK_DASHBOARD: NavItem = {
   href: '/dashboard',
@@ -35,8 +35,8 @@ export const MY_WORK_DASHBOARD: NavItem = {
   icon: 'dashboard',
 };
 
-/** Single entry into personal work — details are in the Work body sidebar. */
-export const MY_WORK_ENTRY: NavItem = {
+/** Single entry to personal work — sub-pages use the inner Work sidebar on /work/*. */
+export const MY_WORK_LINK: NavItem = {
   href: '/work',
   label: 'My work',
   icon: 'grid',
@@ -61,7 +61,7 @@ export const MY_WORK_ACCOUNT_NAV: readonly NavItem[] = [
 
 export const MY_WORK_NAV: readonly NavItem[] = [
   MY_WORK_DASHBOARD,
-  MY_WORK_ENTRY,
+  MY_WORK_LINK,
   ...MY_WORK_TIME_NAV,
   ...MY_WORK_DOCS_NAV,
   ...MY_WORK_ACCOUNT_NAV,
@@ -180,7 +180,6 @@ export function isNavActive(pathname: string, href: string): boolean {
     return pathname === href;
   }
   if (href === '/work') {
-    // Keep “My work” / employee Work chrome active for all personal work routes.
     return pathname === '/work' || pathname.startsWith('/work/');
   }
   if (

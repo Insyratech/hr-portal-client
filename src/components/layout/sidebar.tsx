@@ -21,7 +21,7 @@ import {
   MY_WORK_ACCOUNT_NAV,
   MY_WORK_DASHBOARD,
   MY_WORK_DOCS_NAV,
-  MY_WORK_ENTRY,
+  MY_WORK_LINK,
   MY_WORK_TIME_NAV,
   SUPER_ADMIN_ORG_NAV,
   SUPER_ADMIN_OVERVIEW_NAV,
@@ -32,7 +32,6 @@ import {
 } from '@/constants/nav';
 import { cn } from '@/lib/utils';
 import type { ShellVariant } from '@/features/auth/role-access';
-import { skipsWorkApprovalLoop } from '@/features/work/work-loop';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toggleSidebar } from '@/store/slices/ui-slice';
 
@@ -104,15 +103,9 @@ function NavSection({
 }
 
 function EmployeeNavGroups({ collapsed }: { collapsed: boolean }) {
-  const roles = useAppSelector((state) => state.auth.user?.roles ?? []);
-  /** HR / GM / Finance skip the personal work loop — no My work entry. */
-  const personalTop = skipsWorkApprovalLoop(roles)
-    ? [MY_WORK_DASHBOARD]
-    : [MY_WORK_DASHBOARD, MY_WORK_ENTRY];
-
   return (
     <>
-      <NavLinks items={personalTop} collapsed={collapsed} />
+      <NavLinks items={[MY_WORK_DASHBOARD, MY_WORK_LINK]} collapsed={collapsed} />
       <NavGroup label="Time off" items={MY_WORK_TIME_NAV} collapsed={collapsed} />
       <NavGroup label="Pay & docs" items={MY_WORK_DOCS_NAV} collapsed={collapsed} />
       <NavGroup label="Account" items={MY_WORK_ACCOUNT_NAV} collapsed={collapsed} />
