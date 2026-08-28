@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
 import { EMPLOYEE_NAV, EMPLOYEE_WORK_SUBNAV, isNavActive, isWorkSubnavActive } from '@/constants/nav';
 import { Meta } from '@/components/layout/meta';
+import { ManagerMobileNav } from '@/components/layout/manager-mobile-nav';
 import { Icon } from '@/components/ui/icon';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { NotificationsPanel } from '@/features/notifications/notifications-panel';
@@ -181,19 +182,19 @@ function UserAccountMenu({
         aria-expanded={open}
         aria-controls={menuId}
         className={cn(
-          'inline-flex min-h-10 items-center gap-2 rounded border border-border bg-background px-3 py-1.5 text-sm text-foreground shadow-card transition-colors hover:bg-surface',
+          'inline-flex min-h-10 items-center gap-2 rounded border border-border bg-background px-2.5 py-1.5 text-sm text-foreground shadow-card transition-colors hover:bg-surface lg:px-3',
           open && 'bg-surface',
         )}
         onClick={() => setOpen((value) => !value)}
       >
         <Icon name="user" className="h-4 w-4 shrink-0 text-muted" />
-        <span className="flex min-w-0 flex-col items-start text-left leading-tight">
+        <span className="hidden min-w-0 flex-col items-start text-left leading-tight lg:flex">
           <span className="max-w-[12rem] truncate font-medium">{displayName}</span>
           {displayRole ? (
             <span className="max-w-[12rem] truncate text-[11px] text-muted">{displayRole}</span>
           ) : null}
         </span>
-        <Icon name="chevron-down" className={cn('h-3 w-3 shrink-0 opacity-70 transition', open && 'rotate-180')} />
+        <Icon name="chevron-down" className={cn('hidden h-3 w-3 shrink-0 opacity-70 transition lg:block', open && 'rotate-180')} />
       </button>
       {open ? (
         <div
@@ -241,6 +242,12 @@ function UserAccountMenu({
             <Icon name="close" className="h-3.5 w-3.5 text-muted" />
             Sign out
           </button>
+          <div className="border-t border-border px-3 py-3 lg:hidden">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-foreground">Appearance</span>
+              <ThemeToggle />
+            </div>
+          </div>
         </div>
       ) : null}
     </div>
@@ -265,12 +272,12 @@ export function Topbar({ variant }: { variant: ShellVariant }) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-[2px]">
-      <div className="flex h-14 items-center justify-between gap-6 px-4 md:px-8">
+      <div className="flex h-14 items-center justify-between gap-3 px-4 md:px-8 lg:gap-6">
         <div className="flex min-w-0 flex-1 items-center gap-8">
           {variant === 'employee' ? (
             <>
               <Meta>HR Portal</Meta>
-              <nav className="hidden items-center gap-0.5 md:flex lg:gap-1">
+              <nav className="hidden items-center gap-0.5 lg:flex lg:gap-1">
                 {EMPLOYEE_NAV.map((item) =>
                   item.href === '/work' ? (
                     <span key={item.href} className="contents">
@@ -296,20 +303,25 @@ export function Topbar({ variant }: { variant: ShellVariant }) {
               </nav>
             </>
           ) : (
-            <button
-              type="button"
-              aria-label="Search"
-              className="flex h-10 w-full max-w-sm items-center gap-3 rounded border border-border bg-surface px-3 text-left text-sm text-muted shadow-card transition-colors hover:border-foreground/30"
-              onClick={() => dispatch(setCommandPaletteOpen(true))}
-            >
-              <Icon name="search" className="h-4 w-4 text-muted" />
-              <span className="flex-1">Search</span>
-              <span className="hidden text-xs tracking-[0.12em] text-muted sm:inline">⌘ K</span>
-            </button>
+            <div className="flex min-w-0 flex-1 items-center gap-2 lg:gap-3">
+              <ManagerMobileNav variant={variant as Exclude<ShellVariant, 'employee'>} />
+              <button
+                type="button"
+                aria-label="Search"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border bg-surface text-muted shadow-card transition-colors hover:border-foreground/30 lg:w-full lg:max-w-sm lg:justify-start lg:gap-3 lg:px-3 lg:text-left lg:text-sm"
+                onClick={() => dispatch(setCommandPaletteOpen(true))}
+              >
+                <Icon name="search" className="h-4 w-4 text-muted" />
+                <span className="hidden flex-1 lg:inline">Search</span>
+                <span className="hidden text-xs tracking-[0.12em] text-muted lg:inline">⌘ K</span>
+              </button>
+            </div>
           )}
         </div>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <ThemeToggle />
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
+          <div className="hidden lg:block">
+            <ThemeToggle />
+          </div>
           <button
             type="button"
             data-notifications-trigger

@@ -5,7 +5,6 @@ import { ConfirmDialog } from '@/components/dashboard/confirm-dialog';
 import { EntityDrawer } from '@/components/dashboard/entity-drawer';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { CommandPalette } from '@/components/layout/command-palette';
-import { MobileSectionNav } from '@/components/layout/mobile-section-nav';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
 import type { ShellVariant } from '@/features/auth/role-access';
@@ -21,7 +20,7 @@ export function AppShell({
     return (
       <div className="min-h-screen bg-background">
         <Topbar variant="employee" />
-        <main className="mx-auto max-w-6xl px-4 pb-28 pt-8 md:px-8 md:pb-16">{children}</main>
+        <main className="mx-auto max-w-6xl px-4 pb-28 pt-8 md:px-8 lg:pb-16">{children}</main>
         <BottomNav />
         <ConfirmDialog />
         <EntityDrawer />
@@ -35,7 +34,6 @@ export function AppShell({
       <Sidebar variant={variant} />
       <div className="flex min-w-0 flex-1 flex-col bg-background">
         <Topbar variant={variant} />
-        <MobileSectionNav variant={variant} />
         <main className="flex-1 px-4 py-8 md:px-8 md:py-10">{children}</main>
       </div>
       <ConfirmDialog />

@@ -184,6 +184,9 @@ export function isNavActive(pathname: string, href: string): boolean {
   if (href === '/work') {
     return pathname === '/work' || pathname.startsWith('/work/');
   }
+  if (href === '/leave') {
+    return pathname === '/leave' || (pathname.startsWith('/leave/') && !pathname.startsWith('/leave/holidays'));
+  }
   if (
     href === '/super-admin/work' ||
     href === '/hr/work' ||

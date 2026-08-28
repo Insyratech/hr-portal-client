@@ -154,7 +154,7 @@ export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'
   return (
     <aside
       className={cn(
-        'sticky top-0 hidden h-screen shrink-0 border-r border-border bg-background md:flex md:flex-col',
+        'sticky top-0 hidden h-screen shrink-0 border-r border-border bg-background lg:flex lg:flex-col',
         collapsed ? 'w-16' : 'w-60',
       )}
     >
