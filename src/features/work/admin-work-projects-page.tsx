@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { DataTable } from '@/components/dashboard/data-table';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
@@ -75,6 +75,8 @@ function ProjectUpdatesDialog({
 export function AdminWorkProjectsPage() {
   const toast = useToast();
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const canManage = useAppSelector((state) =>
     state.permissions.permissions.includes(PERMISSIONS.PROJECTS_MANAGE),
   );
@@ -137,6 +139,11 @@ export function AdminWorkProjectsPage() {
   const employeesHref = pathname.startsWith('/super-admin')
     ? '/super-admin/employees'
     : '/cso/work/employees';
+
+  useEffect(() => {
+    const fromUrl = searchParams.get('updatesProjectId');
+    if (fromUrl) setUpdatesProjectId(fromUrl);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!editingId) return;
@@ -328,7 +335,12 @@ export function AdminWorkProjectsPage() {
         project={updatesProject}
         open={Boolean(updatesProjectId)}
         onOpenChange={(open) => {
-          if (!open) setUpdatesProjectId(null);
+          if (!open) {
+            setUpdatesProjectId(null);
+            if (searchParams.get('updatesProjectId')) {
+              router.replace(pathname);
+            }
+          }
         }}
       />
 

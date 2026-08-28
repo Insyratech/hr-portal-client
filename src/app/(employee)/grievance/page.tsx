@@ -7,10 +7,15 @@ import { StatusBadge } from '@/components/dashboard/status-badge';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
-import { GrievanceDrawerPanel } from '@/features/grievances/grievance-drawer-panel';
 import { uploadGrievanceFile } from '@/features/grievances/upload-attachment';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
@@ -19,6 +24,8 @@ import {
   useCreateGrievanceMutation,
   useGetGrievancesQuery,
 } from '@/store/api/api';
+import { useAppDispatch } from '@/store/hooks';
+import { openEntityDrawer } from '@/store/slices/ui-slice';
 import type { GrievanceCategory } from '@/types/api';
 
 const CATEGORIES: GrievanceCategory[] = [
@@ -30,25 +37,40 @@ const CATEGORIES: GrievanceCategory[] = [
   'OTHER',
 ];
 
+const selectClass =
+  'h-10 w-full rounded border border-border bg-background px-3 text-sm text-foreground shadow-card outline-none focus:border-foreground';
+
+const textareaClass =
+  'min-h-[96px] w-full rounded border border-border bg-background px-3 py-2 text-sm text-foreground shadow-card outline-none focus:border-foreground';
+
 function tone(status: string): 'pending' | 'approved' | 'rejected' {
   if (status === 'RESOLVED' || status === 'CLOSED') return 'approved';
   return 'pending';
 }
 
 function GrievancePageBody() {
+  const dispatch = useAppDispatch();
   const { data, isLoading } = useGetGrievancesQuery({ scope: 'mine' });
   const { data: assignedData, isLoading: assignedLoading } = useGetGrievancesQuery({ scope: 'assigned' });
   const [createGrievance, { isLoading: creating }] = useCreateGrievanceMutation();
   const [createAttachment] = useCreateGrievanceAttachmentMutation();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const toast = useToast();
+
+  function openCase(id: string, label: string) {
+    dispatch(
+      openEntityDrawer({
+        title: label,
+        body: '',
+        grievanceId: id,
+      }),
+    );
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setSuccess(null);
     const form = event.currentTarget;
     const dataForm = new FormData(form);
     const file = (dataForm.get('attachment') as File | null) ?? null;
@@ -61,12 +83,13 @@ function GrievancePageBody() {
       if (file && file.size > 0) {
         await uploadGrievanceFile(createAttachment, created.data.id, file);
       }
-      setSuccess('Concern submitted.');
-      toast.success('Concern submitted.');
       form.reset();
+      setCreateOpen(false);
+      toast.success('Concern submitted.');
     } catch (cause) {
-      toast.error(apiErrorMessage(cause, 'Unable to submit concern.'));
-      setError(apiErrorMessage(cause, 'Unable to submit concern.'));
+      const message = apiErrorMessage(cause, 'Unable to submit concern.');
+      setError(message);
+      toast.error(message);
     }
   }
 
@@ -81,8 +104,13 @@ function GrievancePageBody() {
     {
       id: 'open',
       header: 'Open',
-      cell: (row: { id: string }) => (
-        <Button type="button" size="sm" variant="outline" onClick={() => setSelectedId(row.id)}>
+      cell: (row: { id: string; subject: string }) => (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => openCase(row.id, row.subject)}
+        >
           View
         </Button>
       ),
@@ -91,41 +119,76 @@ function GrievancePageBody() {
 
   return (
     <>
-      <PageHeader kicker="Grievance" title="Raise concern" />
-      <form onSubmit={onSubmit} className="mb-10 max-w-xl space-y-4 border border-border p-6">
-        <div>
-          <Label htmlFor="category">Category</Label>
-          <select
-            id="category"
-            name="category"
-            className="h-10 w-full rounded border border-border bg-background px-3 text-sm"
-            required
+      <PageHeader
+        kicker="Grievance"
+        title="My concerns"
+        actions={
+          <Button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setCreateOpen(true);
+            }}
           >
-            {CATEGORIES.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="subject">Subject</Label>
-          <Input id="subject" name="subject" required />
-        </div>
-        <div>
-          <Label htmlFor="description">Description</Label>
-          <Input id="description" name="description" required />
-        </div>
-        <div>
-          <Label htmlFor="attachment">Attachment</Label>
-          <Input id="attachment" name="attachment" type="file" />
-        </div>
-        {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
-        {success ? <StatusMessage tone="success">{success}</StatusMessage> : null}
-        <Button type="submit" disabled={creating}>
-          Submit
-        </Button>
-      </form>
+            Raise concern
+          </Button>
+        }
+      />
+
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) setError(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+          <DialogTitle>Raise concern</DialogTitle>
+          <DialogDescription>
+            Share what happened. HR reviews every case and may assign an investigator. You can attach one supporting
+            file.
+          </DialogDescription>
+          <form onSubmit={onSubmit} className="mt-6 space-y-4">
+            <div>
+              <Label htmlFor="category">Category</Label>
+              <select id="category" name="category" className={selectClass} required>
+                {CATEGORIES.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="subject">Subject</Label>
+              <Input id="subject" name="subject" required />
+            </div>
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <textarea
+                id="description"
+                name="description"
+                className={textareaClass}
+                required
+                placeholder="What happened, and what outcome are you looking for?"
+              />
+            </div>
+            <div>
+              <Label htmlFor="attachment">Attachment</Label>
+              <Input id="attachment" name="attachment" type="file" />
+            </div>
+            {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={creating}>
+                {creating ? 'Submitting…' : 'Submit'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <section className="mb-10">
         <Meta className="mb-4">Assigned to me</Meta>
@@ -148,18 +211,6 @@ function GrievancePageBody() {
           emptyDescription="Your filed concerns appear here."
         />
       </section>
-
-      {selectedId ? (
-        <section className="max-w-xl border border-border p-6">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <Meta>Case</Meta>
-            <Button type="button" size="sm" variant="outline" onClick={() => setSelectedId(null)}>
-              Close
-            </Button>
-          </div>
-          <GrievanceDrawerPanel grievanceId={selectedId} />
-        </section>
-      ) : null}
     </>
   );
 }

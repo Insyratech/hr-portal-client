@@ -115,6 +115,17 @@ export function pathForNotification(item: NotificationItem, roles: string[]): st
     return '/work';
   }
 
+  if (item.referenceType === 'project' && id) {
+    if (/you are the project lead/i.test(item.title)) {
+      return `/work/projects/${encodeURIComponent(id)}`;
+    }
+    if (/status update/i.test(item.title)) {
+      const qs = `updatesProjectId=${encodeURIComponent(id)}`;
+      if (cso) return `/cso/work/projects?${qs}`;
+      if (superAdmin) return `/super-admin/work/projects?${qs}`;
+    }
+  }
+
   if (item.referenceType === 'grievance' && id) {
     if (hrManager) return `/hr/grievances?id=${encodeURIComponent(id)}`;
     return '/grievance';

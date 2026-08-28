@@ -261,6 +261,7 @@ export function Topbar({ variant }: { variant: ShellVariant }) {
     refetchOnReconnect: false,
   });
   const unreadCount = unread?.data.count ?? 0;
+  const notificationsOpen = useAppSelector((state) => state.ui.notificationsOpen);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-[2px]">
@@ -311,7 +312,14 @@ export function Topbar({ variant }: { variant: ShellVariant }) {
           <ThemeToggle />
           <button
             type="button"
-            className="relative inline-flex h-10 items-center gap-2 rounded border border-transparent px-3 text-sm text-foreground transition-colors hover:border-border hover:bg-surface"
+            data-notifications-trigger
+            aria-expanded={notificationsOpen}
+            className={cn(
+              'relative inline-flex h-10 items-center gap-2 rounded border px-3 text-sm transition-colors',
+              notificationsOpen
+                ? 'border-border bg-surface text-foreground'
+                : 'border-transparent text-foreground hover:border-border hover:bg-surface',
+            )}
             aria-label="Notifications"
             onClick={() => dispatch(toggleNotificationsOpen())}
           >
