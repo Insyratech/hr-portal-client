@@ -10,6 +10,8 @@ import type {
   AttendanceReviewDay,
   AuditLog,
   ConfirmedPayrollImport,
+  CalculatePayrollInput,
+  PayrollPreview,
   Company,
   CompanyLogoUpload,
   Compensation,
@@ -978,7 +980,10 @@ export const api = createApi({
       query: (id) => `/api/v1/payroll/runs/${id}`,
       providesTags: (_r, _e, id) => [{ type: 'PayrollRuns', id }],
     }),
-    calculatePayroll: builder.mutation<ApiSuccess<PayrollRunDetail>, { importId: string }>({
+    getPayrollPreview: builder.query<ApiSuccess<PayrollPreview>, string>({
+      query: (importId) => `/api/v1/payroll/preview?importId=${encodeURIComponent(importId)}`,
+    }),
+    calculatePayroll: builder.mutation<ApiSuccess<PayrollRunDetail>, CalculatePayrollInput>({
       query: (body) => ({ url: '/api/v1/payroll/calculate', method: 'POST', body }),
       invalidatesTags: ['PayrollRuns'],
     }),
@@ -1322,6 +1327,7 @@ export const {
   useGetPayrollRunsQuery,
   useGetPayrollImportsQuery,
   useGetPayrollRunQuery,
+  useGetPayrollPreviewQuery,
   useCalculatePayrollMutation,
   usePublishPayrollMutation,
   useGetMyPayslipsQuery,

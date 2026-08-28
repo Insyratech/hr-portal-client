@@ -27,6 +27,7 @@ import {
   useUpdateShiftMutation,
 } from '@/store/api/api';
 import type { Shift } from '@/types/api';
+import { formatShiftOption, formatShiftSummary } from '@/features/attendance/shift-label';
 
 function timeInputValue(value: string) {
   return value.slice(0, 5);
@@ -44,8 +45,10 @@ export default function ShiftsPage() {
   const [assignShift, { isLoading: savingAssignment }] = useCreateShiftAssignmentMutation();
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [createFlexible, setCreateFlexible] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [editing, setEditing] = useState<Shift | null>(null);
+  const [editFlexible, setEditFlexible] = useState(false);
 
   function parseMinutes(value: FormDataEntryValue | null, fallback: number): number {
     const raw = String(value ?? '').trim();
@@ -59,16 +62,18 @@ export default function ShiftsPage() {
     setError(null);
     const formEl = event.currentTarget;
     const form = new FormData(formEl);
+    const flexible = form.get('flexible') === 'on';
     try {
       await createShift({
         name: String(form.get('name') ?? ''),
-        startTime: String(form.get('startTime') ?? ''),
-        endTime: String(form.get('endTime') ?? ''),
-        minimumDurationMinutes: parseMinutes(form.get('minimumDurationMinutes'), 540),
-        gracePeriodMinutes: parseMinutes(form.get('gracePeriodMinutes'), 0),
-        flexible: form.get('flexible') === 'on',
+        startTime: flexible ? '00:00' : String(form.get('startTime') ?? ''),
+        endTime: flexible ? '23:59' : String(form.get('endTime') ?? ''),
+        minimumDurationMinutes: parseMinutes(form.get('minimumDurationMinutes'), flexible ? 540 : 540),
+        gracePeriodMinutes: flexible ? 0 : parseMinutes(form.get('gracePeriodMinutes'), 0),
+        flexible,
       }).unwrap();
       formEl.reset();
+      setCreateFlexible(false);
       setCreateOpen(false);
     } catch (cause) {
       setError(apiErrorMessage(cause, 'Unable to create shift.'));
@@ -98,19 +103,21 @@ export default function ShiftsPage() {
     if (!editing) return;
     setError(null);
     const form = new FormData(event.currentTarget);
+    const flexible = form.get('flexible') === 'on';
     try {
       await updateShift({
         id: editing.id,
         body: {
           name: String(form.get('name') ?? ''),
-          startTime: String(form.get('startTime') ?? ''),
-          endTime: String(form.get('endTime') ?? ''),
+          startTime: flexible ? '00:00' : String(form.get('startTime') ?? ''),
+          endTime: flexible ? '23:59' : String(form.get('endTime') ?? ''),
           minimumDurationMinutes: parseMinutes(form.get('minimumDurationMinutes'), editing.minimumDurationMinutes),
-          gracePeriodMinutes: parseMinutes(form.get('gracePeriodMinutes'), editing.gracePeriodMinutes),
-          flexible: form.get('flexible') === 'on',
+          gracePeriodMinutes: flexible ? 0 : parseMinutes(form.get('gracePeriodMinutes'), editing.gracePeriodMinutes),
+          flexible,
         },
       }).unwrap();
       setEditing(null);
+      setEditFlexible(false);
     } catch (cause) {
       setError(apiErrorMessage(cause, 'Unable to update shift.'));
     }
@@ -135,7 +142,8 @@ export default function ShiftsPage() {
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Shift times live on the shift definition, not on the employee row. Assign employees when needed.
+        Fixed shifts use a start and end window. Flexible shifts only require total hours worked — employees may start at
+        8, 9, 10, or later with no late mark.
       </p>
 
       {!canManage ? (
@@ -151,7 +159,7 @@ export default function ShiftsPage() {
       <DataTable
         columns={[
           { id: 'name', header: 'Name', cell: (row) => row.name },
-          { id: 'window', header: 'Window', cell: (row) => `${timeInputValue(row.startTime)}–${timeInputValue(row.endTime)}` },
+          { id: 'window', header: 'Rule', cell: (row) => formatShiftSummary(row) },
           { id: 'min', header: 'Required', cell: (row) => `${row.minimumDurationMinutes}m` },
           { id: 'flexible', header: 'Flexible', cell: (row) => (row.flexible ? 'Yes' : 'No') },
           ...(canManage
@@ -160,7 +168,13 @@ export default function ShiftsPage() {
                   id: 'edit',
                   header: 'Edit',
                   cell: (row: Shift) => (
-                    <EditIconButton label={`Edit ${row.name}`} onClick={() => setEditing(row)} />
+                    <EditIconButton
+                      label={`Edit ${row.name}`}
+                      onClick={() => {
+                        setEditing(row);
+                        setEditFlexible(row.flexible);
+                      }}
+                    />
                   ),
                 },
               ]
@@ -189,53 +203,84 @@ export default function ShiftsPage() {
         open={createOpen && canManage}
         onOpenChange={(open) => {
           setCreateOpen(open);
-          if (!open) setError(null);
+          if (!open) {
+            setError(null);
+            setCreateFlexible(false);
+          }
         }}
       >
         <DialogContent>
           <DialogTitle>Add shift</DialogTitle>
-          <DialogDescription>Define the time window and required minutes.</DialogDescription>
+          <DialogDescription>
+            Flexible shifts only need total hours (for example 9h). Fixed shifts need a start and end window.
+          </DialogDescription>
           <form onSubmit={onCreateShift} className="mt-6 space-y-4">
             <div>
               <Label htmlFor="name">Name</Label>
-              <Input id="name" name="name" required />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="startTime">Start</Label>
-                <Input id="startTime" name="startTime" type="time" required />
-              </div>
-              <div>
-                <Label htmlFor="endTime">End</Label>
-                <Input id="endTime" name="endTime" type="time" required />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="minimumDurationMinutes">Min minutes</Label>
-              <Input
-                id="minimumDurationMinutes"
-                name="minimumDurationMinutes"
-                type="number"
-                min={1}
-                inputMode="numeric"
-                placeholder="e.g. 540"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="gracePeriodMinutes">Grace minutes</Label>
-              <Input
-                id="gracePeriodMinutes"
-                name="gracePeriodMinutes"
-                type="number"
-                min={0}
-                inputMode="numeric"
-                placeholder="0"
-              />
+              <Input id="name" name="name" required placeholder="Flexible 9H" />
             </div>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="flexible" /> Flexible
+              <input
+                type="checkbox"
+                name="flexible"
+                checked={createFlexible}
+                onChange={(event) => setCreateFlexible(event.target.checked)}
+              />
+              Flexible — no fixed start time
             </label>
+            {createFlexible ? (
+              <div>
+                <Label htmlFor="minimumDurationMinutes">Required hours</Label>
+                <Input
+                  id="minimumDurationMinutes"
+                  name="minimumDurationMinutes"
+                  type="number"
+                  min={1}
+                  inputMode="numeric"
+                  defaultValue={540}
+                  required
+                />
+                <p className="mt-2 text-xs text-muted">
+                  Enter minutes (540 = 9 hours). Arrival time does not matter — only total hours worked.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="startTime">Start</Label>
+                    <Input id="startTime" name="startTime" type="time" required />
+                  </div>
+                  <div>
+                    <Label htmlFor="endTime">End</Label>
+                    <Input id="endTime" name="endTime" type="time" required />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="minimumDurationMinutes">Min minutes</Label>
+                  <Input
+                    id="minimumDurationMinutes"
+                    name="minimumDurationMinutes"
+                    type="number"
+                    min={1}
+                    inputMode="numeric"
+                    placeholder="e.g. 540"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="gracePeriodMinutes">Grace minutes</Label>
+                  <Input
+                    id="gracePeriodMinutes"
+                    name="gracePeriodMinutes"
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    placeholder="0"
+                  />
+                </div>
+              </>
+            )}
             {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
             <div className="flex justify-end gap-3">
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
@@ -277,7 +322,7 @@ export default function ShiftsPage() {
                 <option value="">Select…</option>
                 {(shifts?.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.name}
+                    {formatShiftOption(item)}
                   </option>
                 ))}
               </select>
@@ -299,52 +344,85 @@ export default function ShiftsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(editing) && canManage} onOpenChange={(open) => { if (!open) setEditing(null); }}>
+      <Dialog open={Boolean(editing) && canManage} onOpenChange={(open) => {
+        if (!open) {
+          setEditing(null);
+          setEditFlexible(false);
+        }
+      }}>
         <DialogContent>
           <DialogTitle>Edit shift</DialogTitle>
-          <DialogDescription>Times belong to the shift definition. Existing assignments keep this shift.</DialogDescription>
+          <DialogDescription>
+            Flexible shifts judge only total hours worked. Fixed shifts use the start and end window.
+          </DialogDescription>
           {editing ? (
             <form key={editing.id} onSubmit={onSaveEdit} className="mt-6 space-y-4">
               <div>
                 <Label htmlFor="edit-shift-name">Name</Label>
                 <Input id="edit-shift-name" name="name" defaultValue={editing.name} required />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-startTime">Start</Label>
-                  <Input id="edit-startTime" name="startTime" type="time" defaultValue={timeInputValue(editing.startTime)} required />
-                </div>
-                <div>
-                  <Label htmlFor="edit-endTime">End</Label>
-                  <Input id="edit-endTime" name="endTime" type="time" defaultValue={timeInputValue(editing.endTime)} required />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="edit-min">Min minutes</Label>
-                <Input
-                  id="edit-min"
-                  name="minimumDurationMinutes"
-                  type="number"
-                  min={1}
-                  inputMode="numeric"
-                  defaultValue={editing.minimumDurationMinutes}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-grace">Grace minutes</Label>
-                <Input
-                  id="edit-grace"
-                  name="gracePeriodMinutes"
-                  type="number"
-                  min={0}
-                  inputMode="numeric"
-                  defaultValue={editing.gracePeriodMinutes}
-                />
-              </div>
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="flexible" defaultChecked={editing.flexible} /> Flexible
+                <input
+                  type="checkbox"
+                  name="flexible"
+                  checked={editFlexible}
+                  onChange={(event) => setEditFlexible(event.target.checked)}
+                />
+                Flexible — no fixed start time
               </label>
+              {editFlexible ? (
+                <div>
+                  <Label htmlFor="edit-min">Required hours</Label>
+                  <Input
+                    id="edit-min"
+                    name="minimumDurationMinutes"
+                    type="number"
+                    min={1}
+                    inputMode="numeric"
+                    defaultValue={editing.minimumDurationMinutes}
+                    required
+                  />
+                  <p className="mt-2 text-xs text-muted">
+                    Enter minutes (540 = 9 hours). Employees may start at 8, 9, 10, or later.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-startTime">Start</Label>
+                      <Input id="edit-startTime" name="startTime" type="time" defaultValue={timeInputValue(editing.startTime)} required />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-endTime">End</Label>
+                      <Input id="edit-endTime" name="endTime" type="time" defaultValue={timeInputValue(editing.endTime)} required />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-min-fixed">Min minutes</Label>
+                    <Input
+                      id="edit-min-fixed"
+                      name="minimumDurationMinutes"
+                      type="number"
+                      min={1}
+                      inputMode="numeric"
+                      defaultValue={editing.minimumDurationMinutes}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-grace">Grace minutes</Label>
+                    <Input
+                      id="edit-grace"
+                      name="gracePeriodMinutes"
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      defaultValue={editing.gracePeriodMinutes}
+                    />
+                  </div>
+                </>
+              )}
               {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => setEditing(null)}>

@@ -1,15 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { DataTable } from '@/components/dashboard/data-table';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { apiErrorMessage } from '@/lib/api-error';
-import { useCalculatePayrollMutation, useGetPayrollImportsQuery, useGetPayrollRunsQuery } from '@/store/api/api';
+import { PayrollCalculateDialog } from '@/features/payroll/payroll-calculate-dialog';
+import { useGetPayrollImportsQuery, useGetPayrollPreviewQuery, useGetPayrollRunsQuery } from '@/store/api/api';
 
 export function PayrollHub({
   runHref,
@@ -18,21 +17,12 @@ export function PayrollHub({
   runHref: string;
   canManage: boolean;
 }) {
-  const router = useRouter();
   const { data: runData, isLoading } = useGetPayrollRunsQuery();
   const { data: importData } = useGetPayrollImportsQuery(undefined, { skip: !canManage });
-  const [calculate, { isLoading: calculating }] = useCalculatePayrollMutation();
-  const toast = useToast();
-
-  async function onCalculate(importId: string) {
-    try {
-      const result = await calculate({ importId }).unwrap();
-      toast.success('Payroll calculated. Review slips before publishing.');
-      router.push(`${runHref}/${result.data.run.id}`);
-    } catch (cause) {
-      toast.error(apiErrorMessage(cause, 'Unable to calculate payroll.'));
-    }
-  }
+  const [prepareImportId, setPrepareImportId] = useState<string | null>(null);
+  const { isFetching: previewLoading } = useGetPayrollPreviewQuery(prepareImportId ?? '', {
+    skip: !prepareImportId,
+  });
 
   return (
     <>
@@ -41,8 +31,8 @@ export function PayrollHub({
         <section className="mb-10">
           <Meta className="mb-3">Confirmed attendance</Meta>
           <p className="mb-4 text-sm text-muted">
-            Calculate after the month is confirmed. Publish when the preview looks right. Employees then see the slip
-            only — they cannot change it.
+            Calculate after the month is confirmed. Review incentives and deductions for each employee, then calculate.
+            Publish when the preview looks right. Employees then see the slip only — they cannot change it.
           </p>
           <DataTable
             columns={[
@@ -60,8 +50,14 @@ export function PayrollHub({
                   row.payrollLocked ? (
                     <span className="text-sm text-muted">Published</span>
                   ) : (
-                    <Button type="button" size="sm" disabled={calculating} onClick={() => void onCalculate(row.importId)}>
-                      Calculate
+                    <Button
+                      type="button"
+                      size="sm"
+                      loading={prepareImportId === row.importId && previewLoading}
+                      disabled={prepareImportId === row.importId && previewLoading}
+                      onClick={() => setPrepareImportId(row.importId)}
+                    >
+                      {prepareImportId === row.importId && previewLoading ? 'Opening' : 'Calculate'}
                     </Button>
                   ),
               },
@@ -102,6 +98,14 @@ export function PayrollHub({
         loading={isLoading}
         emptyTitle="No payroll runs"
         emptyDescription={canManage ? 'Calculate a confirmed month to create slips.' : 'Published payroll appears here.'}
+      />
+      <PayrollCalculateDialog
+        importId={prepareImportId}
+        runHref={runHref}
+        open={prepareImportId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPrepareImportId(null);
+        }}
       />
     </>
   );

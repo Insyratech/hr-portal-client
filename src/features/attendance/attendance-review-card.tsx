@@ -28,6 +28,7 @@ const ACTIONS = [
 function dayTone(status: string): 'pending' | 'approved' | 'rejected' {
   if (status === 'PRESENT' || status === 'LEAVE' || status === 'HOLIDAY' || status === 'WEEK_OFF') return 'approved';
   if (status === 'ABSENT' || status === 'MISSING_PUNCH') return 'rejected';
+  if (status === 'NO_SHIFT') return 'pending';
   return 'pending';
 }
 
@@ -149,7 +150,7 @@ export function AttendanceReviewCardPage({
                       : day.leaveTypeName
                         ? `${day.leaveTypeName} (${day.leavePaid ? 'paid' : 'unpaid'})`
                         : day.workedMinutes != null
-                          ? `Worked ${formatDuration(day.workedMinutes)}${card.shiftName?.toLowerCase().includes('flexible') ? ' · flexible (in-time is not late)' : ''}`
+                        ? `Worked ${formatDuration(day.workedMinutes)} · flexible (any start time, ${card.shiftName ?? 'hours required'})`
                           : '—'}
                 </p>
                 {day.needsHrDecision ? (

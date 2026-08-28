@@ -1088,6 +1088,55 @@ export type ConfirmedPayrollImport = {
   payrollLocked: boolean;
 };
 
+export type PayrollCompensationParts = {
+  basic: number;
+  da: number;
+  hra: number;
+  fuel: number;
+  incentives: number;
+  other: number;
+  professionalTax: number;
+  tds: number;
+  employeeWelfare: number;
+  kpi: number;
+  otherDeductions: number;
+};
+
+export type PayrollPreviewEmployee = {
+  employeeId: string;
+  employeeCode: string;
+  fullName: string;
+  companyName: string | null;
+  lopDays: number;
+  compensation: PayrollCompensationParts | null;
+  ready: boolean;
+  skipReason: string | null;
+};
+
+export type PayrollPreview = {
+  importId: string;
+  period: string;
+  monthLabel: string;
+  calendarDays: number;
+  employees: PayrollPreviewEmployee[];
+};
+
+export type PayrollAdjustment = {
+  employeeId: string;
+  incentives?: number;
+  other?: number;
+  professionalTax?: number;
+  tds?: number;
+  employeeWelfare?: number;
+  kpi?: number;
+  otherDeductions?: number;
+};
+
+export type CalculatePayrollInput = {
+  importId: string;
+  adjustments?: PayrollAdjustment[];
+};
+
 export type SalarySlip = {
   id: string;
   runId: string;

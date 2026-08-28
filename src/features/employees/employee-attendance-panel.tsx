@@ -18,6 +18,8 @@ import {
   useGetShiftsQuery,
   useSaveEmployeeWorkWeekMutation,
 } from '@/store/api/api';
+import { formatShiftOption } from '@/features/attendance/shift-label';
+import { formatAssignmentStatus, sortAssignmentsCurrentFirst } from '@/features/attendance/assignment-status';
 import type { WorkWeek } from '@/types/api';
 
 const WEEK_OPTIONS: { value: WorkWeek['pattern']; label: string }[] = [
@@ -48,11 +50,13 @@ export function EmployeeAttendancePanel({
   const [shiftOpen, setShiftOpen] = useState(false);
 
   const records = (dayData?.data.records ?? []).filter((item) => item.employeeId === employeeId);
-  const assignments = (assignmentsData?.data ?? []).filter((item) => item.employeeId === employeeId);
+  const assignments = sortAssignmentsCurrentFirst(
+    (assignmentsData?.data ?? []).filter((item) => item.employeeId === employeeId),
+  );
   const shifts = (shiftsData?.data ?? []).filter((item) => item.active);
   const weeks = weeksData?.data ?? [];
   const today = new Date().toISOString().slice(0, 10);
-  const currentShift = assignments.find((row) => !row.effectiveTo || row.effectiveTo >= today) ?? assignments[0];
+  const currentShift = assignments.find((row) => !row.effectiveTo) ?? assignments[0];
   const currentWeek = weeks.find((row) => !row.effectiveTo || row.effectiveTo >= today) ?? weeks[0];
 
   async function onAssign(event: FormEvent<HTMLFormElement>) {
@@ -123,8 +127,8 @@ export function EmployeeAttendancePanel({
               <div>
                 <Meta className="mb-1">Shift</Meta>
                 <p className="text-sm text-muted">
-                  Same date updates the shift (for example Flexible 9H to General). A later date starts a new row and
-                  closes the previous one.
+                  Only one shift is current at a time. Saving a change closes the previous shift the day before the
+                  effective date. Older rows stay in history as closed.
                 </p>
               </div>
               <Button type="button" size="sm" variant="ghost" onClick={() => setShiftOpen(true)}>
@@ -135,7 +139,7 @@ export function EmployeeAttendancePanel({
               columns={[
                 { id: 'shift', header: 'Shift', cell: (row) => row.shiftName ?? '—' },
                 { id: 'from', header: 'Effective from', cell: (row) => row.effectiveFrom },
-                { id: 'to', header: 'Effective to', cell: (row) => row.effectiveTo ?? 'Open' },
+                { id: 'to', header: 'Status', cell: (row) => formatAssignmentStatus(row.effectiveTo) },
               ]}
               rows={assignments}
               emptyTitle="No shift assigned"
@@ -191,8 +195,8 @@ export function EmployeeAttendancePanel({
           <Dialog open={shiftOpen} onOpenChange={setShiftOpen}>
             <DialogContent>
               <DialogTitle>Save shift</DialogTitle>
-              <DialogDescription className="sr-only">
-                Assign or update this employee’s shift and effective date.
+              <DialogDescription>
+                Pick the shift and the date it starts. The previous current shift will close automatically.
               </DialogDescription>
               <form
                 key={`shift-${currentShift?.id ?? 'new'}-${shiftOpen}`}
@@ -213,8 +217,7 @@ export function EmployeeAttendancePanel({
                     </option>
                     {shifts.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.name} ({item.startTime}–{item.endTime}
-                        {item.flexible ? ', flexible' : ''})
+                        {formatShiftOption(item)}
                       </option>
                     ))}
                   </select>

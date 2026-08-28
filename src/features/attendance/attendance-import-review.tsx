@@ -148,11 +148,16 @@ export function AttendanceImportReview({
           {canManage && bundle.import.status !== 'CONFIRMED' && bundle.import.status !== 'REJECTED' ? (
             <div className="space-y-2">
               <div className="flex flex-wrap gap-3">
-                <Button type="button" disabled={!bundle.canConfirm || confirming} onClick={() => void onConfirm()}>
-                  Confirm month
+                <Button
+                  type="button"
+                  loading={confirming}
+                  disabled={!bundle.canConfirm || confirming}
+                  onClick={() => void onConfirm()}
+                >
+                  {confirming ? 'Confirming month' : 'Confirm month'}
                 </Button>
-                <Button type="button" variant="outline" disabled={rejecting} onClick={() => void onReject()}>
-                  Reject import
+                <Button type="button" variant="outline" loading={rejecting} disabled={rejecting || confirming} onClick={() => void onReject()}>
+                  {rejecting ? 'Rejecting' : 'Reject import'}
                 </Button>
               </div>
               {!bundle.canConfirm ? (
@@ -180,8 +185,8 @@ export function AttendanceImportReview({
             <Button type="button" variant="outline" onClick={() => setAskDelete(false)}>
               Cancel
             </Button>
-            <Button type="button" disabled={deleting} onClick={() => void onDelete()}>
-              Delete
+            <Button type="button" loading={deleting} disabled={deleting} onClick={() => void onDelete()}>
+              {deleting ? 'Deleting' : 'Delete'}
             </Button>
           </div>
         </DialogContent>

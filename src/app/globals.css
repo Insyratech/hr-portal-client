@@ -214,6 +214,13 @@
   height: 0.7rem;
 }
 
+/* Primary buttons use inverted colors — dots must follow button text. */
+button .hr-dots__dot,
+[role="button"] .hr-dots__dot {
+  background-color: currentColor;
+  box-shadow: none;
+}
+
 .hr-skeleton {
   border-radius: 0.25rem;
   background: linear-gradient(
