@@ -47,6 +47,7 @@ export function AttendanceImportHub({
   const [upload, { isLoading: uploading }] = useUploadAttendanceImportMutation();
   const [remove, { isLoading: deleting }] = useDeleteAttendanceImportMutation();
   const [error, setError] = useState<string | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<AttendanceImport | null>(null);
   const toast = useToast();
   const defaultPeriod = new Date().toISOString().slice(0, 7);
@@ -68,6 +69,7 @@ export function AttendanceImportHub({
         contentBase64,
       }).unwrap();
       toast.success('File parsed. Review each employee before confirming.');
+      setUploadOpen(false);
       router.push(`${listHref}/${result.data.import.id}`);
     } catch (cause) {
       const text = apiErrorMessage(cause, 'Unable to upload this file.');
@@ -89,36 +91,68 @@ export function AttendanceImportHub({
 
   return (
     <>
-      <PageHeader kicker="Attendance" title="Monthly import" />
-      {canManage ? (
-        <form onSubmit={(event) => void onSubmit(event)} className="mb-10 max-w-xl space-y-4 border border-border p-6">
-          <p className="text-sm text-muted">
-            Upload the biometric workbook for a month (.xls or .xlsx). Flexible shifts are judged on hours worked, not
-            clock-in time. Confirm month turns on after every flagged day has a LOP choice. Rejected uploads can be
-            deleted from the list.
-          </p>
-          <div>
-            <Label htmlFor="period">Month</Label>
-            <Input id="period" name="period" type="month" required defaultValue={defaultPeriod} />
-          </div>
-          <div>
-            <Label htmlFor="file">Excel file</Label>
-            <Input
-              id="file"
-              name="file"
-              type="file"
-              accept=".xlsx,.xls,.xlsm,.xlsb,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              required
-            />
-          </div>
-          {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
-          <Button type="submit" disabled={uploading}>
-            {uploading ? 'Parsing…' : 'Upload and review'}
-          </Button>
-        </form>
-      ) : (
+      <PageHeader
+        kicker="Attendance"
+        title="Monthly import"
+        actions={
+          canManage ? (
+            <Button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setUploadOpen(true);
+              }}
+            >
+              Upload and review
+            </Button>
+          ) : null
+        }
+      />
+      {!canManage ? (
         <p className="mb-10 text-sm text-muted">View-only. General Manager uploads and confirms the month.</p>
-      )}
+      ) : null}
+
+      <Dialog
+        open={uploadOpen && canManage}
+        onOpenChange={(open) => {
+          setUploadOpen(open);
+          if (!open) setError(null);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogTitle>Upload monthly attendance</DialogTitle>
+          <DialogDescription>
+            Upload the biometric workbook for a month (.xls or .xlsx). Flexible shifts are judged on hours worked, not
+            clock-in time. Confirm month turns on after every flagged day has a LOP choice.
+          </DialogDescription>
+          <form onSubmit={(event) => void onSubmit(event)} className="mt-6 space-y-4">
+            <div>
+              <Label htmlFor="period">Month</Label>
+              <Input id="period" name="period" type="month" required defaultValue={defaultPeriod} />
+            </div>
+            <div>
+              <Label htmlFor="file">Excel file</Label>
+              <Input
+                id="file"
+                name="file"
+                type="file"
+                accept=".xlsx,.xls,.xlsm,.xlsb,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                required
+              />
+            </div>
+            {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setUploadOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={uploading}>
+                {uploading ? 'Parsing…' : 'Upload and review'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <Meta className="mb-3">Recent imports</Meta>
       <DataTable
         columns={[
@@ -158,7 +192,7 @@ export function AttendanceImportHub({
         rows={data?.data ?? []}
         loading={isLoading}
         emptyTitle="No imports"
-        emptyDescription="HR uploads a biometric Excel file to start a month."
+        emptyDescription="Upload a biometric Excel file to start a month. Rejected uploads can be deleted from the list."
       />
       <Dialog open={Boolean(pendingDelete)} onOpenChange={(open) => !open && setPendingDelete(null)}>
         <DialogContent>
