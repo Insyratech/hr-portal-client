@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { isSupabaseBrowserConfigured } from '@/lib/env';
+import { notifyNativeLogout } from '@/lib/native-app';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { closeConfirmDialog } from '@/store/slices/ui-slice';
 import { clearSession } from '@/store/slices/auth-slice';
@@ -27,6 +28,7 @@ export function ConfirmDialog() {
       }
       dispatch(clearPermissions());
       dispatch(clearSession());
+      notifyNativeLogout();
       dispatch(closeConfirmDialog());
       router.replace('/login');
       return;

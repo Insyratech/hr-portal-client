@@ -13,6 +13,7 @@ import { StatusMessage, type StatusTone } from '@/components/ui/status-message';
 import { Meta } from '@/components/layout/meta';
 import { ThreeDotsSpinner } from '@/components/ui/three-dots-spinner';
 import { destinationAfterLogin } from '@/features/auth/role-access';
+import { notifyNativeLoginSuccess } from '@/lib/native-app';
 import { isSupabaseBrowserConfigured } from '@/lib/env';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { api, useGetHealthQuery } from '@/store/api/api';
@@ -91,6 +92,11 @@ export function LoginForm() {
         }),
       );
       dispatch(setPermissions(me.permissions as Permission[]));
+      notifyNativeLoginSuccess({
+        userId: me.authUserId,
+        accessToken: signIn.session.access_token,
+        refreshToken: signIn.session.refresh_token,
+      });
       router.replace(destination(me.roles));
     } finally {
       setPending(false);
