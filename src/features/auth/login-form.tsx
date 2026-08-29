@@ -14,6 +14,7 @@ import { Meta } from '@/components/layout/meta';
 import { ThreeDotsSpinner } from '@/components/ui/three-dots-spinner';
 import { destinationAfterLogin } from '@/features/auth/role-access';
 import { isSupabaseBrowserConfigured } from '@/lib/env';
+import { recordPasswordAuth } from '@/lib/session-policy';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { api, useGetHealthQuery } from '@/store/api/api';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -37,7 +38,10 @@ export function LoginForm() {
 
   useEffect(() => {
     if (searchParams.get('reason') === 'credential_expired') {
-      setMessage({ tone: 'warning', text: 'Sign in with password again.' });
+      setMessage({
+        tone: 'warning',
+        text: 'For your security, sign in with your password again. You will stay signed in for 7 days.',
+      });
     }
   }, [searchParams]);
 
@@ -97,6 +101,7 @@ export function LoginForm() {
         }),
       );
       dispatch(setPermissions(me.permissions as Permission[]));
+      recordPasswordAuth();
       router.replace(destination(me.roles));
     } finally {
       setPending(false);

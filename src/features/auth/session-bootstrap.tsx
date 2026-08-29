@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { isSupabaseBrowserConfigured } from '@/lib/env';
+import {
+  clearPasswordAuth,
+  shouldRequirePasswordReauth,
+  touchPasswordAuthIfMissing,
+} from '@/lib/session-policy';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { unregisterWebPush } from '@/features/notifications/web-push-bootstrap';
 import { api } from '@/store/api/api';
@@ -12,6 +18,7 @@ import type { Permission } from '@/types/permissions';
 
 export function SessionBootstrap() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
 
   useEffect(() => {
     if (!isSupabaseBrowserConfigured()) {
@@ -23,6 +30,18 @@ export function SessionBootstrap() {
     let cancelled = false;
     let hadSession = false;
 
+    async function expirePasswordSession(): Promise<void> {
+      if (hadSession) {
+        await unregisterWebPush(dispatch);
+      }
+      clearPasswordAuth();
+      await supabase.auth.signOut();
+      dispatch(clearPermissions());
+      dispatch(clearSession());
+      hadSession = false;
+      router.replace('/login?reason=credential_expired');
+    }
+
     async function applyAccessToken(accessToken: string | null): Promise<void> {
       if (!accessToken) {
         if (hadSession) {
@@ -33,6 +52,12 @@ export function SessionBootstrap() {
         hadSession = false;
         return;
       }
+
+      if (shouldRequirePasswordReauth()) {
+        await expirePasswordSession();
+        return;
+      }
+      touchPasswordAuthIfMissing();
 
       dispatch(setAccessToken(accessToken));
       const result = await dispatch(api.endpoints.getMe.initiate(undefined, { forceRefetch: true }));
@@ -79,7 +104,7 @@ export function SessionBootstrap() {
       cancelled = true;
       data.subscription.unsubscribe();
     };
-  }, [dispatch]);
+  }, [dispatch, router]);
 
   return null;
 }

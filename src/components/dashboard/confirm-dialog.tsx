@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { isSupabaseBrowserConfigured } from '@/lib/env';
+import { clearPasswordAuth } from '@/lib/session-policy';
 import { unregisterWebPush } from '@/features/notifications/web-push-bootstrap';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { closeConfirmDialog } from '@/store/slices/ui-slice';
@@ -27,6 +28,7 @@ export function ConfirmDialog() {
       if (isSupabaseBrowserConfigured()) {
         await getSupabaseBrowserClient().auth.signOut();
       }
+      clearPasswordAuth();
       dispatch(clearPermissions());
       dispatch(clearSession());
       dispatch(closeConfirmDialog());
