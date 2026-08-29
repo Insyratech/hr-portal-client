@@ -1,0 +1,26 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "VF3GDSV7SD.com.insyratech.hrportal",
+        "paths": [
+          "/login",
+          "/dashboard",
+          "/attendance*",
+          "/leave*",
+          "/payslips*",
+          "/permission*",
+          "/work*",
+          "/grievance*",
+          "/policies*",
+          "/gm/*",
+          "/hr/*",
+          "/cso/*",
+          "/finance*",
+          "/super-admin*"
+        ]
+      }
+    ]
+  }
+}

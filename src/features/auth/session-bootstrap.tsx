@@ -3,6 +3,12 @@
 import { useEffect } from 'react';
 import { isSupabaseBrowserConfigured } from '@/lib/env';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
+import {
+  notifyNativeLoginSuccessWhenReady,
+  notifyNativeLogout,
+  type NativeLoginPayload,
+} from '@/lib/native-app';
+import { unregisterNativePushDevice } from '@/features/auth/native-push-bootstrap';
 import { api } from '@/store/api/api';
 import { useAppDispatch } from '@/store/hooks';
 import { clearSession, setAccessToken, setHydrated, setSession } from '@/store/slices/auth-slice';
@@ -20,11 +26,30 @@ export function SessionBootstrap() {
 
     const supabase = getSupabaseBrowserClient();
     let cancelled = false;
+    let hadSession = false;
 
-    async function applyAccessToken(accessToken: string | null): Promise<void> {
+    async function notifyNativeSession(
+      accessToken: string,
+      refreshToken: string | null,
+      authUserId: string,
+    ): Promise<void> {
+      const payload: NativeLoginPayload = {
+        userId: authUserId,
+        accessToken,
+        refreshToken: refreshToken ?? '',
+      };
+      await notifyNativeLoginSuccessWhenReady(payload);
+    }
+
+    async function applyAccessToken(accessToken: string | null, refreshToken: string | null): Promise<void> {
       if (!accessToken) {
+        if (hadSession) {
+          await unregisterNativePushDevice(dispatch);
+          await notifyNativeLogout();
+        }
         dispatch(clearPermissions());
         dispatch(clearSession());
+        hadSession = false;
         return;
       }
 
@@ -49,17 +74,29 @@ export function SessionBootstrap() {
           }),
         );
         dispatch(setPermissions(me.permissions as Permission[]));
+        hadSession = true;
+        await notifyNativeSession(accessToken, refreshToken, me.authUserId);
         return;
       }
 
+      if (hadSession) {
+        await unregisterNativePushDevice(dispatch);
+        notifyNativeLogout();
+      }
       dispatch(clearPermissions());
       dispatch(clearSession());
+      hadSession = false;
     }
 
-    void supabase.auth.getSession().then(({ data }) => applyAccessToken(data.session?.access_token ?? null));
+    void supabase.auth.getSession().then(({ data }) => {
+      void applyAccessToken(
+        data.session?.access_token ?? null,
+        data.session?.refresh_token ?? null,
+      );
+    });
 
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      void applyAccessToken(session?.access_token ?? null);
+      void applyAccessToken(session?.access_token ?? null, session?.refresh_token ?? null);
     });
 
     return () => {

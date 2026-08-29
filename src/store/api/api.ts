@@ -69,6 +69,7 @@ import type {
   WeeklyPptAdminBoard,
   WeeklyPptGmShares,
   NotificationItem,
+  MobileDevice,
   WorkPermission,
   WorkPermissionMine,
 } from '@/types/api';
@@ -1194,6 +1195,24 @@ export const api = createApi({
       query: () => ({ url: '/api/v1/notifications/read-all', method: 'POST' }),
       invalidatesTags: ['Notifications'],
     }),
+    registerMobileDevice: builder.mutation<
+      ApiSuccess<MobileDevice>,
+      { deviceId: string; platform: 'android' | 'ios'; pushToken: string; appVersion?: string }
+    >({
+      query: (body) => ({ url: '/api/v1/mobile/devices/register', method: 'POST', body }),
+    }),
+    unregisterMobileDevice: builder.mutation<ApiSuccess<{ revoked: boolean }>, string>({
+      query: (deviceId) => ({ url: `/api/v1/mobile/devices/${deviceId}`, method: 'DELETE' }),
+    }),
+    recordMobileCredentialAuth: builder.mutation<ApiSuccess<{ recorded: boolean }>, { deviceId: string }>({
+      query: (body) => ({ url: '/api/v1/mobile/auth/credential', method: 'POST', body }),
+    }),
+    enrollMobileBiometric: builder.mutation<ApiSuccess<{ deviceRefreshSecret: string }>, { deviceId: string }>({
+      query: (body) => ({ url: '/api/v1/mobile/auth/enroll', method: 'POST', body }),
+    }),
+    revokeMobileBiometricEnroll: builder.mutation<ApiSuccess<{ revoked: boolean }>, { deviceId: string }>({
+      query: (body) => ({ url: '/api/v1/mobile/auth/enroll', method: 'DELETE', body }),
+    }),
     getReportsOverview: builder.query<
       ApiSuccess<ReportsOverview>,
       { from?: string; to?: string; period?: string; companyId?: string } | void
@@ -1360,5 +1379,10 @@ export const {
   useGetNotificationUnreadCountQuery,
   useMarkNotificationReadMutation,
   useMarkAllNotificationsReadMutation,
+  useRegisterMobileDeviceMutation,
+  useUnregisterMobileDeviceMutation,
+  useRecordMobileCredentialAuthMutation,
+  useEnrollMobileBiometricMutation,
+  useRevokeMobileBiometricEnrollMutation,
   useGetReportsOverviewQuery,
 } = api;
