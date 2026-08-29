@@ -13,7 +13,6 @@ import { apiErrorMessage } from '@/lib/api-error';
 import { isStandaloneDisplayMode } from '@/lib/pwa';
 import {
   canSubscribeToWebPush,
-  isIosDevice,
   isPushApiSupported,
   PUSH_PROMPT_DISMISS_KEY,
   storePushEndpoint,
@@ -46,13 +45,14 @@ export function PushPermissionPrompt() {
     if (!user || typeof window === 'undefined') {
       return;
     }
-    if (!isPushApiSupported() || window.localStorage.getItem(PUSH_PROMPT_DISMISS_KEY) === '1') {
+    if (
+      !isStandaloneDisplayMode() ||
+      !isPushApiSupported() ||
+      window.localStorage.getItem(PUSH_PROMPT_DISMISS_KEY) === '1'
+    ) {
       return;
     }
     if (Notification.permission === 'granted' || Notification.permission === 'denied') {
-      return;
-    }
-    if (isIosDevice() && !isStandaloneDisplayMode()) {
       return;
     }
     if (!canSubscribeToWebPush()) {

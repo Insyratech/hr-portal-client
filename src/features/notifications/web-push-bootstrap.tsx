@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { isStandaloneDisplayMode } from '@/lib/pwa';
 import {
   canSubscribeToWebPush,
   getPushSubscription,
@@ -20,12 +21,17 @@ export function WebPushBootstrap() {
   const syncedEndpointRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!accessToken || !canSubscribeToWebPush()) {
+    if (
+      typeof window === 'undefined' ||
+      !accessToken ||
+      !isStandaloneDisplayMode() ||
+      !canSubscribeToWebPush()
+    ) {
       syncedEndpointRef.current = null;
       return;
     }
 
-    if (typeof window === 'undefined' || Notification.permission !== 'granted') {
+    if (Notification.permission !== 'granted') {
       return;
     }
 

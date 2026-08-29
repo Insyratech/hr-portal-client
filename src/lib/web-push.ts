@@ -12,14 +12,12 @@ export function isPushApiSupported(): boolean {
   }
   return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 }
+/** Web push is only supported in the installed PWA (home screen), not in a regular browser tab. */
 export function canSubscribeToWebPush(): boolean {
   if (!isPushApiSupported() || !isVapidConfigured()) {
     return false;
   }
-  if (isIosDevice() && !isStandaloneDisplayMode()) {
-    return false;
-  }
-  return true;
+  return isStandaloneDisplayMode();
 }
 
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
