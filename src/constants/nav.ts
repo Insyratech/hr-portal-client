@@ -176,6 +176,47 @@ export const FINANCE_OVERVIEW_NAV: readonly NavItem[] = [
 
 export const FINANCE_NAV: readonly NavItem[] = [...FINANCE_OVERVIEW_NAV];
 
+/** Primary managerial shortcuts for phone and tablet bottom nav (full menu stays in the hamburger). */
+export const HR_BOTTOM_NAV: readonly NavItem[] = [
+  { href: '/hr', label: 'Overview', icon: 'overview' },
+  { href: '/hr/employees', label: 'Employees', icon: 'users' },
+  { href: '/hr/leaves', label: 'Leave', icon: 'leave' },
+  { href: '/hr/grievances', label: 'Grievances', icon: 'shield' },
+  { href: '/more', label: 'More', icon: 'more' },
+];
+
+export const GM_BOTTOM_NAV: readonly NavItem[] = [
+  { href: '/gm', label: 'Overview', icon: 'overview' },
+  { href: '/gm/attendance', label: 'Attendance', icon: 'clock' },
+  { href: '/gm/payroll', label: 'Payroll', icon: 'grid' },
+  { href: '/gm/leave-status', label: 'Leave', icon: 'leave' },
+  { href: '/more', label: 'More', icon: 'more' },
+];
+
+export const CSO_BOTTOM_NAV: readonly NavItem[] = [
+  { href: '/cso/work', label: 'Team week', icon: 'calendar' },
+  { href: '/cso/work/priorities', label: 'Priorities', icon: 'grid' },
+  { href: '/cso/work/weekly-updates', label: 'Updates', icon: 'file' },
+  { href: '/cso/work/projects', label: 'Projects', icon: 'building' },
+  { href: '/more', label: 'More', icon: 'more' },
+];
+
+export const SUPER_ADMIN_BOTTOM_NAV: readonly NavItem[] = [
+  { href: '/super-admin', label: 'Overview', icon: 'overview' },
+  { href: '/super-admin/employees', label: 'Employees', icon: 'users' },
+  { href: '/super-admin/edit-requests', label: 'Requests', icon: 'audit' },
+  { href: '/super-admin/settings', label: 'Settings', icon: 'settings' },
+  { href: '/more', label: 'More', icon: 'more' },
+];
+
+export const FINANCE_BOTTOM_NAV: readonly NavItem[] = [
+  { href: '/finance', label: 'Overview', icon: 'overview' },
+  { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
+  { href: '/work', label: 'Work', icon: 'grid' },
+  { href: '/attendance', label: 'Attendance', icon: 'clock' },
+  { href: '/more', label: 'More', icon: 'more' },
+];
+
 export function isNavActive(pathname: string, href: string): boolean {
   const roots = ['/super-admin', '/hr', '/gm', '/cso', '/finance', '/dashboard'];
   if (roots.includes(href)) {

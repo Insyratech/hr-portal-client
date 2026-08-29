@@ -1,10 +1,14 @@
 import {
+  CSO_BOTTOM_NAV,
   CSO_WORK_NAV,
+  FINANCE_BOTTOM_NAV,
   FINANCE_OVERVIEW_NAV,
   GM_ATTENDANCE_NAV,
+  GM_BOTTOM_NAV,
   GM_LEAVE_NAV,
   GM_OVERVIEW_NAV,
   GM_WORK_NAV,
+  HR_BOTTOM_NAV,
   HR_LEAVE_NAV,
   HR_OPS_NAV,
   HR_ORG_NAV,
@@ -15,6 +19,7 @@ import {
   MY_WORK_DOCS_NAV,
   MY_WORK_LINK,
   MY_WORK_TIME_NAV,
+  SUPER_ADMIN_BOTTOM_NAV,
   SUPER_ADMIN_ORG_NAV,
   SUPER_ADMIN_OVERVIEW_NAV,
   SUPER_ADMIN_POLICIES_NAV,
@@ -113,4 +118,12 @@ export function shellMobileNavTitle(variant: Exclude<ShellVariant, 'employee'>):
 
 export function shellNavItemActive(pathname: string, href: string): boolean {
   return isNavActive(pathname, href);
+}
+
+export function shellBottomNavItems(variant: Exclude<ShellVariant, 'employee'>): readonly NavItem[] {
+  if (variant === 'super-admin') return SUPER_ADMIN_BOTTOM_NAV;
+  if (variant === 'hr') return HR_BOTTOM_NAV;
+  if (variant === 'gm' || variant === 'admin') return GM_BOTTOM_NAV;
+  if (variant === 'cso') return CSO_BOTTOM_NAV;
+  return FINANCE_BOTTOM_NAV;
 }
