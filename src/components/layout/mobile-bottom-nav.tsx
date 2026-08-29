@@ -9,9 +9,16 @@ import { cn } from '@/lib/utils';
 export function MobileBottomNav({ items }: { items: readonly NavItem[] }) {
   const pathname = usePathname();
 
+  if (items.length === 0) {
+    return null;
+  }
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur-[2px] lg:hidden">
-      <ul className="grid grid-cols-5 px-0.5 py-1">
+      <ul
+        className="grid px-0.5 py-1"
+        style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+      >
         {items.map((item) => {
           const active = isNavActive(pathname, item.href);
           return (
