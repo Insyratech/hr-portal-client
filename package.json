@@ -12,8 +12,6 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@capacitor/core": "^8.5.0",
-    "@capacitor/push-notifications": "^8.0.2",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-slot": "^1.2.3",
     "@reduxjs/toolkit": "^2.8.2",

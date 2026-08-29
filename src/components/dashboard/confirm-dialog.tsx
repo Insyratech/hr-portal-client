@@ -9,8 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { isSupabaseBrowserConfigured } from '@/lib/env';
-import { notifyNativeLogout } from '@/lib/native-app';
-import { unregisterNativePushDevice } from '@/features/auth/native-push-bootstrap';
+import { unregisterWebPush } from '@/features/notifications/web-push-bootstrap';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { closeConfirmDialog } from '@/store/slices/ui-slice';
 import { clearSession } from '@/store/slices/auth-slice';
@@ -24,8 +23,7 @@ export function ConfirmDialog() {
 
   async function onConfirm(): Promise<void> {
     if (action === 'logout') {
-      await unregisterNativePushDevice(dispatch);
-      await notifyNativeLogout();
+      await unregisterWebPush(dispatch);
       if (isSupabaseBrowserConfigured()) {
         await getSupabaseBrowserClient().auth.signOut();
       }

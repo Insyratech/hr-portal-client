@@ -266,6 +266,7 @@ export function Topbar({ variant }: { variant: ShellVariant }) {
     skip: !user,
     refetchOnFocus: false,
     refetchOnReconnect: false,
+    pollingInterval: user ? 60_000 : 0,
   });
   const unreadCount = unread?.data.count ?? 0;
   const notificationsOpen = useAppSelector((state) => state.ui.notificationsOpen);

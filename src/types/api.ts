@@ -981,17 +981,6 @@ export type NotificationItem = {
   unread: boolean;
 };
 
-export type MobileDevice = {
-  id: string;
-  deviceId: string;
-  platform: 'android' | 'ios';
-  pushToken: string;
-  appVersion: string | null;
-  lastSeenAt: string;
-  revokedAt: string | null;
-  createdAt: string;
-};
-
 export type DirectoryEditRequestStatus =
   | 'PENDING'
   | 'APPROVED'
