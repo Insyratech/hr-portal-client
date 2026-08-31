@@ -193,7 +193,7 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
     try {
       const result = await submitAll().unwrap();
       const count = result.data.submitted.length;
-      toast.success(count === 1 ? 'Sent 1 priority to CSO.' : `Sent ${count} priorities to CSO.`);
+      toast.success(count === 1 ? 'Sent 1 priority to your project lead.' : `Sent ${count} priorities to your project lead.`);
       setForcePlan(false);
     } catch (error) {
       toast.error(apiErrorMessage(error, 'Could not submit priorities.'));
@@ -211,7 +211,7 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
         await updatePriority({ id: item.id, body: { title: nextTitle } }).unwrap();
       }
       await submitOne(item.id).unwrap();
-      toast.success('Resubmitted to CSO.');
+      toast.success('Resubmitted to your project lead.');
       setEditTitleById((prev) => {
         const next = { ...prev };
         delete next[item.id];
@@ -230,7 +230,7 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
           {board.week.start} → {board.week.end}
         </p>
         <p className="mt-2 text-sm text-muted">
-          Add work goals first, then an optional skill plan, then submit everything once for CSO approval. A
+          Add work goals first, then an optional skill plan, then submit everything once for project lead approval. A
           reminder goes out Monday at 4:00 pm IST — please submit before end of Monday. If you are on leave
           Monday, submit when you are back. Daily updates unlock after every line is approved.
         </p>
@@ -243,7 +243,7 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
         <section className="space-y-4 border border-border bg-background p-5 shadow-card">
           <Meta>Needs your update</Meta>
           <p className="text-sm text-muted">
-            CSO asked for a change on these lines. Edit and resubmit only the lines below — you do not need to
+            Your project lead asked for a change on these lines. Edit and resubmit only the lines below — you do not need to
             redo the whole week.
           </p>
           <div className="space-y-4">
@@ -252,7 +252,7 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
                 <p className="text-sm text-muted">{priorityTypeLine(item)}</p>
                 {item.csoComment ? (
                   <p className="mt-2 rounded border border-border bg-surface px-3 py-2 text-sm">
-                    <span className="text-muted">CSO comment: </span>
+                    <span className="text-muted">Lead comment: </span>
                     {item.csoComment}
                   </p>
                 ) : null}
@@ -287,7 +287,7 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
           <Meta>Status</Meta>
           {awaiting.length > 0 ? (
             <p className="mt-2 text-sm">
-              Waiting for CSO on {awaiting.length} {awaiting.length === 1 ? 'line' : 'lines'}. You can edit again
+              Waiting for your project lead on {awaiting.length} {awaiting.length === 1 ? 'line' : 'lines'}. You can edit again
               only if they ask for a resubmit.
             </p>
           ) : null}
@@ -303,7 +303,7 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
                 <span className="mt-1 block text-muted">
                   {priorityTypeLine(item)} ·{' '}
                   {item.approvalStatus === 'SUBMITTED'
-                    ? 'Awaiting CSO'
+                    ? 'Awaiting project lead'
                     : item.approvalStatus === 'APPROVED'
                       ? 'Approved'
                       : item.approvalStatus}
@@ -544,7 +544,7 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
             <section className="space-y-4 border border-border bg-background p-5 shadow-card">
               <Meta>Step 3 — Review &amp; submit</Meta>
               <p className="text-sm text-muted">
-                One submit sends all draft work goals and skill plans to CSO together. You need at least one
+                One submit sends all draft work goals and skill plans to your project lead together. You need at least one
                 work goal; about 3–5 is a focused week.
               </p>
               {allDrafts.length === 0 ? (
@@ -568,7 +568,7 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
                   disabled={submitAllState.isLoading || workDrafts.length === 0}
                   onClick={() => void onSubmitAll()}
                 >
-                  {submitAllState.isLoading ? 'Submitting…' : 'Submit for CSO approval'}
+                  {submitAllState.isLoading ? 'Submitting…' : 'Submit for approval'}
                 </Button>
                 <Button type="button" variant="ghost" onClick={() => setStep(2)}>
                   Back

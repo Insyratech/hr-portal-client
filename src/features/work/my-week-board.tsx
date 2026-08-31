@@ -38,7 +38,7 @@ const STATUS_LABEL: Record<WorkPriority['status'], string> = {
 
 const APPROVAL_LABEL: Record<WorkPriorityApprovalStatus, string> = {
   DRAFT: 'Draft',
-  SUBMITTED: 'Awaiting CSO',
+  SUBMITTED: 'Awaiting project lead',
   APPROVED: 'Approved',
   RESUBMIT_REQUESTED: 'Needs resubmit',
 };
@@ -165,7 +165,8 @@ export function MyWeekBoard({
         {items.map((item) => {
           const lockedCarry = item.status === 'CARRIED_FORWARD';
           const editableExecution = !readOnly && !lockedCarry && item.approvalStatus === 'APPROVED';
-          const showCsoActions = canApprove && item.approvalStatus === 'SUBMITTED';
+          const showApproverActions =
+            canApprove && item.approvalStatus === 'SUBMITTED' && item.canApprove !== false;
 
           return (
             <article
@@ -194,7 +195,7 @@ export function MyWeekBoard({
               </p>
               {item.csoComment && item.approvalStatus === 'RESUBMIT_REQUESTED' ? (
                 <p className="mt-3 rounded border border-border bg-surface px-3 py-2 text-sm">
-                  <span className="text-muted">CSO comment: </span>
+                  <span className="text-muted">Lead comment: </span>
                   {item.csoComment}
                 </p>
               ) : null}
@@ -243,11 +244,11 @@ export function MyWeekBoard({
 
               {item.approvalStatus === 'SUBMITTED' && !readOnly ? (
                 <p className="mt-3 text-sm text-muted">
-                  Waiting for CSO. You can edit again only if they ask for a resubmit.
+                  Waiting for your project lead. You can edit again only if they ask for a resubmit.
                 </p>
               ) : null}
 
-              {showCsoActions ? (
+              {showApproverActions ? (
                 <div className="mt-4 space-y-3 border-t border-border pt-4">
                   <Button
                     type="button"

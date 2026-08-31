@@ -13,13 +13,15 @@ import { ProjectStatusUpdatesSection } from '@/features/work/project-status-upda
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
+  useApproveWorkPriorityMutation,
   useCreateProjectStatusUpdateMutation,
   useGetLeadProjectDeskQuery,
+  useRequestWorkPriorityResubmitMutation,
 } from '@/store/api/api';
 
 const APPROVAL_LABEL: Record<string, string> = {
   DRAFT: 'Draft',
-  SUBMITTED: 'Awaiting CSO',
+  SUBMITTED: 'Awaiting your review',
   APPROVED: 'Approved',
   RESUBMIT_REQUESTED: 'Needs resubmit',
 };
@@ -65,6 +67,9 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
     date: weekDate,
   });
   const [createUpdate, createState] = useCreateProjectStatusUpdateMutation();
+  const [approveOne, approveState] = useApproveWorkPriorityMutation();
+  const [requestResubmit, resubmitState] = useRequestWorkPriorityResubmitMutation();
+  const [resubmitCommentById, setResubmitCommentById] = useState<Record<string, string>>({});
   const desk = data?.data;
 
   const forbidden = useMemo(() => {
@@ -82,6 +87,32 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
       await refetch();
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Could not post the update.'));
+    }
+  }
+
+  async function onApprove(priorityId: string) {
+    try {
+      await approveOne(priorityId).unwrap();
+      toast.success('Priority approved.');
+      await refetch();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Could not approve.'));
+    }
+  }
+
+  async function onRequestResubmit(priorityId: string) {
+    const comment = (resubmitCommentById[priorityId] ?? '').trim();
+    if (!comment) {
+      toast.error('Add a short comment so the employee knows what to change.');
+      return;
+    }
+    try {
+      await requestResubmit({ id: priorityId, comment }).unwrap();
+      toast.success('Employee was asked to resubmit.');
+      setResubmitCommentById((prev) => ({ ...prev, [priorityId]: '' }));
+      await refetch();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Could not request resubmit.'));
     }
   }
 
@@ -164,7 +195,13 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
 
       <section className="space-y-3">
         <Meta>Weekly priorities · this project</Meta>
-        <p className="text-sm text-muted">Read-only. CSO approves submissions.</p>
+        <p className="text-sm text-muted">
+          Approve or ask for a resubmit on submitted lines. For regular or skill priorities, use{' '}
+          <Link href="/work/priorities/review" className="underline">
+            Team priorities
+          </Link>
+          .
+        </p>
         {priorities.length === 0 ? (
           <p className="text-sm text-muted">No project priorities for this week yet.</p>
         ) : (
@@ -192,6 +229,40 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
                 <p className="mt-1 text-xs text-muted">
                   {item.employeeName} · {item.type}
                 </p>
+                {item.approvalStatus === 'SUBMITTED' ? (
+                  <div className="mt-3 space-y-3 border-t border-border pt-3">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={approveState.isLoading}
+                      onClick={() => void onApprove(item.id)}
+                    >
+                      Approve
+                    </Button>
+                    <div>
+                      <Label htmlFor={`lead-resubmit-${item.id}`}>Ask for resubmit</Label>
+                      <Input
+                        id={`lead-resubmit-${item.id}`}
+                        className="mt-1"
+                        value={resubmitCommentById[item.id] ?? ''}
+                        onChange={(event) =>
+                          setResubmitCommentById((prev) => ({ ...prev, [item.id]: event.target.value }))
+                        }
+                        placeholder="What should they change?"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2"
+                        disabled={resubmitState.isLoading}
+                        onClick={() => void onRequestResubmit(item.id)}
+                      >
+                        Request resubmit
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>

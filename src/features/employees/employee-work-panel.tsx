@@ -47,7 +47,7 @@ function planApprovalSummary(statuses: WorkPriorityApprovalStatus[]): string {
   if (statuses.length === 0) return 'No plan yet';
   if (statuses.every((status) => status === 'APPROVED')) return 'Approved';
   if (statuses.some((status) => status === 'RESUBMIT_REQUESTED')) return 'Needs resubmit';
-  if (statuses.some((status) => status === 'SUBMITTED')) return 'Awaiting CSO';
+  if (statuses.some((status) => status === 'SUBMITTED')) return 'Awaiting project lead';
   if (statuses.some((status) => status === 'DRAFT')) return 'Draft';
   return 'In progress';
 }

@@ -18,6 +18,7 @@ export const EMPLOYEE_NAV: readonly NavItem[] = [
 export const EMPLOYEE_WORK_SUBNAV: readonly NavItem[] = [
   { href: '/work', label: 'Today', icon: 'clock' },
   { href: '/work/priorities', label: 'Priorities', icon: 'grid' },
+  { href: '/work/priorities/review', label: 'Team priorities', icon: 'users' },
   { href: '/work/projects', label: 'Project desk', icon: 'building' },
   { href: '/work/weekly-update', label: 'My weekly update', icon: 'file' },
   { href: '/work/trends', label: 'Trends', icon: 'overview' },

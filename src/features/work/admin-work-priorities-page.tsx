@@ -17,6 +17,8 @@ import {
   useApproveAllWorkPrioritiesMutation,
   useGetDepartmentsQuery,
   useGetEmployeesQuery,
+  useGetWorkLeadPrioritiesApprovedQuery,
+  useGetWorkLeadPrioritiesQueueQuery,
   useGetWorkPrioritiesApprovedQuery,
   useGetWorkPrioritiesQueueQuery,
   useGetWorkWeekQuery,
@@ -50,7 +52,13 @@ function filterByDesk<T extends { departmentId: string | null; employeeId: strin
   return next;
 }
 
-function PrioritiesDesk({ canApprove }: { canApprove: boolean }) {
+function PrioritiesDesk({
+  canApprove,
+  deskMode = 'admin',
+}: {
+  canApprove: boolean;
+  deskMode?: 'admin' | 'lead';
+}) {
   const toast = useToast();
   const router = useRouter();
   const pathname = usePathname();
@@ -61,8 +69,14 @@ function PrioritiesDesk({ canApprove }: { canApprove: boolean }) {
   const [employeeId, setEmployeeId] = useState('');
 
   const weekArg = { date: weekDate };
-  const { data: queueData, isLoading: queueLoading } = useGetWorkPrioritiesQueueQuery(weekArg);
-  const { data: approvedData, isLoading: approvedLoading } = useGetWorkPrioritiesApprovedQuery(weekArg);
+  const adminQueue = useGetWorkPrioritiesQueueQuery(weekArg, { skip: deskMode === 'lead' });
+  const adminApproved = useGetWorkPrioritiesApprovedQuery(weekArg, { skip: deskMode === 'lead' });
+  const leadQueue = useGetWorkLeadPrioritiesQueueQuery(weekArg, { skip: deskMode !== 'lead' });
+  const leadApproved = useGetWorkLeadPrioritiesApprovedQuery(weekArg, { skip: deskMode !== 'lead' });
+  const queueData = deskMode === 'lead' ? leadQueue.data : adminQueue.data;
+  const approvedData = deskMode === 'lead' ? leadApproved.data : adminApproved.data;
+  const queueLoading = deskMode === 'lead' ? leadQueue.isLoading : adminQueue.isLoading;
+  const approvedLoading = deskMode === 'lead' ? leadApproved.isLoading : adminApproved.isLoading;
   const queue = queueData?.data;
   const approved = approvedData?.data;
   const week = approved?.week ?? queue?.week ?? null;
@@ -116,7 +130,8 @@ function PrioritiesDesk({ canApprove }: { canApprove: boolean }) {
       (row) =>
         row.status !== 'CANCELLED' &&
         row.status !== 'CARRIED_FORWARD' &&
-        row.approvalStatus === 'SUBMITTED',
+        row.approvalStatus === 'SUBMITTED' &&
+        row.canApprove !== false,
     ).length;
   }, [canApprove, weekData?.data, selectedFromQueue?.submittedCount]);
 
@@ -161,11 +176,13 @@ function PrioritiesDesk({ canApprove }: { canApprove: boolean }) {
 
   return (
     <>
-      <PageHeader kicker="Work" title="Priorities" />
+      <PageHeader kicker="Work" title={deskMode === 'lead' ? 'Team priorities' : 'Priorities'} />
       <p className="mb-6 max-w-2xl text-sm text-muted">
         {canApprove
           ? 'Review submissions for the selected week, or browse who already has approved priorities. Open a row for the full plan.'
-          : 'See who is waiting for CSO review and who already has approved priorities for the selected week. Only CSO can approve.'}
+          : deskMode === 'lead'
+            ? 'See priorities waiting for your review as project lead. Open a row to view the full plan.'
+            : 'See who is waiting for project lead review and who already has approved priorities for the selected week. Approval is done by project leads.'}
       </p>
 
       <div className="mb-6 space-y-4 rounded border border-border bg-background p-5 shadow-card">
@@ -314,7 +331,9 @@ function PrioritiesDesk({ canApprove }: { canApprove: boolean }) {
             emptyDescription={
               filterHint
                 ? 'No approved plans match this filter for the selected week.'
-                : 'When CSO approves a week’s priorities, people appear here. Change the week above to check another period.'
+                : deskMode === 'lead'
+                  ? 'When you approve a week’s priorities, people appear here. Change the week above to check another period.'
+                  : 'When project leads approve a week’s priorities, people appear here. Change the week above to check another period.'
             }
           />
         ) : null}
@@ -365,10 +384,16 @@ function PrioritiesDesk({ canApprove }: { canApprove: boolean }) {
   );
 }
 
-export function AdminWorkPrioritiesPage({ canApprove = false }: { canApprove?: boolean }) {
+export function AdminWorkPrioritiesPage({
+  canApprove = false,
+  deskMode = 'admin',
+}: {
+  canApprove?: boolean;
+  deskMode?: 'admin' | 'lead';
+}) {
   return (
     <Suspense fallback={<PageLoading compact message="Loading…" />}>
-      <PrioritiesDesk canApprove={canApprove} />
+      <PrioritiesDesk canApprove={canApprove} deskMode={deskMode} />
     </Suspense>
   );
 }

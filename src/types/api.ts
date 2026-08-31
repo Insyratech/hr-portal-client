@@ -389,6 +389,8 @@ export type WorkPriority = {
   resubmitRequestedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Present when a project lead views another employee's week. */
+  canApprove?: boolean;
 };
 
 export type WorkOverview = {

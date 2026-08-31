@@ -15,7 +15,7 @@ export function LeadProjectsPage() {
       <PageHeader kicker="Work" title="Project desk" />
       <p className="max-w-2xl text-sm text-muted">
         Projects where you are the current project lead. Open a desk to post status updates, see members, this week’s
-        priorities, and related daily work. CSO still approves weekly priorities. Leave approvals for your projects
+        priorities, and related daily work. Approve weekly priorities from Team priorities or on each project desk. Leave approvals for your projects
         appear under Leave.
       </p>
       <DataTable

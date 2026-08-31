@@ -14,8 +14,8 @@ export function leaveApprovalPath(roles: string[], id: string): string {
   return `/leave?applicationId=${encodeURIComponent(id)}`;
 }
 
-/** CSO review alerts use referenceId = employeeId (see work service notify). */
-function isCsoPriorityReview(item: NotificationItem): boolean {
+/** Project lead review alerts use referenceId = employeeId (see work service notify). */
+function isLeadPriorityReview(item: NotificationItem): boolean {
   return /submitted for approval|resubmitted for approval/i.test(item.title);
 }
 
@@ -106,7 +106,10 @@ export function pathForNotification(item: NotificationItem, roles: string[]): st
       return '/work/weekly-update';
     }
     if (item.referenceType === 'weekly_priority' || item.referenceType === 'weekly_plan') {
-      if (cso && isCsoPriorityReview(item)) {
+      if (isLeadPriorityReview(item) && id) {
+        return `/work/priorities/review?employeeId=${encodeURIComponent(id)}`;
+      }
+      if (cso && isLeadPriorityReview(item)) {
         return id
           ? `/cso/work/priorities?employeeId=${encodeURIComponent(id)}`
           : '/cso/work/priorities';

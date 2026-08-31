@@ -653,6 +653,20 @@ export const api = createApi({
       }),
       providesTags: ['Work'],
     }),
+    getWorkLeadPrioritiesQueue: builder.query<ApiSuccess<WorkPrioritiesQueue>, { date?: string } | void>({
+      query: (arg) => ({
+        url: '/api/v1/work/priorities/lead-queue',
+        params: arg && arg.date ? { date: arg.date } : undefined,
+      }),
+      providesTags: ['Work'],
+    }),
+    getWorkLeadPrioritiesApproved: builder.query<ApiSuccess<WorkPrioritiesApproved>, { date?: string } | void>({
+      query: (arg) => ({
+        url: '/api/v1/work/priorities/lead-approved',
+        params: arg && arg.date ? { date: arg.date } : undefined,
+      }),
+      providesTags: ['Work'],
+    }),
     getWorkAnalytics: builder.query<
       ApiSuccess<WorkAnalytics>,
       {
@@ -1294,6 +1308,8 @@ export const {
   useGetWorkBoardQuery,
   useGetWorkPrioritiesQueueQuery,
   useGetWorkPrioritiesApprovedQuery,
+  useGetWorkLeadPrioritiesQueueQuery,
+  useGetWorkLeadPrioritiesApprovedQuery,
   useGetWorkAnalyticsQuery,
   useGetWorkSettingsQuery,
   useUpdateWorkSettingsMutation,
