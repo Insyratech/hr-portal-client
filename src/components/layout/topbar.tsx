@@ -130,8 +130,6 @@ function EmployeeWorkMenu() {
 function MyProjectMenu() {
   const pathname = usePathname();
   const { isProjectLead } = useIsProjectLead();
-  if (!isProjectLead) return null;
-
   const projectActive = isMyProjectArea(pathname);
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -170,6 +168,8 @@ function MyProjectMenu() {
       clearCloseTimer();
     };
   }, []);
+
+  if (!isProjectLead) return null;
 
   return (
     <div
