@@ -15,13 +15,13 @@ import { StatusBadge } from '@/components/dashboard/status-badge';
 import {
   useGetAttendanceMeQuery,
   useGetGrievancesQuery,
-  useGetLeadProjectsQuery,
   useGetLeaveApplicationsQuery,
   useGetLeaveBalancesQuery,
   useGetMeQuery,
   useGetMyPayslipsQuery,
   useGetMyWorkPermissionsQuery,
 } from '@/store/api/api';
+import { useIsProjectLead } from '@/features/work/project-lead';
 import { remainingInMonth, remainingText } from '@/features/work-permissions/format';
 import { DashboardMyProjectsCard } from '@/features/work/dashboard-my-projects-card';
 import { DashboardWorkCard } from '@/features/work/dashboard-work-card';
@@ -43,9 +43,8 @@ export default function EmployeeDashboardPage() {
   const { data: assignedGrievances } = useGetGrievancesQuery({ scope: 'assigned' });
   const { data: permissionData } = useGetMyWorkPermissionsQuery(undefined, { skip: !canApplyPermission });
   const { data: payslipData } = useGetMyPayslipsQuery();
-  const { data: leadProjectsData } = useGetLeadProjectsQuery();
+  const { isProjectLead } = useIsProjectLead();
   const latestSlip = payslipData?.data[0];
-  const isProjectLead = (leadProjectsData?.data ?? []).length > 0;
 
   const balances = (balanceData?.data ?? [])
     .filter((item) => DASHBOARD_CODES.includes(item.code))
@@ -198,6 +197,7 @@ export default function EmployeeDashboardPage() {
           <div className="flex flex-wrap gap-3">
             <QuickAction href="/work" label="My week" />
             {isProjectLead ? <QuickAction href="/work/projects" label="Project desk" /> : null}
+            {isProjectLead ? <QuickAction href="/work/priorities/review" label="Team priorities" /> : null}
             <QuickAction href="/leave?apply=1" label="Apply leave" />
             {canApplyPermission ? <QuickAction href="/permission?apply=1" label="Request permission" /> : null}
             <QuickAction href="/attendance" label="Attendance" />

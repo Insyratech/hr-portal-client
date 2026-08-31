@@ -119,22 +119,25 @@ export function AdminWorkProjectsPage() {
           id: person.id,
           label: person.fullName,
           hint: person.departmentName ?? person.employeeCode,
+          hasPortalLogin: Boolean(person.userId),
         })),
     [employees?.data],
   );
 
+  const portalPeople = useMemo(() => people.filter((person) => person.hasPortalLogin), [people]);
+
   const createLeadOptions = useMemo(() => {
     const selected = new Set(createMemberIds);
     if (createLeadId) selected.add(createLeadId);
-    const fromMembers = people.filter((person) => selected.has(person.id));
-    return fromMembers.length > 0 ? fromMembers : people;
-  }, [people, createMemberIds, createLeadId]);
+    const fromMembers = portalPeople.filter((person) => selected.has(person.id));
+    return fromMembers.length > 0 ? fromMembers : portalPeople;
+  }, [portalPeople, createMemberIds, createLeadId]);
 
   const editLeadOptions = useMemo(() => {
     const selected = new Set(editMemberIds);
     if (editLeadId) selected.add(editLeadId);
-    return people.filter((person) => selected.has(person.id));
-  }, [people, editMemberIds, editLeadId]);
+    return portalPeople.filter((person) => selected.has(person.id));
+  }, [portalPeople, editMemberIds, editLeadId]);
 
   const employeesHref = pathname.startsWith('/super-admin')
     ? '/super-admin/employees'
@@ -380,6 +383,9 @@ export function AdminWorkProjectsPage() {
             </div>
             <div>
               <Label htmlFor="project-lead">Project lead</Label>
+              <p className="mb-2 text-xs text-muted">
+                Only employees with a portal login can be project lead.
+              </p>
               <select
                 id="project-lead"
                 className={selectClass}
@@ -435,6 +441,9 @@ export function AdminWorkProjectsPage() {
               </div>
               <div>
                 <Label htmlFor="edit-project-lead">Project lead</Label>
+                <p className="mb-2 text-xs text-muted">
+                  Only employees with a portal login can be project lead.
+                </p>
                 <select
                   id="edit-project-lead"
                   className={selectClass}
@@ -449,7 +458,7 @@ export function AdminWorkProjectsPage() {
                   required
                 >
                   <option value="">Choose lead</option>
-                  {(editLeadOptions.length > 0 ? editLeadOptions : people).map((person) => (
+                  {(editLeadOptions.length > 0 ? editLeadOptions : portalPeople).map((person) => (
                     <option key={person.id} value={person.id}>
                       {person.label}
                       {person.hint ? ` · ${person.hint}` : ''}

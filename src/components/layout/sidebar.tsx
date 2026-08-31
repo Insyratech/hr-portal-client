@@ -23,6 +23,7 @@ import {
   MY_WORK_DOCS_NAV,
   MY_WORK_LINK,
   MY_WORK_TIME_NAV,
+  MY_PROJECT_NAV,
   SUPER_ADMIN_ORG_NAV,
   SUPER_ADMIN_OVERVIEW_NAV,
   SUPER_ADMIN_POLICIES_NAV,
@@ -32,6 +33,7 @@ import {
 } from '@/constants/nav';
 import { cn } from '@/lib/utils';
 import type { ShellVariant } from '@/features/auth/role-access';
+import { useIsProjectLead } from '@/features/work/project-lead';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toggleSidebar } from '@/store/slices/ui-slice';
 
@@ -103,9 +105,12 @@ function NavSection({
 }
 
 function EmployeeNavGroups({ collapsed }: { collapsed: boolean }) {
+  const { isProjectLead } = useIsProjectLead();
+
   return (
     <>
       <NavLinks items={[MY_WORK_DASHBOARD, MY_WORK_LINK]} collapsed={collapsed} />
+      {isProjectLead ? <NavGroup label="My project" items={MY_PROJECT_NAV} collapsed={collapsed} /> : null}
       <NavGroup label="Time off" items={MY_WORK_TIME_NAV} collapsed={collapsed} />
       <NavGroup label="Pay & docs" items={MY_WORK_DOCS_NAV} collapsed={collapsed} />
       <NavGroup label="Account" items={MY_WORK_ACCOUNT_NAV} collapsed={collapsed} />

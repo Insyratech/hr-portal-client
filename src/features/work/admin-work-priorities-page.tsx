@@ -176,7 +176,7 @@ function PrioritiesDesk({
 
   return (
     <>
-      <PageHeader kicker="Work" title={deskMode === 'lead' ? 'Team priorities' : 'Priorities'} />
+      <PageHeader kicker="My project" title={deskMode === 'lead' ? 'Team priorities' : 'Priorities'} />
       <p className="mb-6 max-w-2xl text-sm text-muted">
         {canApprove
           ? 'Review submissions for the selected week, or browse who already has approved priorities. Open a row for the full plan.'

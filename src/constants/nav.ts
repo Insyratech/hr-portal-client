@@ -18,11 +18,15 @@ export const EMPLOYEE_NAV: readonly NavItem[] = [
 export const EMPLOYEE_WORK_SUBNAV: readonly NavItem[] = [
   { href: '/work', label: 'Today', icon: 'clock' },
   { href: '/work/priorities', label: 'Priorities', icon: 'grid' },
-  { href: '/work/priorities/review', label: 'Team priorities', icon: 'users' },
-  { href: '/work/projects', label: 'Project desk', icon: 'building' },
   { href: '/work/weekly-update', label: 'My weekly update', icon: 'file' },
   { href: '/work/trends', label: 'Trends', icon: 'overview' },
   { href: '/work/history', label: 'History', icon: 'calendar' },
+];
+
+/** Project lead tools — only shown when the employee leads at least one active project. */
+export const MY_PROJECT_NAV: readonly NavItem[] = [
+  { href: '/work/projects', label: 'Project desk', icon: 'building' },
+  { href: '/work/priorities/review', label: 'Team priorities', icon: 'users' },
 ];
 
 /**
@@ -221,7 +225,10 @@ export function isNavActive(pathname: string, href: string): boolean {
     return pathname === href;
   }
   if (href === '/work') {
-    return pathname === '/work' || pathname.startsWith('/work/');
+    return (
+      pathname === '/work' ||
+      (pathname.startsWith('/work/') && !isMyProjectArea(pathname))
+    );
   }
   if (href === '/leave') {
     return pathname === '/leave' || (pathname.startsWith('/leave/') && !pathname.startsWith('/leave/holidays'));
@@ -238,8 +245,24 @@ export function isNavActive(pathname: string, href: string): boolean {
 }
 
 export function isWorkSubnavActive(pathname: string, href: string): boolean {
+  return isMyProjectNavActive(pathname, href) || pathname === href;
+}
+
+export function isMyProjectNavActive(pathname: string, href: string): boolean {
   if (href === '/work/projects') {
     return pathname === href || pathname.startsWith('/work/projects/');
   }
+  if (href === '/work/priorities/review') {
+    return pathname === href || pathname.startsWith('/work/priorities/review');
+  }
   return pathname === href;
+}
+
+export function isMyProjectArea(pathname: string): boolean {
+  return (
+    pathname === '/work/projects' ||
+    pathname.startsWith('/work/projects/') ||
+    pathname === '/work/priorities/review' ||
+    pathname.startsWith('/work/priorities/review')
+  );
 }

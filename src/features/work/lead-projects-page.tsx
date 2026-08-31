@@ -12,7 +12,7 @@ export function LeadProjectsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader kicker="Work" title="Project desk" />
+      <PageHeader kicker="My project" title="Project desk" />
       <p className="max-w-2xl text-sm text-muted">
         Projects where you are the current project lead. Open a desk to post status updates, see members, this week’s
         priorities, and related daily work. Approve weekly priorities from Team priorities or on each project desk. Leave approvals for your projects
@@ -36,7 +36,7 @@ export function LeadProjectsPage() {
         rows={projects.map((row) => ({ ...row, id: row.id }))}
         loading={isLoading}
         emptyTitle="No lead projects"
-        emptyDescription="When CSO assigns you as a project lead, those projects appear here."
+        emptyDescription="When CSO assigns you as project lead on an active project, it appears here. If you were just assigned, refresh the page or sign out and back in. Ask CSO to open Projects → Assign people and save again if it still does not show."
       />
     </div>
   );

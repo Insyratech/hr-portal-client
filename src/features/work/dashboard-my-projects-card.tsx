@@ -4,12 +4,11 @@ import Link from 'next/link';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
 import { CardSkeleton } from '@/components/ui/skeleton';
-import { useGetLeadProjectsQuery } from '@/store/api/api';
+import { useIsProjectLead } from '@/features/work/project-lead';
 
 /** Compact lead-project list for the employee dashboard. */
 export function DashboardMyProjectsCard() {
-  const { data, isLoading } = useGetLeadProjectsQuery();
-  const projects = data?.data ?? [];
+  const { projects, isLoading } = useIsProjectLead();
 
   if (isLoading) {
     return <CardSkeleton />;
@@ -19,12 +18,15 @@ export function DashboardMyProjectsCard() {
 
   return (
     <section className="border border-border bg-background p-5 shadow-card">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <Meta>My projects</Meta>
+      <div className="flex flex-wrap items-baseline justify-end gap-3">
         <Link href="/work/projects" className="text-sm text-muted hover:text-foreground">
           Project desk
         </Link>
+        <Link href="/work/priorities/review" className="text-sm text-muted hover:text-foreground">
+          Team priorities
+        </Link>
       </div>
+      <Meta className="mt-3">My project</Meta>
       <p className="mt-2 text-sm text-muted">
         Projects you lead. Open a desk for members, status updates, and this week’s work.
       </p>

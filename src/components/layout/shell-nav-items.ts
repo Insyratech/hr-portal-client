@@ -14,6 +14,7 @@ import {
   HR_ORG_NAV,
   HR_OVERVIEW_NAV,
   HR_WORK_NAV,
+  MY_PROJECT_NAV,
   MY_WORK_ACCOUNT_NAV,
   MY_WORK_DASHBOARD,
   MY_WORK_DOCS_NAV,
@@ -39,15 +40,23 @@ export type NavMenuSection = {
   groups: readonly NavMenuGroup[];
 };
 
-function employeeSection(): NavMenuSection {
+function employeeSectionGroups(isProjectLead: boolean): NavMenuGroup[] {
+  const groups: NavMenuGroup[] = [{ items: [MY_WORK_DASHBOARD, MY_WORK_LINK] }];
+  if (isProjectLead) {
+    groups.push({ label: 'My project', items: MY_PROJECT_NAV });
+  }
+  groups.push(
+    { label: 'Time off', items: MY_WORK_TIME_NAV },
+    { label: 'Pay & docs', items: MY_WORK_DOCS_NAV },
+    { label: 'Account', items: MY_WORK_ACCOUNT_NAV },
+  );
+  return groups;
+}
+
+function employeeSection(isProjectLead = false): NavMenuSection {
   return {
     title: 'Employee',
-    groups: [
-      { items: [MY_WORK_DASHBOARD, MY_WORK_LINK] },
-      { label: 'Time off', items: MY_WORK_TIME_NAV },
-      { label: 'Pay & docs', items: MY_WORK_DOCS_NAV },
-      { label: 'Account', items: MY_WORK_ACCOUNT_NAV },
-    ],
+    groups: employeeSectionGroups(isProjectLead),
   };
 }
 
@@ -87,7 +96,10 @@ function managerialSection(variant: Exclude<ShellVariant, 'employee' | 'super-ad
   };
 }
 
-export function shellMobileNavSections(variant: Exclude<ShellVariant, 'employee'>): NavMenuSection[] {
+export function shellMobileNavSections(
+  variant: Exclude<ShellVariant, 'employee'>,
+  isProjectLead = false,
+): NavMenuSection[] {
   if (variant === 'super-admin') {
     return [
       {
@@ -104,7 +116,7 @@ export function shellMobileNavSections(variant: Exclude<ShellVariant, 'employee'
       },
     ];
   }
-  return [managerialSection(variant), employeeSection()];
+  return [managerialSection(variant), employeeSection(isProjectLead)];
 }
 
 export function shellMobileNavTitle(variant: Exclude<ShellVariant, 'employee'>): string {

@@ -3,27 +3,33 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
-import { EMPLOYEE_NAV, EMPLOYEE_WORK_SUBNAV, isNavActive, isWorkSubnavActive } from '@/constants/nav';
+import {
+  EMPLOYEE_NAV,
+  isMyProjectArea,
+  isMyProjectNavActive,
+  isNavActive,
+  isWorkSubnavActive,
+  MY_PROJECT_NAV,
+} from '@/constants/nav';
+import { useWorkNavGroups } from '@/components/layout/employee-work-sidebar';
 import { Meta } from '@/components/layout/meta';
 import { ManagerMobileNav } from '@/components/layout/manager-mobile-nav';
 import { Icon } from '@/components/ui/icon';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { NotificationsPanel } from '@/features/notifications/notifications-panel';
-import { useGetLeadProjectsQuery, useGetNotificationUnreadCountQuery } from '@/store/api/api';
+import { useGetNotificationUnreadCountQuery } from '@/store/api/api';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { openConfirmDialog, setCommandPaletteOpen, toggleNotificationsOpen } from '@/store/slices/ui-slice';
 import { cn } from '@/lib/utils';
 import { primaryRoleCode, type ShellVariant } from '@/features/auth/role-access';
 import { roleLabel } from '@/features/employees/onboarding-roles';
-
-function isProjectDeskPath(pathname: string): boolean {
-  return pathname === '/work/projects' || pathname.startsWith('/work/projects/');
-}
+import { useIsProjectLead } from '@/features/work/project-lead';
 
 function EmployeeWorkMenu() {
   const pathname = usePathname();
+  const { workItems } = useWorkNavGroups();
   const workActive =
-    (pathname === '/work' || pathname.startsWith('/work/')) && !isProjectDeskPath(pathname);
+    (pathname === '/work' || pathname.startsWith('/work/')) && !isMyProjectArea(pathname);
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -95,7 +101,7 @@ function EmployeeWorkMenu() {
           onMouseEnter={openMenu}
           onMouseLeave={scheduleClose}
         >
-          {EMPLOYEE_WORK_SUBNAV.map((item) => {
+          {workItems.map((item) => {
             const active = isWorkSubnavActive(pathname, item.href);
             return (
               <Link
@@ -121,25 +127,106 @@ function EmployeeWorkMenu() {
   );
 }
 
-function ProjectDeskNavLink() {
+function MyProjectMenu() {
   const pathname = usePathname();
-  const user = useAppSelector((state) => state.auth.user);
-  const { data } = useGetLeadProjectsQuery(undefined, { skip: !user });
-  const projects = data?.data ?? [];
-  if (projects.length === 0) return null;
+  const { isProjectLead } = useIsProjectLead();
+  if (!isProjectLead) return null;
 
-  const active = isProjectDeskPath(pathname);
+  const projectActive = isMyProjectArea(pathname);
+  const menuId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [open, setOpen] = useState(false);
+
+  function clearCloseTimer() {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }
+
+  function openMenu() {
+    clearCloseTimer();
+    setOpen(true);
+  }
+
+  function scheduleClose() {
+    clearCloseTimer();
+    closeTimer.current = setTimeout(() => setOpen(false), 120);
+  }
+
+  useEffect(() => {
+    function onPointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKey);
+      clearCloseTimer();
+    };
+  }, []);
+
   return (
-    <Link
-      href="/work/projects"
-      className={cn(
-        'inline-flex shrink-0 items-center gap-2 rounded px-2.5 py-2 text-sm transition-colors lg:px-3',
-        active ? 'bg-surface text-foreground' : 'text-muted hover:bg-surface hover:text-foreground',
-      )}
+    <div
+      ref={rootRef}
+      className="relative"
+      onMouseEnter={openMenu}
+      onMouseLeave={scheduleClose}
     >
-      <Icon name="building" className="h-3.5 w-3.5" />
-      Project desk
-    </Link>
+      <Link
+        href="/work/projects"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
+        className={cn(
+          'inline-flex shrink-0 items-center gap-2 rounded px-2.5 py-2 text-sm transition-colors lg:px-3',
+          projectActive || open
+            ? 'bg-surface text-foreground'
+            : 'text-muted hover:bg-surface hover:text-foreground',
+        )}
+        onFocus={openMenu}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Icon name="building" className="h-3.5 w-3.5" />
+        My project
+        <Icon name="chevron-down" className={cn('h-3 w-3 opacity-70 transition', open && 'rotate-180')} />
+      </Link>
+      {open ? (
+        <div
+          id={menuId}
+          role="menu"
+          className="absolute left-0 top-[calc(100%+0.35rem)] z-[60] w-52 rounded border border-border bg-background py-1 shadow-card"
+          onMouseEnter={openMenu}
+          onMouseLeave={scheduleClose}
+        >
+          {MY_PROJECT_NAV.map((item) => {
+            const active = isMyProjectNavActive(pathname, item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                role="menuitem"
+                className={cn(
+                  'flex items-center gap-2 px-3 py-2.5 text-sm transition-colors',
+                  active
+                    ? 'bg-foreground text-background'
+                    : 'text-foreground hover:bg-surface',
+                )}
+                onClick={() => setOpen(false)}
+              >
+                <Icon name={item.icon} className="h-3.5 w-3.5" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -283,7 +370,7 @@ export function Topbar({ variant }: { variant: ShellVariant }) {
                   item.href === '/work' ? (
                     <span key={item.href} className="contents">
                       <EmployeeWorkMenu />
-                      <ProjectDeskNavLink />
+                      <MyProjectMenu />
                     </span>
                   ) : (
                     <Link
