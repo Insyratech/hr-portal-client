@@ -34,6 +34,113 @@ import type { WorkProject } from '@/types/api';
 const selectClass =
   'h-10 w-full rounded border border-border bg-background px-3 text-sm text-foreground shadow-card outline-none focus:border-foreground';
 
+function memberNames(project: WorkProject): string {
+  const members = project.members ?? [];
+  if (members.length === 0) return '—';
+  return members.map((member) => member.fullName).join(', ');
+}
+
+function ProjectDetailDialog({
+  project,
+  open,
+  onOpenChange,
+  canManage,
+  canViewUpdates,
+  onViewUpdates,
+  onAssignPeople,
+}: {
+  project: WorkProject | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  canManage: boolean;
+  canViewUpdates: boolean;
+  onViewUpdates: (projectId: string) => void;
+  onAssignPeople: (projectId: string) => void;
+}) {
+  const members = project?.members ?? [];
+  const leadId = project?.leadEmployeeId ?? null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+        <DialogTitle>{project?.name ?? 'Project'}</DialogTitle>
+        <DialogDescription>
+          {project ? `${project.code} · ${project.status}` : 'Project details.'}
+        </DialogDescription>
+        {project ? (
+          <div className="mt-6 space-y-5">
+            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-xs uppercase tracking-[0.12em] text-muted">Code</dt>
+                <dd className="mt-1 text-foreground">{project.code}</dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase tracking-[0.12em] text-muted">Status</dt>
+                <dd className="mt-1 capitalize text-foreground">{project.status}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-xs uppercase tracking-[0.12em] text-muted">Project lead</dt>
+                <dd className="mt-1 text-foreground">{project.leadName ?? '—'}</dd>
+              </div>
+            </dl>
+
+            <div>
+              <p className="text-xs uppercase tracking-[0.12em] text-muted">
+                Members · {project.memberCount ?? members.length}
+              </p>
+              {members.length === 0 ? (
+                <p className="mt-2 text-sm text-muted">No members assigned yet.</p>
+              ) : (
+                <ul className="mt-2 space-y-1 rounded border border-border bg-background p-3 shadow-card">
+                  {members.map((member) => (
+                    <li
+                      key={member.employeeId}
+                      className="flex items-center justify-between gap-3 text-sm text-foreground"
+                    >
+                      <span>{member.fullName}</span>
+                      {member.employeeId === leadId ? (
+                        <span className="text-xs uppercase tracking-[0.12em] text-muted">Lead</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
+              {canViewUpdates ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    onOpenChange(false);
+                    onViewUpdates(project.id);
+                  }}
+                >
+                  Status updates
+                </Button>
+              ) : null}
+              {canManage && project.status === 'active' ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    onOpenChange(false);
+                    onAssignPeople(project.id);
+                  }}
+                >
+                  Assign people
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ProjectUpdatesDialog({
   project,
   open,
@@ -100,6 +207,7 @@ export function AdminWorkProjectsPage() {
   const [editMemberIds, setEditMemberIds] = useState<string[]>([]);
   const [editLeadId, setEditLeadId] = useState('');
   const [updatesProjectId, setUpdatesProjectId] = useState<string | null>(null);
+  const [detailProjectId, setDetailProjectId] = useState<string | null>(null);
 
   const projects = useMemo(() => data?.data ?? [], [data?.data]);
   const editingProject = useMemo(
@@ -109,6 +217,10 @@ export function AdminWorkProjectsPage() {
   const updatesProject = useMemo(
     () => projects.find((row) => row.id === updatesProjectId) ?? null,
     [projects, updatesProjectId],
+  );
+  const detailProject = useMemo(
+    () => projects.find((row) => row.id === detailProjectId) ?? null,
+    [projects, detailProjectId],
   );
   const people = useMemo(
     () =>
@@ -270,7 +382,19 @@ export function AdminWorkProjectsPage() {
       <DataTable
         columns={[
           { id: 'code', header: 'Code', cell: (row) => row.code },
-          { id: 'name', header: 'Name', cell: (row) => row.name },
+          {
+            id: 'name',
+            header: 'Name',
+            cell: (row) => (
+              <button
+                type="button"
+                className="text-left text-foreground underline-offset-2 hover:underline"
+                onClick={() => setDetailProjectId(row.id)}
+              >
+                {row.name}
+              </button>
+            ),
+          },
           {
             id: 'lead',
             header: 'Lead',
@@ -279,13 +403,9 @@ export function AdminWorkProjectsPage() {
           {
             id: 'members',
             header: 'Members',
-            cell: (row) => {
-              const count = row.memberCount ?? row.members?.length ?? 0;
-              if (count === 0) return '—';
-              const names = (row.members ?? []).slice(0, 3).map((member) => member.fullName);
-              const more = count > names.length ? ` +${count - names.length}` : '';
-              return `${names.join(', ')}${more}`;
-            },
+            cell: (row) => (
+              <span className="block max-w-md text-sm leading-relaxed">{memberNames(row)}</span>
+            ),
           },
           { id: 'status', header: 'Status', cell: (row) => row.status },
           {
@@ -332,6 +452,18 @@ export function AdminWorkProjectsPage() {
         rows={projects}
         emptyTitle="No projects yet"
         emptyDescription="Add a project here before assigning project priorities."
+      />
+
+      <ProjectDetailDialog
+        project={detailProject}
+        open={Boolean(detailProjectId)}
+        onOpenChange={(open) => {
+          if (!open) setDetailProjectId(null);
+        }}
+        canManage={canManage}
+        canViewUpdates={canViewUpdates}
+        onViewUpdates={setUpdatesProjectId}
+        onAssignPeople={setEditingId}
       />
 
       <ProjectUpdatesDialog
