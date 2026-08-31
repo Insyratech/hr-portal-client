@@ -28,6 +28,7 @@ import {
   SUPER_ADMIN_OVERVIEW_NAV,
   SUPER_ADMIN_POLICIES_NAV,
   SUPER_ADMIN_SYSTEM_NAV,
+  isMyProjectNavActive,
   isNavActive,
   type NavItem,
 } from '@/constants/nav';
@@ -42,7 +43,9 @@ function NavLinks({ items, collapsed }: { items: readonly NavItem[]; collapsed: 
   return (
     <ul className="space-y-1">
       {items.map((item) => {
-        const active = isNavActive(pathname, item.href);
+        const active = MY_PROJECT_NAV.some((projectItem) => projectItem.href === item.href)
+          ? isMyProjectNavActive(pathname, item.href)
+          : isNavActive(pathname, item.href);
         return (
           <li key={item.href}>
             <Link
@@ -105,12 +108,9 @@ function NavSection({
 }
 
 function EmployeeNavGroups({ collapsed }: { collapsed: boolean }) {
-  const { isProjectLead } = useIsProjectLead();
-
   return (
     <>
       <NavLinks items={[MY_WORK_DASHBOARD, MY_WORK_LINK]} collapsed={collapsed} />
-      {isProjectLead ? <NavGroup label="My project" items={MY_PROJECT_NAV} collapsed={collapsed} /> : null}
       <NavGroup label="Time off" items={MY_WORK_TIME_NAV} collapsed={collapsed} />
       <NavGroup label="Pay & docs" items={MY_WORK_DOCS_NAV} collapsed={collapsed} />
       <NavGroup label="Account" items={MY_WORK_ACCOUNT_NAV} collapsed={collapsed} />
@@ -155,6 +155,7 @@ function ManagerialNavGroups({
 export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'> }) {
   const collapsed = useAppSelector((state) => state.ui.sidebarCollapsed);
   const dispatch = useAppDispatch();
+  const { isProjectLead } = useIsProjectLead();
 
   return (
     <aside
@@ -194,6 +195,11 @@ export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'
             <NavSection title="Managerial responsibility" collapsed={collapsed}>
               <ManagerialNavGroups variant={variant} collapsed={collapsed} />
             </NavSection>
+            {isProjectLead ? (
+              <NavSection title="My project" collapsed={collapsed}>
+                <NavLinks items={MY_PROJECT_NAV} collapsed={collapsed} />
+              </NavSection>
+            ) : null}
             <NavSection title="Employee" collapsed={collapsed}>
               <EmployeeNavGroups collapsed={collapsed} />
             </NavSection>

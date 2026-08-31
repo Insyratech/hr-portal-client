@@ -365,6 +365,9 @@ export function Topbar({ variant }: { variant: ShellVariant }) {
           {variant === 'employee' ? (
             <>
               <Meta>HR Portal</Meta>
+              <div className="lg:hidden">
+                <MyProjectMenu />
+              </div>
               <nav className="hidden items-center gap-0.5 lg:flex lg:gap-1">
                 {EMPLOYEE_NAV.map((item) =>
                   item.href === '/work' ? (

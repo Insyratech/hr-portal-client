@@ -245,7 +245,8 @@ export function isNavActive(pathname: string, href: string): boolean {
 }
 
 export function isWorkSubnavActive(pathname: string, href: string): boolean {
-  return isMyProjectNavActive(pathname, href) || pathname === href;
+  if (isMyProjectArea(pathname)) return false;
+  return pathname === href;
 }
 
 export function isMyProjectNavActive(pathname: string, href: string): boolean {

@@ -1,25 +1,23 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useWorkNavGroups } from '@/components/layout/employee-work-sidebar';
 import { NavHamburgerMenu } from '@/components/layout/nav-hamburger-menu';
-import type { NavMenuSection } from '@/components/layout/shell-nav-items';
-import { isWorkSubnavActive } from '@/constants/nav';
+import { isMyProjectArea, isWorkSubnavActive } from '@/constants/nav';
 
-/** Work section hamburger for phone and tablet — desktop uses the left sidebar. */
+/** Work hamburger for phone and tablet — personal My work only. */
 export function EmployeeWorkMobileNav() {
-  const { workItems, projectItems } = useWorkNavGroups();
+  const pathname = usePathname();
+  const { workItems } = useWorkNavGroups();
 
-  const sections: NavMenuSection[] = [{ title: 'My work', groups: [{ items: workItems }] }];
-  if (projectItems.length > 0) {
-    sections.push({ title: 'My project', groups: [{ items: projectItems }] });
-  }
+  if (isMyProjectArea(pathname) || workItems.length === 0) return null;
 
   return (
     <div className="mb-6 lg:hidden">
       <NavHamburgerMenu
-        ariaLabel="Open work sections"
-        panelTitle="Work"
-        sections={sections}
+        ariaLabel="Open My work"
+        panelTitle="My work"
+        items={workItems}
         isItemActive={(currentPath, href) => isWorkSubnavActive(currentPath, href)}
       />
     </div>
