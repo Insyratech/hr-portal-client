@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,34 +9,43 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { isSupabaseBrowserConfigured } from '@/lib/env';
-import { clearPasswordAuth } from '@/lib/session-policy';
-import { unregisterWebPush } from '@/features/notifications/web-push-bootstrap';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { performSignOut } from '@/features/auth/sign-out';
 import { closeConfirmDialog } from '@/store/slices/ui-slice';
-import { clearSession } from '@/store/slices/auth-slice';
-import { clearPermissions } from '@/store/slices/permissions-slice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
 export function ConfirmDialog() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const { open, title, description, action } = useAppSelector((state) => state.ui.confirmDialog);
+  const [pending, setPending] = useState(false);
 
   async function onConfirm(): Promise<void> {
-    if (action === 'logout') {
-      await unregisterWebPush(dispatch);
-      if (isSupabaseBrowserConfigured()) {
-        await getSupabaseBrowserClient().auth.signOut();
-      }
-      clearPasswordAuth();
-      dispatch(clearPermissions());
-      dispatch(clearSession());
-      dispatch(closeConfirmDialog());
-      router.replace('/login');
+    if (pending) {
       return;
     }
 
+    if (action === 'logout') {
+      setPending(true);
+      try {
+        await performSignOut(dispatch);
+        dispatch(closeConfirmDialog());
+        router.replace('/login');
+      } catch {
+        dispatch(closeConfirmDialog());
+        router.replace('/login');
+      } finally {
+        setPending(false);
+      }
+      return;
+    }
+
+    dispatch(closeConfirmDialog());
+  }
+
+  function onDismiss(): void {
+    if (pending) {
+      return;
+    }
     dispatch(closeConfirmDialog());
   }
 
@@ -44,19 +54,19 @@ export function ConfirmDialog() {
       open={open}
       onOpenChange={(next) => {
         if (!next) {
-          dispatch(closeConfirmDialog());
+          onDismiss();
         }
       }}
     >
-      <DialogContent>
+      <DialogContent showClose={!pending}>
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>{description}</DialogDescription>
         <div className="mt-8 flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => dispatch(closeConfirmDialog())}>
+          <Button type="button" variant="outline" onClick={onDismiss} disabled={pending}>
             {action === 'logout' ? 'Cancel' : 'Close'}
           </Button>
           {action === 'logout' ? (
-            <Button type="button" onClick={() => void onConfirm()}>
+            <Button type="button" loading={pending} onClick={() => void onConfirm()}>
               Sign out
             </Button>
           ) : null}

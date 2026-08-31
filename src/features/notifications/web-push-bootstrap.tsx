@@ -69,6 +69,8 @@ export function WebPushBootstrap() {
   return null;
 }
 
+const SERVER_REVOKE_MS = 3000;
+
 export async function unregisterWebPush(dispatch: ReturnType<typeof useAppDispatch>): Promise<void> {
   let endpoint = readStoredPushEndpoint();
 
@@ -84,7 +86,16 @@ export async function unregisterWebPush(dispatch: ReturnType<typeof useAppDispat
   }
 
   if (endpoint) {
-    await dispatch(api.endpoints.unsubscribeWebPush.initiate({ endpoint }));
+    try {
+      await Promise.race([
+        dispatch(api.endpoints.unsubscribeWebPush.initiate({ endpoint })),
+        new Promise<void>((resolve) => {
+          window.setTimeout(resolve, SERVER_REVOKE_MS);
+        }),
+      ]);
+    } catch {
+      // Sign-out must not fail when revoke is unavailable.
+    }
   }
 
   window.localStorage.removeItem(PUSH_ENDPOINT_STORAGE_KEY);

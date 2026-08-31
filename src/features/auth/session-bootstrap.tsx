@@ -32,7 +32,7 @@ export function SessionBootstrap() {
 
     async function expirePasswordSession(): Promise<void> {
       if (hadSession) {
-        await unregisterWebPush(dispatch);
+        void unregisterWebPush(dispatch);
       }
       clearPasswordAuth();
       await supabase.auth.signOut();
@@ -45,7 +45,7 @@ export function SessionBootstrap() {
     async function applyAccessToken(accessToken: string | null): Promise<void> {
       if (!accessToken) {
         if (hadSession) {
-          await unregisterWebPush(dispatch);
+          void unregisterWebPush(dispatch);
         }
         dispatch(clearPermissions());
         dispatch(clearSession());
@@ -85,7 +85,7 @@ export function SessionBootstrap() {
       }
 
       if (hadSession) {
-        await unregisterWebPush(dispatch);
+        void unregisterWebPush(dispatch);
       }
       dispatch(clearPermissions());
       dispatch(clearSession());

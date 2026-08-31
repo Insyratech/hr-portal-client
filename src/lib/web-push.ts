@@ -35,8 +35,30 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   return navigator.serviceWorker.register('/sw.js', { scope: '/' });
 }
 
+const SERVICE_WORKER_READY_MS = 3000;
+
+async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegistration | null> {
+  if (!isPushApiSupported()) {
+    return null;
+  }
+  try {
+    const registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<null>((resolve) => {
+        window.setTimeout(() => resolve(null), SERVICE_WORKER_READY_MS);
+      }),
+    ]);
+    return registration;
+  } catch {
+    return null;
+  }
+}
+
 export async function getPushSubscription(): Promise<PushSubscription | null> {
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await getServiceWorkerRegistration();
+  if (!registration) {
+    return null;
+  }
   return registration.pushManager.getSubscription();
 }
 
