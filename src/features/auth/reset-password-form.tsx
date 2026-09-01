@@ -10,25 +10,29 @@ import { Meta } from '@/components/layout/meta';
 import { PageLoading } from '@/components/ui/page-loading';
 import { PasswordInput } from '@/components/ui/password-input';
 import { StatusMessage, type StatusTone } from '@/components/ui/status-message';
+import { hasRecoveryTokenInUrl, parseAuthHashError } from '@/lib/auth-hash';
 import { isSupabaseBrowserConfigured } from '@/lib/env';
 import { clearPasswordAuth } from '@/lib/session-policy';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
-
-function hasRecoveryTokenInUrl(): boolean {
-  if (typeof window === 'undefined') return false;
-  const hash = window.location.hash;
-  return hash.includes('type=recovery') || hash.includes('access_token=');
-}
 
 export function ResetPasswordForm() {
   const router = useRouter();
   const hadRecoveryHash = useRef(hasRecoveryTokenInUrl());
   const [phase, setPhase] = useState<'loading' | 'ready' | 'invalid'>('loading');
+  const [invalidReason, setInvalidReason] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: StatusTone; text: string } | null>(null);
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
+    const hashError = parseAuthHashError();
+    if (hashError) {
+      setInvalidReason(hashError);
+      setPhase('invalid');
+      return;
+    }
+
     if (!isSupabaseBrowserConfigured()) {
+      setInvalidReason('Password reset is not configured on this site.');
       setPhase('invalid');
       return;
     }
@@ -43,20 +47,28 @@ export function ResetPasswordForm() {
     }
 
     void supabase.auth.getSession().then(({ data }) => {
-      if (data.session && hadRecoveryHash.current) {
+      if (data.session && (hadRecoveryHash.current || hasRecoveryTokenInUrl())) {
         markReady();
       }
     });
 
     const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' && session) {
+      if (!session) return;
+      if (event === 'PASSWORD_RECOVERY') {
+        markReady();
+        return;
+      }
+      if (event === 'SIGNED_IN' && (hadRecoveryHash.current || hasRecoveryTokenInUrl())) {
         markReady();
       }
     });
 
     const timer = window.setTimeout(() => {
-      if (!settled) setPhase('invalid');
-    }, 10_000);
+      if (!settled) {
+        setInvalidReason('This reset link is invalid or has expired.');
+        setPhase('invalid');
+      }
+    }, 12_000);
 
     return () => {
       subscription.subscription.unsubscribe();
@@ -110,7 +122,7 @@ export function ResetPasswordForm() {
           <h1 className="text-3xl font-semibold tracking-tight">RESET LINK EXPIRED</h1>
         </div>
         <p className="text-sm text-muted">
-          This link is invalid or has expired. Request a new reset email and open the latest link.
+          {invalidReason ?? 'This link is invalid or has expired. Request a new reset email and open the latest link.'}
         </p>
         <Button asChild type="button" className="w-full">
           <Link href="/forgot-password">Request new link</Link>

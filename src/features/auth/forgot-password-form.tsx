@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { StatusMessage, type StatusTone } from '@/components/ui/status-message';
 import { Meta } from '@/components/layout/meta';
 import { apiErrorMessage } from '@/lib/api-error';
-import { clientAuthPath } from '@/lib/site-url';
 import { useRequestPasswordResetMutation } from '@/store/api/api';
 
 export function ForgotPasswordForm() {
@@ -22,10 +21,7 @@ export function ForgotPasswordForm() {
 
     const email = String(new FormData(event.currentTarget).get('email') ?? '');
     try {
-      await requestReset({
-        email,
-        redirectTo: clientAuthPath('/reset-password'),
-      }).unwrap();
+      await requestReset({ email }).unwrap();
       setMessage({
         tone: 'success',
         text: 'If that account exists, a reset email has been sent. You can request up to 5 reset emails every 3 hours.',

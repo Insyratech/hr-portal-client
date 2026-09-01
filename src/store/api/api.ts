@@ -128,10 +128,7 @@ export const api = createApi({
       query: () => '/api/v1/me',
       providesTags: ['Me'],
     }),
-    requestPasswordReset: builder.mutation<
-      ApiSuccess<{ sent: true }>,
-      { email: string; redirectTo?: string }
-    >({
+    requestPasswordReset: builder.mutation<ApiSuccess<{ sent: true }>, { email: string }>({
       query: (body) => ({
         url: '/api/v1/auth/forgot-password',
         method: 'POST',
