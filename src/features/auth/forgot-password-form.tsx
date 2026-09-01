@@ -8,41 +8,35 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusMessage, type StatusTone } from '@/components/ui/status-message';
 import { Meta } from '@/components/layout/meta';
-import { isSupabaseBrowserConfigured } from '@/lib/env';
+import { apiErrorMessage } from '@/lib/api-error';
 import { clientAuthPath } from '@/lib/site-url';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { useRequestPasswordResetMutation } from '@/store/api/api';
 
 export function ForgotPasswordForm() {
   const [message, setMessage] = useState<{ tone: StatusTone; text: string } | null>(null);
-  const [pending, setPending] = useState(false);
+  const [requestReset, { isLoading: pending }] = useRequestPasswordResetMutation();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
 
-    if (!isSupabaseBrowserConfigured()) {
-      setMessage({ tone: 'warning', text: 'Supabase is not configured on this client.' });
-      return;
-    }
-
     const email = String(new FormData(event.currentTarget).get('email') ?? '');
-    setPending(true);
     try {
-      const { error } = await getSupabaseBrowserClient().auth.resetPasswordForEmail(email, {
+      await requestReset({
+        email,
         redirectTo: clientAuthPath('/reset-password'),
+      }).unwrap();
+      setMessage({
+        tone: 'success',
+        text: 'If that account exists, a reset email has been sent. You can request up to 5 reset emails every 3 hours.',
       });
-      setMessage(
-        error
-          ? { tone: 'danger', text: error.message }
-          : { tone: 'success', text: 'If that account exists, a reset email has been sent.' },
-      );
-    } finally {
-      setPending(false);
+    } catch (error) {
+      setMessage({ tone: 'danger', text: apiErrorMessage(error, 'Could not send the reset email.') });
     }
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <form onSubmit={(event) => void onSubmit(event)} className="space-y-6">
       <div>
         <Meta className="mb-3">HR Portal</Meta>
         <h1 className="text-3xl font-semibold tracking-tight">FORGOT PASSWORD</h1>
@@ -53,7 +47,7 @@ export function ForgotPasswordForm() {
       </div>
       {message ? <StatusMessage tone={message.tone}>{message.text}</StatusMessage> : null}
       <Button type="submit" className="w-full" disabled={pending}>
-        Send reset link
+        {pending ? 'Sending…' : 'Send reset link'}
       </Button>
       <p className="text-center text-sm text-muted">
         <Link href="/login" className="hover:text-foreground">

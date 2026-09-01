@@ -128,6 +128,16 @@ export const api = createApi({
       query: () => '/api/v1/me',
       providesTags: ['Me'],
     }),
+    requestPasswordReset: builder.mutation<
+      ApiSuccess<{ sent: true }>,
+      { email: string; redirectTo?: string }
+    >({
+      query: (body) => ({
+        url: '/api/v1/auth/forgot-password',
+        method: 'POST',
+        body,
+      }),
+    }),
     getEmployees: builder.query<ApiSuccess<Employee[]>, { q?: string; status?: 'active' | 'inactive' } | void>({
       query: (arg) => ({
         url: '/api/v1/employees',
@@ -1363,6 +1373,7 @@ export const api = createApi({
 export const {
   useGetHealthQuery,
   useGetMeQuery,
+  useRequestPasswordResetMutation,
   useGetEmployeesQuery,
   useGetEmployeeQuery,
   useCreateEmployeeMutation,
