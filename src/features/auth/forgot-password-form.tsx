@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusMessage, type StatusTone } from '@/components/ui/status-message';
 import { Meta } from '@/components/layout/meta';
-import { clientEnv, isSupabaseBrowserConfigured } from '@/lib/env';
+import { isSupabaseBrowserConfigured } from '@/lib/env';
+import { clientAuthPath } from '@/lib/site-url';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 
 export function ForgotPasswordForm() {
@@ -28,7 +29,7 @@ export function ForgotPasswordForm() {
     setPending(true);
     try {
       const { error } = await getSupabaseBrowserClient().auth.resetPasswordForEmail(email, {
-        redirectTo: `${clientEnv.siteUrl}/login`,
+        redirectTo: clientAuthPath('/reset-password'),
       });
       setMessage(
         error

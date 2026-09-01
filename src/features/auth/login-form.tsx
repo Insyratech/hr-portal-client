@@ -42,6 +42,13 @@ export function LoginForm() {
         tone: 'warning',
         text: 'For your security, sign in with your password again. You will stay signed in for 7 days.',
       });
+      return;
+    }
+    if (searchParams.get('reset') === 'success') {
+      setMessage({
+        tone: 'success',
+        text: 'Password updated. Sign in with your new password.',
+      });
     }
   }, [searchParams]);
 
