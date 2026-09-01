@@ -63,9 +63,11 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
     date: weekDate,
   });
   const [createUpdate, createState] = useCreateProjectStatusUpdateMutation();
-  const [approveOne, approveState] = useApproveWorkPriorityMutation();
-  const [requestResubmit, resubmitState] = useRequestWorkPriorityResubmitMutation();
+  const [approveOne] = useApproveWorkPriorityMutation();
+  const [requestResubmit] = useRequestWorkPriorityResubmitMutation();
   const [resubmitCommentById, setResubmitCommentById] = useState<Record<string, string>>({});
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [resubmittingId, setResubmittingId] = useState<string | null>(null);
   const desk = data?.data;
 
   const forbidden = useMemo(() => {
@@ -87,12 +89,15 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
   }
 
   async function onApprove(priorityId: string) {
+    setApprovingId(priorityId);
     try {
       await approveOne(priorityId).unwrap();
       toast.success('Priority approved.');
       await refetch();
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Could not approve.'));
+    } finally {
+      setApprovingId(null);
     }
   }
 
@@ -102,6 +107,7 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
       toast.error('Add a short comment so the employee knows what to change.');
       return;
     }
+    setResubmittingId(priorityId);
     try {
       await requestResubmit({ id: priorityId, comment }).unwrap();
       toast.success('Employee was asked to resubmit.');
@@ -109,6 +115,8 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
       await refetch();
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Could not request resubmit.'));
+    } finally {
+      setResubmittingId(null);
     }
   }
 
@@ -215,10 +223,10 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
                         <Button
                           type="button"
                           size="sm"
-                          disabled={approveState.isLoading}
+                          disabled={approvingId === item.id}
                           onClick={() => void onApprove(item.id)}
                         >
-                          Approve
+                          {approvingId === item.id ? 'Approving…' : 'Approve'}
                         </Button>
                         <div>
                           <Label htmlFor={`lead-resubmit-${item.id}`}>Ask for resubmit</Label>
@@ -236,10 +244,10 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
                             variant="ghost"
                             size="sm"
                             className="mt-2"
-                            disabled={resubmitState.isLoading}
+                            disabled={resubmittingId === item.id}
                             onClick={() => void onRequestResubmit(item.id)}
                           >
-                            Request resubmit
+                            {resubmittingId === item.id ? 'Sending…' : 'Request resubmit'}
                           </Button>
                         </div>
                       </div>

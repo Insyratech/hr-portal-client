@@ -104,12 +104,14 @@ export function MyWeekBoard({
   const { data, isLoading } = useGetWorkWeekQuery(weekQuery, { skip });
   const [updatePriority] = useUpdateWorkPriorityMutation();
   const [carryForward] = useCarryForwardWorkPriorityMutation();
-  const [approveOne, approveState] = useApproveWorkPriorityMutation();
-  const [requestResubmit, resubmitState] = useRequestWorkPriorityResubmitMutation();
+  const [approveOne] = useApproveWorkPriorityMutation();
+  const [requestResubmit] = useRequestWorkPriorityResubmitMutation();
 
   const board = data?.data;
   const [reasonById, setReasonById] = useState<Record<string, string>>({});
   const [resubmitCommentById, setResubmitCommentById] = useState<Record<string, string>>({});
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [resubmittingId, setResubmittingId] = useState<string | null>(null);
 
   const goals = useMemo(
     () => (board?.priorities ?? []).filter((item) => item.type !== 'SKILL'),
@@ -135,11 +137,14 @@ export function MyWeekBoard({
   }
 
   async function onApprove(id: string) {
+    setApprovingId(id);
     try {
       await approveOne(id).unwrap();
       toast.success('Priority approved.');
     } catch (error) {
       toast.error(apiErrorMessage(error, 'Could not approve.'));
+    } finally {
+      setApprovingId(null);
     }
   }
 
@@ -149,12 +154,15 @@ export function MyWeekBoard({
       toast.error('Add a short comment so the employee knows what to change.');
       return;
     }
+    setResubmittingId(id);
     try {
       await requestResubmit({ id, comment }).unwrap();
       toast.success('Employee was asked to resubmit.');
       setResubmitCommentById((prev) => ({ ...prev, [id]: '' }));
     } catch (error) {
       toast.error(apiErrorMessage(error, 'Could not request resubmit.'));
+    } finally {
+      setResubmittingId(null);
     }
   }
 
@@ -256,10 +264,10 @@ export function MyWeekBoard({
                   <Button
                     type="button"
                     size="sm"
-                    disabled={approveState.isLoading}
+                    disabled={approvingId === item.id}
                     onClick={() => void onApprove(item.id)}
                   >
-                    Approve
+                    {approvingId === item.id ? 'Approving…' : 'Approve'}
                   </Button>
                   <div>
                     <Label htmlFor={`resubmit-${item.id}`}>Ask for resubmit (comment required)</Label>
@@ -277,10 +285,10 @@ export function MyWeekBoard({
                       variant="ghost"
                       size="sm"
                       className="mt-2"
-                      disabled={resubmitState.isLoading}
+                      disabled={resubmittingId === item.id}
                       onClick={() => void onRequestResubmit(item.id)}
                     >
-                      Request resubmit
+                      {resubmittingId === item.id ? 'Sending…' : 'Request resubmit'}
                     </Button>
                   </div>
                 </div>
