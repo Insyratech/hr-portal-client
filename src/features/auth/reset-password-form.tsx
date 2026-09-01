@@ -10,7 +10,7 @@ import { Meta } from '@/components/layout/meta';
 import { PageLoading } from '@/components/ui/page-loading';
 import { PasswordInput } from '@/components/ui/password-input';
 import { StatusMessage, type StatusTone } from '@/components/ui/status-message';
-import { hasRecoveryTokenInUrl, parseAuthHashError } from '@/lib/auth-hash';
+import { hasRecoveryTokenInUrl, parseAuthHashError, readRecoveryQuery } from '@/lib/auth-hash';
 import { isSupabaseBrowserConfigured } from '@/lib/env';
 import { clearPasswordAuth } from '@/lib/session-policy';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
@@ -39,42 +39,69 @@ export function ResetPasswordForm() {
 
     const supabase = getSupabaseBrowserClient();
     let settled = false;
+    let cancelled = false;
 
     function markReady() {
-      if (settled) return;
+      if (settled || cancelled) return;
       settled = true;
       setPhase('ready');
     }
 
-    void supabase.auth.getSession().then(({ data }) => {
-      if (data.session && (hadRecoveryHash.current || hasRecoveryTokenInUrl())) {
-        markReady();
-      }
-    });
+    function fail(reason: string) {
+      if (cancelled) return;
+      settled = true;
+      setInvalidReason(reason);
+      setPhase('invalid');
+    }
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) return;
-      if (event === 'PASSWORD_RECOVERY') {
-        markReady();
-        return;
-      }
-      if (event === 'SIGNED_IN' && (hadRecoveryHash.current || hasRecoveryTokenInUrl())) {
-        markReady();
-      }
-    });
+    const recoveryQuery = readRecoveryQuery();
+    let unsubscribe: (() => void) | undefined;
+
+    if (recoveryQuery) {
+      void supabase.auth
+        .verifyOtp({ token_hash: recoveryQuery.tokenHash, type: 'recovery' })
+        .then(({ error }) => {
+          if (cancelled) return;
+          if (error) {
+            fail(error.message);
+            return;
+          }
+          router.replace('/reset-password');
+          markReady();
+        });
+    } else {
+      void supabase.auth.getSession().then(({ data }) => {
+        if (cancelled) return;
+        if (data.session && (hadRecoveryHash.current || hasRecoveryTokenInUrl())) {
+          markReady();
+        }
+      });
+
+      const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
+        if (!session || cancelled) return;
+        if (event === 'PASSWORD_RECOVERY') {
+          markReady();
+          return;
+        }
+        if (event === 'SIGNED_IN' && (hadRecoveryHash.current || hasRecoveryTokenInUrl())) {
+          markReady();
+        }
+      });
+      unsubscribe = () => subscription.subscription.unsubscribe();
+    }
 
     const timer = window.setTimeout(() => {
-      if (!settled) {
-        setInvalidReason('This reset link is invalid or has expired.');
-        setPhase('invalid');
+      if (!settled && !cancelled) {
+        fail('This reset link is invalid or has expired.');
       }
     }, 12_000);
 
     return () => {
-      subscription.subscription.unsubscribe();
+      cancelled = true;
+      unsubscribe?.();
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [router]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
