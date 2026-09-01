@@ -53,6 +53,9 @@ export function LoginForm() {
   }, [searchParams]);
 
   useEffect(() => {
+    if (searchParams.get('reset') === 'success') {
+      return;
+    }
     if (user) {
       router.replace(destination(user.roles));
     }

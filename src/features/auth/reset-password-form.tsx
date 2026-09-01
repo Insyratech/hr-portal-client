@@ -10,13 +10,15 @@ import { Meta } from '@/components/layout/meta';
 import { PageLoading } from '@/components/ui/page-loading';
 import { PasswordInput } from '@/components/ui/password-input';
 import { StatusMessage, type StatusTone } from '@/components/ui/status-message';
+import { performSignOut } from '@/features/auth/sign-out';
 import { hasRecoveryTokenInUrl, parseAuthHashError, readRecoveryQuery } from '@/lib/auth-hash';
 import { isSupabaseBrowserConfigured } from '@/lib/env';
-import { clearPasswordAuth } from '@/lib/session-policy';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { useAppDispatch } from '@/store/hooks';
 
 export function ResetPasswordForm() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const hadRecoveryHash = useRef(hasRecoveryTokenInUrl());
   const [phase, setPhase] = useState<'loading' | 'ready' | 'invalid'>('loading');
   const [invalidReason, setInvalidReason] = useState<string | null>(null);
@@ -129,9 +131,8 @@ export function ResetPasswordForm() {
         return;
       }
 
-      clearPasswordAuth();
-      await supabase.auth.signOut();
-      router.replace('/login?reset=success');
+      await performSignOut(dispatch);
+      window.location.assign('/login?reset=success');
     } finally {
       setPending(false);
     }
