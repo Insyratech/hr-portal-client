@@ -132,6 +132,8 @@ function DailyUpdateForm({
                 <span>
                   <span className="font-medium">{item.title}</span>
                   {item.projectName ? <span className="text-muted"> · {item.projectName}</span> : null}
+                  {item.milestoneName ? <span className="text-muted"> · {item.milestoneName}</span> : null}
+                  {item.isAdditional ? <span className="text-muted"> · Added mid-week</span> : null}
                 </span>
               </label>
               {checked[item.id] ? (

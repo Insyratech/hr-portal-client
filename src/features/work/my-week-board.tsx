@@ -180,6 +180,9 @@ export function MyWeekBoard({
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="text-sm font-medium">{item.title}</p>
                 <div className="flex flex-wrap gap-2">
+                  {item.isAdditional ? (
+                    <StatusBadge status="pending" label="Mid-week add" />
+                  ) : null}
                   <StatusBadge
                     status={approvalTone(item.approvalStatus)}
                     label={APPROVAL_LABEL[item.approvalStatus]}

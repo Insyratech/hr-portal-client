@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { PageLoading } from '@/components/ui/page-loading';
 import { CheckboxIdPicker } from '@/features/work/checkbox-id-picker';
 import { ProjectStatusUpdateList } from '@/features/work/project-status-updates';
+import { ProjectGoalsMilestonesReadonly } from '@/features/work/project-goals-milestones-readonly';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
@@ -40,13 +41,18 @@ function memberNames(project: WorkProject): string {
   return members.map((member) => member.fullName).join(', ');
 }
 
+function cn(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(' ');
+}
+
+type ProjectDetailTab = 'overview' | 'plan' | 'updates';
+
 function ProjectDetailDialog({
   project,
   open,
   onOpenChange,
   canManage,
   canViewUpdates,
-  onViewUpdates,
   onAssignPeople,
 }: {
   project: WorkProject | null;
@@ -54,86 +60,127 @@ function ProjectDetailDialog({
   onOpenChange: (open: boolean) => void;
   canManage: boolean;
   canViewUpdates: boolean;
-  onViewUpdates: (projectId: string) => void;
   onAssignPeople: (projectId: string) => void;
 }) {
+  const [tab, setTab] = useState<ProjectDetailTab>('overview');
   const members = project?.members ?? [];
   const leadId = project?.leadEmployeeId ?? null;
+  const { data: updatesData, isLoading: updatesLoading } = useGetProjectStatusUpdatesQuery(
+    project?.id ?? '',
+    { skip: !open || !project?.id || tab !== 'updates' },
+  );
+  const updates = updatesData?.data ?? [];
+
+  useEffect(() => {
+    if (!open) setTab('overview');
+  }, [open]);
+
+  const tabs: { id: ProjectDetailTab; label: string }[] = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'plan', label: 'Goals & milestones' },
+    ...(canViewUpdates ? [{ id: 'updates' as const, label: 'Status updates' }] : []),
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogTitle>{project?.name ?? 'Project'}</DialogTitle>
         <DialogDescription>
           {project ? `${project.code} · ${project.status}` : 'Project details.'}
         </DialogDescription>
         {project ? (
-          <div className="mt-6 space-y-5">
-            <dl className="grid gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-xs uppercase tracking-[0.12em] text-muted">Code</dt>
-                <dd className="mt-1 text-foreground">{project.code}</dd>
-              </div>
-              <div>
-                <dt className="text-xs uppercase tracking-[0.12em] text-muted">Status</dt>
-                <dd className="mt-1 capitalize text-foreground">{project.status}</dd>
-              </div>
-              <div className="sm:col-span-2">
-                <dt className="text-xs uppercase tracking-[0.12em] text-muted">Project lead</dt>
-                <dd className="mt-1 text-foreground">{project.leadName ?? '—'}</dd>
-              </div>
-            </dl>
+          <div className="mt-4 space-y-5">
+            <nav className="flex gap-1 overflow-x-auto border-b border-border">
+              {tabs.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={cn(
+                    'shrink-0 px-3 py-2 text-xs uppercase tracking-[0.12em]',
+                    tab === item.id ? 'bg-foreground text-background' : 'text-muted',
+                  )}
+                  onClick={() => setTab(item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
 
-            <div>
-              <p className="text-xs uppercase tracking-[0.12em] text-muted">
-                Members · {project.memberCount ?? members.length}
-              </p>
-              {members.length === 0 ? (
-                <p className="mt-2 text-sm text-muted">No members assigned yet.</p>
-              ) : (
-                <ul className="mt-2 space-y-1 rounded border border-border bg-background p-3 shadow-card">
-                  {members.map((member) => (
-                    <li
-                      key={member.employeeId}
-                      className="flex items-center justify-between gap-3 text-sm text-foreground"
+            {tab === 'overview' ? (
+              <>
+                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs uppercase tracking-[0.12em] text-muted">Code</dt>
+                    <dd className="mt-1 text-foreground">{project.code}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs uppercase tracking-[0.12em] text-muted">Status</dt>
+                    <dd className="mt-1 capitalize text-foreground">{project.status}</dd>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs uppercase tracking-[0.12em] text-muted">Project lead</dt>
+                    <dd className="mt-1 text-foreground">{project.leadName ?? '—'}</dd>
+                  </div>
+                </dl>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.12em] text-muted">
+                    Members · {project.memberCount ?? members.length}
+                  </p>
+                  {members.length === 0 ? (
+                    <p className="mt-2 text-sm text-muted">No members assigned yet.</p>
+                  ) : (
+                    <ul className="mt-2 space-y-1 rounded border border-border bg-background p-3 shadow-card">
+                      {members.map((member) => (
+                        <li
+                          key={member.employeeId}
+                          className="flex items-center justify-between gap-3 text-sm text-foreground"
+                        >
+                          <span>{member.fullName}</span>
+                          {member.employeeId === leadId ? (
+                            <span className="text-xs uppercase tracking-[0.12em] text-muted">Lead</span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
+                  {canManage && project.status === 'active' ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => {
+                        onOpenChange(false);
+                        onAssignPeople(project.id);
+                      }}
                     >
-                      <span>{member.fullName}</span>
-                      {member.employeeId === leadId ? (
-                        <span className="text-xs uppercase tracking-[0.12em] text-muted">Lead</span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                      Assign people
+                    </Button>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
 
-            <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
-              {canViewUpdates ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    onOpenChange(false);
-                    onViewUpdates(project.id);
-                  }}
-                >
-                  Status updates
-                </Button>
-              ) : null}
-              {canManage && project.status === 'active' ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => {
-                    onOpenChange(false);
-                    onAssignPeople(project.id);
-                  }}
-                >
-                  Assign people
-                </Button>
-              ) : null}
-            </div>
+            {tab === 'plan' ? (
+              <div>
+                <p className="mb-4 text-sm text-muted">
+                  Read-only view. The project lead manages goals and milestones on their project desk.
+                </p>
+                <ProjectGoalsMilestonesReadonly projectId={project.id} />
+              </div>
+            ) : null}
+
+            {tab === 'updates' && canViewUpdates ? (
+              <div>
+                {updatesLoading ? <PageLoading compact message="Loading updates…" /> : null}
+                {!updatesLoading ? (
+                  <ProjectStatusUpdateList
+                    updates={updates}
+                    emptyLabel="No status updates from the project lead yet."
+                  />
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </DialogContent>
@@ -462,7 +509,6 @@ export function AdminWorkProjectsPage() {
         }}
         canManage={canManage}
         canViewUpdates={canViewUpdates}
-        onViewUpdates={setUpdatesProjectId}
         onAssignPeople={setEditingId}
       />
 

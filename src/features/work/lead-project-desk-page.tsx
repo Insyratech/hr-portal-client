@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/dashboard/status-badge';
+import { ProjectGoalsMilestonesManage } from '@/features/work/project-goals-milestones-manage';
+import { ProjectReportingChainSection } from '@/features/work/project-reporting-chain';
 import { ProjectStatusUpdatesSection } from '@/features/work/project-status-updates';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
@@ -46,12 +48,6 @@ function statusTone(status: string): 'approved' | 'pending' | 'rejected' {
   if (status === 'COMPLETED') return 'approved';
   if (status === 'CANCELLED' || status === 'BLOCKED') return 'rejected';
   return 'pending';
-}
-
-function entryLabel(category: string): string {
-  if (category === 'UNPLANNED') return 'Unplanned';
-  if (category === 'SKILL') return 'Skill';
-  return 'Planned';
 }
 
 function todayIso(): string {
@@ -136,7 +132,7 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
     );
   }
 
-  const { project, week, updates, priorities, dailyEntries } = desk;
+  const { project, week, updates, prioritiesByMilestone, reportingChain } = desk;
 
   return (
     <div className="space-y-8">
@@ -151,15 +147,6 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
           <Link href="/work/projects">All my projects</Link>
         </Button>
       </div>
-
-      <ProjectStatusUpdatesSection
-        updates={updates}
-        canPost
-        draft={draft}
-        onDraftChange={setDraft}
-        onSubmit={() => void onPostUpdate()}
-        submitting={createState.isLoading}
-      />
 
       <section className="rounded border border-border bg-background p-5 shadow-card">
         <div className="flex flex-wrap items-end gap-4">
@@ -179,6 +166,103 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
         </div>
       </section>
 
+      <ProjectGoalsMilestonesManage projectId={projectId} />
+
+      <section className="space-y-3">
+        <Meta>Team priorities this week</Meta>
+        <p className="text-sm text-muted">
+          Approve or ask for a resubmit on submitted lines. For regular or skill priorities, use{' '}
+          <Link href="/work/priorities/review" className="underline">
+            Team priorities
+          </Link>
+          .
+        </p>
+        {prioritiesByMilestone.length === 0 ? (
+          <p className="text-sm text-muted">No project priorities for this week yet.</p>
+        ) : (
+          <div className="space-y-6">
+            {prioritiesByMilestone.map((group) => (
+              <div key={group.milestoneId ?? 'none'} className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.12em] text-muted">{group.milestoneName}</p>
+                {group.items.map((item) => (
+                  <article
+                    key={item.id}
+                    className="rounded border border-border bg-background px-4 py-3 shadow-card"
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="text-sm font-medium">{item.title}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {item.isAdditional ? (
+                          <StatusBadge status="pending" label="Additional" />
+                        ) : null}
+                        <StatusBadge
+                          status={approvalTone(item.approvalStatus)}
+                          label={APPROVAL_LABEL[item.approvalStatus] ?? item.approvalStatus}
+                        />
+                        {item.approvalStatus === 'APPROVED' ? (
+                          <StatusBadge
+                            status={statusTone(item.status)}
+                            label={STATUS_LABEL[item.status] ?? item.status}
+                          />
+                        ) : null}
+                      </div>
+                    </div>
+                    <p className="mt-1 text-xs text-muted">
+                      {item.employeeName} · {item.type}
+                    </p>
+                    {item.approvalStatus === 'SUBMITTED' ? (
+                      <div className="mt-3 space-y-3 border-t border-border pt-3">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={approveState.isLoading}
+                          onClick={() => void onApprove(item.id)}
+                        >
+                          Approve
+                        </Button>
+                        <div>
+                          <Label htmlFor={`lead-resubmit-${item.id}`}>Ask for resubmit</Label>
+                          <Input
+                            id={`lead-resubmit-${item.id}`}
+                            className="mt-1"
+                            value={resubmitCommentById[item.id] ?? ''}
+                            onChange={(event) =>
+                              setResubmitCommentById((prev) => ({ ...prev, [item.id]: event.target.value }))
+                            }
+                            placeholder="What should they change?"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="mt-2"
+                            disabled={resubmitState.isLoading}
+                            onClick={() => void onRequestResubmit(item.id)}
+                          >
+                            Request resubmit
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <ProjectReportingChainSection chain={reportingChain ?? []} />
+
+      <ProjectStatusUpdatesSection
+        updates={updates}
+        canPost
+        draft={draft}
+        onDraftChange={setDraft}
+        onSubmit={() => void onPostUpdate()}
+        submitting={createState.isLoading}
+      />
+
       <section className="space-y-3">
         <Meta>Members · {project.memberCount}</Meta>
         <ul className="rounded border border-border bg-background p-4 text-sm shadow-card">
@@ -193,102 +277,6 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
         </ul>
       </section>
 
-      <section className="space-y-3">
-        <Meta>Weekly priorities · this project</Meta>
-        <p className="text-sm text-muted">
-          Approve or ask for a resubmit on submitted lines. For regular or skill priorities, use{' '}
-          <Link href="/work/priorities/review" className="underline">
-            Team priorities
-          </Link>
-          .
-        </p>
-        {priorities.length === 0 ? (
-          <p className="text-sm text-muted">No project priorities for this week yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {priorities.map((item) => (
-              <article
-                key={item.id}
-                className="rounded border border-border bg-background px-4 py-3 shadow-card"
-              >
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="text-sm font-medium">{item.title}</p>
-                  <div className="flex flex-wrap gap-2">
-                    <StatusBadge
-                      status={approvalTone(item.approvalStatus)}
-                      label={APPROVAL_LABEL[item.approvalStatus] ?? item.approvalStatus}
-                    />
-                    {item.approvalStatus === 'APPROVED' ? (
-                      <StatusBadge
-                        status={statusTone(item.status)}
-                        label={STATUS_LABEL[item.status] ?? item.status}
-                      />
-                    ) : null}
-                  </div>
-                </div>
-                <p className="mt-1 text-xs text-muted">
-                  {item.employeeName} · {item.type}
-                </p>
-                {item.approvalStatus === 'SUBMITTED' ? (
-                  <div className="mt-3 space-y-3 border-t border-border pt-3">
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={approveState.isLoading}
-                      onClick={() => void onApprove(item.id)}
-                    >
-                      Approve
-                    </Button>
-                    <div>
-                      <Label htmlFor={`lead-resubmit-${item.id}`}>Ask for resubmit</Label>
-                      <Input
-                        id={`lead-resubmit-${item.id}`}
-                        className="mt-1"
-                        value={resubmitCommentById[item.id] ?? ''}
-                        onChange={(event) =>
-                          setResubmitCommentById((prev) => ({ ...prev, [item.id]: event.target.value }))
-                        }
-                        placeholder="What should they change?"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="mt-2"
-                        disabled={resubmitState.isLoading}
-                        onClick={() => void onRequestResubmit(item.id)}
-                      >
-                        Request resubmit
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <Meta>Daily work · this project</Meta>
-        <p className="text-sm text-muted">Entries members logged against this project this week.</p>
-        {dailyEntries.length === 0 ? (
-          <p className="text-sm text-muted">No daily notes for this project in the selected week.</p>
-        ) : (
-          <ul className="space-y-2">
-            {dailyEntries.map((entry) => (
-              <li key={entry.id} className="rounded border border-border bg-background px-4 py-3 text-sm shadow-card">
-                <p className="font-medium">
-                  {entry.date} · {entry.employeeName}
-                </p>
-                <p className="mt-1 text-muted">
-                  {entryLabel(entry.category)} · {entry.description}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </div>
   );
 }

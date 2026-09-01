@@ -61,6 +61,12 @@ import type {
   LeadProjectSummary,
   LeadProjectDesk,
   ProjectStatusUpdate,
+  ProjectPlan,
+  ProjectGoal,
+  ProjectGoalListItem,
+  ProjectMilestone,
+  ProjectMilestoneListItem,
+  MilestoneHistoryEntry,
   WorkProjectMember,
   WorkDayBoard,
   WorkHistoryMonth,
@@ -802,12 +808,136 @@ export const api = createApi({
       }),
       invalidatesTags: ['Work'],
     }),
+    getProjectPlan: builder.query<ApiSuccess<ProjectPlan>, string>({
+      query: (projectId) => `/api/v1/work/projects/${projectId}/plan`,
+      providesTags: ['Work'],
+    }),
+    getProjectGoals: builder.query<ApiSuccess<{ projectId: string; goals: ProjectGoalListItem[] }>, string>({
+      query: (projectId) => `/api/v1/work/projects/${projectId}/goals`,
+      providesTags: ['Work'],
+    }),
+    getProjectMilestones: builder.query<
+      ApiSuccess<{ projectId: string; milestones: ProjectMilestoneListItem[] }>,
+      string
+    >({
+      query: (projectId) => `/api/v1/work/projects/${projectId}/milestones`,
+      providesTags: ['Work'],
+    }),
+    createProjectGoal: builder.mutation<
+      ApiSuccess<ProjectGoal>,
+      { projectId: string; name: string; description?: string; isPrimary?: boolean; sequence?: number }
+    >({
+      query: ({ projectId, ...body }) => ({
+        url: `/api/v1/work/projects/${projectId}/goals`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Work'],
+    }),
+    updateProjectGoal: builder.mutation<
+      ApiSuccess<ProjectGoal>,
+      { goalId: string; body: { name?: string; description?: string; isPrimary?: boolean; sequence?: number } }
+    >({
+      query: ({ goalId, body }) => ({
+        url: `/api/v1/work/goals/${goalId}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['Work'],
+    }),
+    deleteProjectGoal: builder.mutation<ApiSuccess<{ goalId: string }>, string>({
+      query: (goalId) => ({ url: `/api/v1/work/goals/${goalId}`, method: 'DELETE' }),
+      invalidatesTags: ['Work'],
+    }),
+    createProjectMilestone: builder.mutation<
+      ApiSuccess<ProjectMilestone>,
+      {
+        goalId: string;
+        name: string;
+        description?: string;
+        startDate?: string | null;
+        targetDate?: string | null;
+        status?: ProjectMilestone['status'];
+        sequence?: number;
+      }
+    >({
+      query: ({ goalId, ...body }) => ({
+        url: `/api/v1/work/goals/${goalId}/milestones`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Work'],
+    }),
+    updateProjectMilestone: builder.mutation<
+      ApiSuccess<ProjectMilestone>,
+      {
+        milestoneId: string;
+        body: {
+          name?: string;
+          description?: string;
+          startDate?: string | null;
+          targetDate?: string | null;
+          status?: ProjectMilestone['status'];
+          sequence?: number;
+          changeReason: string;
+        };
+      }
+    >({
+      query: ({ milestoneId, body }) => ({
+        url: `/api/v1/work/milestones/${milestoneId}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['Work'],
+    }),
+    activateProjectMilestone: builder.mutation<
+      ApiSuccess<ProjectMilestone>,
+      { milestoneId: string; changeReason?: string }
+    >({
+      query: ({ milestoneId, changeReason }) => ({
+        url: `/api/v1/work/milestones/${milestoneId}/activate`,
+        method: 'POST',
+        body: changeReason ? { changeReason } : {},
+      }),
+      invalidatesTags: ['Work'],
+    }),
+    completeProjectMilestone: builder.mutation<
+      ApiSuccess<ProjectMilestone>,
+      { milestoneId: string; changeReason?: string }
+    >({
+      query: ({ milestoneId, changeReason }) => ({
+        url: `/api/v1/work/milestones/${milestoneId}/complete`,
+        method: 'POST',
+        body: changeReason ? { changeReason } : {},
+      }),
+      invalidatesTags: ['Work'],
+    }),
+    cancelProjectMilestone: builder.mutation<
+      ApiSuccess<ProjectMilestone>,
+      { milestoneId: string; changeReason?: string }
+    >({
+      query: ({ milestoneId, changeReason }) => ({
+        url: `/api/v1/work/milestones/${milestoneId}/cancel`,
+        method: 'POST',
+        body: changeReason ? { changeReason } : {},
+      }),
+      invalidatesTags: ['Work'],
+    }),
+    deleteProjectMilestone: builder.mutation<ApiSuccess<{ milestoneId: string }>, string>({
+      query: (milestoneId) => ({ url: `/api/v1/work/milestones/${milestoneId}`, method: 'DELETE' }),
+      invalidatesTags: ['Work'],
+    }),
+    getMilestoneHistory: builder.query<ApiSuccess<{ milestoneId: string; items: MilestoneHistoryEntry[] }>, string>({
+      query: (milestoneId) => `/api/v1/work/milestones/${milestoneId}/history`,
+      providesTags: ['Work'],
+    }),
     createWorkPriority: builder.mutation<
       ApiSuccess<{ priority: WorkPriority; overCap: boolean; warning: string | null }>,
       {
         employeeId?: string;
         type: WorkPriority['type'];
         projectId?: string | null;
+        milestoneId?: string | null;
         regularSubtype?: WorkPriority['regularSubtype'];
         regularSubtypeLabel?: string | null;
         title: string;
@@ -1325,6 +1455,19 @@ export const {
   useSetWorkProjectStatusMutation,
   useGetEmployeeWorkProjectsQuery,
   useSetEmployeeWorkProjectsMutation,
+  useGetProjectPlanQuery,
+  useGetProjectGoalsQuery,
+  useGetProjectMilestonesQuery,
+  useCreateProjectGoalMutation,
+  useUpdateProjectGoalMutation,
+  useDeleteProjectGoalMutation,
+  useCreateProjectMilestoneMutation,
+  useUpdateProjectMilestoneMutation,
+  useActivateProjectMilestoneMutation,
+  useCompleteProjectMilestoneMutation,
+  useCancelProjectMilestoneMutation,
+  useDeleteProjectMilestoneMutation,
+  useGetMilestoneHistoryQuery,
   useCreateWorkPriorityMutation,
   useUpdateWorkPriorityMutation,
   useCarryForwardWorkPriorityMutation,

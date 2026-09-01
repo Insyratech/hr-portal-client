@@ -148,6 +148,9 @@ export type WorkDayPriority = {
   type: string;
   projectId: string | null;
   projectName: string | null;
+  milestoneId: string | null;
+  milestoneName: string | null;
+  isAdditional: boolean;
   status: string;
   approvalStatus?: WorkPriorityApprovalStatus;
 };
@@ -179,6 +182,19 @@ export type WorkProjectMember = {
   fullName: string;
 };
 
+export type ProjectActiveMilestone = {
+  id: string;
+  name: string;
+  goalName: string;
+  targetDate: string | null;
+};
+
+export type ProjectMilestoneSummary = {
+  initialCount: number;
+  additionalCount: number;
+  completedCount: number;
+};
+
 export type WorkProject = {
   id: string;
   name: string;
@@ -188,6 +204,64 @@ export type WorkProject = {
   leadName?: string | null;
   memberCount?: number;
   members?: WorkProjectMember[];
+  activeMilestone?: ProjectActiveMilestone | null;
+  milestoneSummary?: ProjectMilestoneSummary;
+};
+
+export type ProjectGoalListItem = Omit<ProjectGoal, 'milestones'>;
+
+export type ProjectMilestoneListItem = ProjectMilestone & {
+  goalName: string;
+};
+
+export type MilestoneStatus = 'UPCOMING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+
+export type ProjectMilestone = {
+  id: string;
+  goalId: string;
+  projectId: string;
+  name: string;
+  description: string;
+  startDate: string | null;
+  targetDate: string | null;
+  status: MilestoneStatus;
+  sequence: number;
+  createdBy: string;
+  updatedBy: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProjectGoal = {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string;
+  isPrimary: boolean;
+  sequence: number;
+  createdBy: string;
+  updatedBy: string;
+  createdAt: string;
+  updatedAt: string;
+  milestones: ProjectMilestone[];
+};
+
+export type ProjectPlan = {
+  projectId: string;
+  goals: ProjectGoal[];
+};
+
+export type MilestoneHistoryEntry = {
+  id: string;
+  milestoneId: string;
+  version: number;
+  changedField: string;
+  oldValue: string | null;
+  newValue: string | null;
+  changedBy: string;
+  changedByName: string;
+  changedAt: string;
+  changeReason: string;
 };
 
 export type LeadProjectSummary = {
@@ -216,6 +290,7 @@ export type LeadProjectDesk = {
     memberCount: number;
   };
   week: { start: string; end: string };
+  activeMilestone: ProjectActiveMilestone | null;
   updates: ProjectStatusUpdate[];
   priorities: {
     id: string;
@@ -225,6 +300,14 @@ export type LeadProjectDesk = {
     type: string;
     status: string;
     approvalStatus: string;
+    milestoneId: string | null;
+    milestoneName: string | null;
+    isAdditional: boolean;
+  }[];
+  prioritiesByMilestone: {
+    milestoneId: string | null;
+    milestoneName: string;
+    items: LeadProjectDesk['priorities'];
   }[];
   dailyEntries: {
     id: string;
@@ -235,6 +318,42 @@ export type LeadProjectDesk = {
     description: string;
     priorityId: string | null;
   }[];
+  reportingChain: ProjectReportingGoal[];
+};
+
+export type ProjectReportingDailyEntry = {
+  id: string;
+  date: string;
+  category: string;
+  description: string;
+};
+
+export type ProjectReportingPriority = {
+  id: string;
+  title: string;
+  status: string;
+  approvalStatus: string;
+  isAdditional: boolean;
+  dailyEntries: ProjectReportingDailyEntry[];
+};
+
+export type ProjectReportingEmployee = {
+  employeeId: string;
+  fullName: string;
+  priorities: ProjectReportingPriority[];
+};
+
+export type ProjectReportingMilestone = {
+  id: string;
+  name: string;
+  status: MilestoneStatus;
+  employees: ProjectReportingEmployee[];
+};
+
+export type ProjectReportingGoal = {
+  id: string;
+  name: string;
+  milestones: ProjectReportingMilestone[];
 };
 
 export type EmployeeWorkProjects = {
@@ -363,6 +482,9 @@ export type WorkPriority = {
   projectId: string | null;
   projectName: string | null;
   projectCode: string | null;
+  milestoneId: string | null;
+  milestoneName: string | null;
+  isAdditional: boolean;
   regularSubtype: WorkRegularSubtype | null;
   regularSubtypeLabel: string | null;
   title: string;

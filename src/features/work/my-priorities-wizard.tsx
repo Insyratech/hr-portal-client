@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import {
   IMPORTANCE_OPTIONS,
   REGULAR_SUBTYPE_OPTIONS,
+  formatMilestoneSummary,
   isPendingSubmit,
   isWorkGoal,
   priorityTypeLine,
@@ -89,6 +90,62 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
   const active = priorities.filter(
     (item) => item.status !== 'CANCELLED' && item.status !== 'CARRIED_FORWARD',
   );
+  const projectOptions = useMemo(
+    () => board.projects.filter((project) => project.activeMilestone),
+    [board.projects],
+  );
+  const selectedProject = useMemo(
+    () => board.projects.find((project) => project.id === projectId) ?? null,
+    [board.projects, projectId],
+  );
+  const approvedProjectOnMilestone = useMemo(
+    () =>
+      priorities.some(
+        (item) =>
+          item.type === 'PROJECT' &&
+          item.approvalStatus === 'APPROVED' &&
+          item.projectId === projectId &&
+          item.milestoneId === selectedProject?.activeMilestone?.id,
+      ),
+    [priorities, projectId, selectedProject?.activeMilestone?.id],
+  );
+  const projectSummaries = useMemo(
+    () =>
+      board.projects
+        .filter(
+          (project) =>
+            (project.milestoneSummary?.initialCount ?? 0) > 0 ||
+            (project.milestoneSummary?.additionalCount ?? 0) > 0,
+        )
+        .map((project) => ({
+          id: project.id,
+          label: `${project.code} · ${project.name}`,
+          summary: project.milestoneSummary!,
+        })),
+    [board.projects],
+  );
+  const projectsWithoutMilestone = useMemo(
+    () => board.projects.filter((project) => !project.activeMilestone),
+    [board.projects],
+  );
+  const approvedProjectMilestones = useMemo(() => {
+    const seen = new Set<string>();
+    const rows: { projectId: string; label: string; milestoneName: string }[] = [];
+    for (const item of priorities) {
+      if (item.type !== 'PROJECT' || item.approvalStatus !== 'APPROVED' || !item.projectId) continue;
+      const project = board.projects.find((row) => row.id === item.projectId);
+      const milestoneName = item.milestoneName ?? project?.activeMilestone?.name ?? 'Current milestone';
+      const key = `${item.projectId}:${item.milestoneId ?? ''}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push({
+        projectId: item.projectId,
+        label: project ? `${project.code} · ${project.name}` : 'Project',
+        milestoneName,
+      });
+    }
+    return rows;
+  }, [priorities, board.projects]);
   const planningDone =
     active.length > 0 && allDrafts.length === 0 && needsResubmit.length === 0 && !forcePlan;
 
@@ -237,6 +294,16 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
         {board.overCap ? (
           <p className="mt-3 text-sm">You have {active.length} items. Aim for a focused week (about 3–5).</p>
         ) : null}
+        {projectSummaries.length > 0 ? (
+          <ul className="mt-4 space-y-2 text-sm">
+            {projectSummaries.map((row) => (
+              <li key={row.id}>
+                <span className="font-medium">{row.label}</span>
+                <span className="text-muted"> · {formatMilestoneSummary(row.summary)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </section>
 
       {needsResubmit.length > 0 ? (
@@ -311,7 +378,23 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
               </li>
             ))}
           </ul>
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-2">
+            {approvedProjectMilestones.map((row) => (
+              <Button
+                key={row.projectId}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setForcePlan(true);
+                  setWorkKind('PROJECT');
+                  setProjectId(row.projectId);
+                  setStep(1);
+                }}
+              >
+                Add more for {row.milestoneName}
+              </Button>
+            ))}
             <Button
               type="button"
               variant="ghost"
@@ -393,22 +476,56 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
                   </div>
                 </div>
                 {workKind === 'PROJECT' ? (
-                  <div>
-                    <Label htmlFor="work-project">Project</Label>
-                    <select
-                      id="work-project"
-                      className={selectClass}
-                      value={projectId}
-                      onChange={(event) => setProjectId(event.target.value)}
-                      required
-                    >
-                      <option value="">Pick a project</option>
-                      {board.projects.map((project) => (
-                        <option key={project.id} value={project.id}>
-                          {project.code} · {project.name}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="work-project">Project</Label>
+                      <select
+                        id="work-project"
+                        className={selectClass}
+                        value={projectId}
+                        onChange={(event) => setProjectId(event.target.value)}
+                        required
+                      >
+                        <option value="">Pick a project</option>
+                        {projectOptions.map((project) => (
+                          <option key={project.id} value={project.id}>
+                            {project.code} · {project.name}
+                          </option>
+                        ))}
+                      </select>
+                      {board.projects.length > 0 && projectOptions.length === 0 ? (
+                        <p className="mt-2 text-sm text-muted">
+                          No project has an active milestone yet. Ask your project lead to set one before you add
+                          R&amp;D priorities.
+                        </p>
+                      ) : null}
+                      {projectsWithoutMilestone.length > 0 && projectOptions.length > 0 ? (
+                        <p className="text-sm text-muted">
+                          Waiting on a milestone:{' '}
+                          {projectsWithoutMilestone.map((project) => (
+                            <span key={project.id}>
+                              {project.code}
+                              {project.leadName ? ` (lead: ${project.leadName})` : ''}
+                              {projectsWithoutMilestone.indexOf(project) < projectsWithoutMilestone.length - 1
+                                ? ', '
+                                : ''}
+                            </span>
+                          ))}
+                        </p>
+                      ) : null}
+                    </div>
+                    {selectedProject?.activeMilestone ? (
+                      <p className="text-sm text-muted">
+                        Current milestone:{' '}
+                        <span className="text-foreground">{selectedProject.activeMilestone.name}</span>
+                        {selectedProject.activeMilestone.targetDate
+                          ? ` · target ${selectedProject.activeMilestone.targetDate}`
+                          : ''}
+                        {approvedProjectOnMilestone
+                          ? ' · New lines this week will count as mid-week additions and need lead approval.'
+                          : ''}
+                      </p>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -554,7 +671,12 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
                   {allDrafts.map((item) => (
                     <li key={item.id} className="border border-border px-4 py-3 text-sm">
                       <span className="font-medium">{item.title}</span>
-                      <span className="mt-1 block text-muted">{priorityTypeLine(item)}</span>
+                      <span className="mt-1 block text-muted">
+                        {priorityTypeLine(item)}
+                        {item.type === 'PROJECT' && item.milestoneName ? (
+                          <span> · Milestone: {item.milestoneName}</span>
+                        ) : null}
+                      </span>
                     </li>
                   ))}
                 </ul>

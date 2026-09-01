@@ -23,11 +23,22 @@ export function regularSubtypeLabel(item: Pick<WorkPriority, 'regularSubtype' | 
 
 export function priorityTypeLine(item: WorkPriority): string {
   if (item.type === 'PROJECT') {
-    return item.projectCode ? `R&D · ${item.projectCode}` : 'R&D project';
+    const project = item.projectCode ? `R&D · ${item.projectCode}` : 'R&D project';
+    const milestone = item.milestoneName ? ` · ${item.milestoneName}` : '';
+    const additional = item.isAdditional ? ' · Added mid-week' : '';
+    return `${project}${milestone}${additional}`;
   }
   if (item.type === 'SKILL') return 'Skill';
   const subtype = regularSubtypeLabel(item);
   return subtype ? `Regular · ${subtype}` : 'Regular work';
+}
+
+export function formatMilestoneSummary(summary: {
+  initialCount: number;
+  additionalCount: number;
+  completedCount: number;
+}): string {
+  return `Initial: ${summary.initialCount} · Additional: ${summary.additionalCount} · Completed: ${summary.completedCount}`;
 }
 
 export function isPendingSubmit(item: WorkPriority): boolean {
