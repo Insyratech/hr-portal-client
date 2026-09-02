@@ -9,6 +9,12 @@ import { StatusMessage, type StatusTone } from '@/components/ui/status-message';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
+  isLeaveStartWithinBookingWindow,
+  latestBookableLeaveStartDate,
+  leaveBookingWindowHint,
+  leaveTooFarInAdvanceMessage,
+} from '@/lib/leave-booking-window';
+import {
   useApplyLeaveMutation,
   useGetLeaveBalancesQuery,
   useGetLeaveColleaguesQuery,
@@ -22,6 +28,10 @@ import type { LeaveApplication } from '@/types/api';
 
 function dateValue(value: string): string {
   return value.slice(0, 10);
+}
+
+function maxIsoDate(a: string, b: string): string {
+  return a >= b ? a : b;
 }
 
 export function ApplyLeaveForm({
@@ -52,6 +62,9 @@ export function ApplyLeaveForm({
   const [message, setMessage] = useState<{ tone: StatusTone; text: string } | null>(null);
   const toast = useToast();
   const isLoading = applying || saving;
+  const latestBookableStart = latestBookableLeaveStartDate();
+  const maxStartDate = editing ? maxIsoDate(latestBookableStart, dateValue(editing.startDate)) : latestBookableStart;
+  const bookingHint = leaveBookingWindowHint();
   const rangeEnd = duration === 'half' ? startDate : endDate || startDate;
   const { data: colleagues } = useGetLeaveColleaguesQuery(startDate ? { startDate, endDate: rangeEnd } : undefined);
 
@@ -145,6 +158,17 @@ export function ApplyLeaveForm({
       toast.warning('Select a leave type first.');
       return;
     }
+    const startUnchanged = Boolean(editing && start === dateValue(editing.startDate));
+    if (!startUnchanged && !isLeaveStartWithinBookingWindow(start)) {
+      const text = leaveTooFarInAdvanceMessage();
+      toast.warning(text);
+      setMessage({ tone: 'warning', text });
+      return;
+    }
+    if (duration === 'full' && end < start) {
+      toast.warning('End date cannot be before start date.');
+      return;
+    }
     if (needsProject && !projectId) {
       toast.warning('Select which project this leave relates to.');
       return;
@@ -188,6 +212,7 @@ export function ApplyLeaveForm({
       }
     >
       <p className="text-xs uppercase tracking-[0.2em] text-muted">{editing ? 'Edit leave' : ruleLine}</p>
+      <p className="text-sm text-muted">{bookingHint}</p>
       {activeTypes.length === 0 ? (
         <StatusMessage tone="warning">No leave types are allocated to you. Ask HR to add an entitlement first.</StatusMessage>
       ) : null}
@@ -218,6 +243,7 @@ export function ApplyLeaveForm({
           name="startDate"
           type="date"
           required
+          max={maxStartDate}
           value={startDate}
           onChange={(event) => setStartDate(event.target.value)}
         />
@@ -230,6 +256,7 @@ export function ApplyLeaveForm({
             name="endDate"
             type="date"
             required
+            min={startDate || undefined}
             value={endDate}
             onChange={(event) => setEndDate(event.target.value)}
           />
