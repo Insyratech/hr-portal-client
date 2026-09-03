@@ -55,6 +55,11 @@ export function ReportsOverviewPage({ kicker }: { kicker: string }) {
     name: row.name,
     count: row.count,
   }));
+  const companyRows = (report.employees.byCompany ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    count: row.total,
+  }));
   const grievanceRows = report.grievances.byCategory.map((row) => ({
     id: row.category,
     name: row.category,
@@ -145,6 +150,15 @@ export function ReportsOverviewPage({ kicker }: { kicker: string }) {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
+        <div>
+          <Meta className="mb-3">Employees by company</Meta>
+          <DataTable
+            columns={NAME_COUNT_COLUMNS}
+            rows={companyRows}
+            emptyTitle="No companies"
+            emptyDescription="Headcount by company will appear here."
+          />
+        </div>
         <div>
           <Meta className="mb-3">Employees by department</Meta>
           <DataTable

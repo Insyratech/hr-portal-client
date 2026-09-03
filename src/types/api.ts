@@ -1193,6 +1193,7 @@ export type ReportsOverview = {
     inactive: number;
     byDepartment: { name: string; count: number }[];
     byDesignation: { name: string; count: number }[];
+    byCompany: { id: string; name: string; active: number; inactive: number; total: number }[];
   };
   leave: {
     period: string;
@@ -1202,6 +1203,15 @@ export type ReportsOverview = {
     pendingApprovals: number;
     byType: { name: string; used: number; allocated: number; available: number }[];
     byDepartment: { name: string; used: number }[];
+    employeeStatus?: {
+      id: string;
+      employeeName: string;
+      employeeCode: string;
+      used: number;
+      allocated: number;
+      available: number;
+      utilizationRate: number;
+    }[];
   };
   attendance: {
     from: string;
@@ -1223,6 +1233,103 @@ export type ReportsOverview = {
     resolved: number;
     averageResolutionHours: number | null;
     byCategory: { category: string; count: number }[];
+  };
+  permissions: {
+    pending: number;
+    approvedThisPeriod: number;
+    rejectedThisPeriod: number;
+    minutesApprovedThisPeriod: number;
+    byStatus: { status: string; count: number }[];
+  };
+  projects: {
+    active: number;
+    inactive: number;
+    withActiveMilestone: number;
+    statusUpdatesThisPeriod: number;
+    items: {
+      id: string;
+      name: string;
+      code: string;
+      status: string;
+      leadEmployeeId: string | null;
+      leadName: string | null;
+      memberCount: number;
+      activeMilestoneName: string | null;
+    }[];
+    byStatus: { status: string; count: number }[];
+  };
+  work: {
+    prioritiesPendingApproval: number;
+    dailyUpdatesThisWeek: number;
+    weekStart: string;
+    prioritiesByApproval: { status: string; count: number }[];
+  };
+  queues: {
+    pendingLeaves: number;
+    pendingPermissions: number;
+    pendingEditRequests: number;
+    pendingShiftChanges: number;
+    openGrievances: number;
+    leaves?: {
+      id: string;
+      employeeName: string;
+      employeeCode: string;
+      leaveTypeName: string;
+      leaveTypeCode: string | null;
+      startDate: string;
+      endDate: string;
+      duration: string;
+      quantity: number;
+      reason: string | null;
+      status: string;
+      createdAt: string;
+    }[];
+    permissions?: {
+      id: string;
+      employeeName: string;
+      employeeCode: string;
+      permissionDate: string;
+      minutes: number;
+      slot: string;
+      reason: string | null;
+      status: string;
+      createdAt: string;
+    }[];
+    shiftChanges?: {
+      id: string;
+      employeeName: string;
+      employeeCode: string;
+      projectName: string | null;
+      projectCode: string | null;
+      startDate: string;
+      endDate: string;
+      currentShiftName: string | null;
+      requestedShiftName: string | null;
+      reason: string;
+      projectLeadRequired: boolean;
+      projectLeadAccepted: boolean;
+      status: string;
+      createdAt: string;
+    }[];
+    editRequests?: {
+      id: string;
+      targetName: string;
+      targetCode: string;
+      requesterName: string;
+      reason: string;
+      fieldHints: string | null;
+      status: string;
+      createdAt: string;
+    }[];
+    grievances?: {
+      id: string;
+      subject: string;
+      category: string;
+      status: string;
+      employeeName: string | null;
+      employeeCode: string | null;
+      createdAt: string;
+    }[];
   };
 };
 
