@@ -204,16 +204,29 @@ function ProjectUpdatesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-        <DialogTitle>Status updates · {project?.code ?? 'Project'}</DialogTitle>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogTitle>
+          Status updates
+          {project ? ` · ${project.code}` : ''}
+        </DialogTitle>
         <DialogDescription>
           {project
-            ? `Read-only history for ${project.name}. Only the current lead can post.`
+            ? `Read-only notes from the lead of ${project.name}. Newest first.`
             : 'Read-only project status history.'}
         </DialogDescription>
+        {project ? (
+          <div className="mt-3 rounded border border-border bg-surface/40 px-4 py-3 text-sm">
+            <p className="font-medium text-foreground">{project.name}</p>
+            <p className="mt-1 text-muted">
+              Lead · {project.leadName ?? '—'} · {updates.length} note{updates.length === 1 ? '' : 's'}
+            </p>
+          </div>
+        ) : null}
         <div className="mt-6">
           {isLoading ? <PageLoading compact message="Loading updates…" /> : null}
-          {isError ? <PageLoading compact message="Could not load status updates." /> : null}
+          {isError ? (
+            <p className="text-sm text-muted">Could not load status updates.</p>
+          ) : null}
           {!isLoading && !isError ? (
             <ProjectStatusUpdateList
               updates={updates}

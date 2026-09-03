@@ -97,7 +97,16 @@ export function ProjectReportingChain({ chain }: { chain: ProjectReportingGoal[]
   );
 }
 
-export function ProjectReportingChainSection({ chain }: { chain: ProjectReportingGoal[] }) {
+export function ProjectReportingChainSection({
+  chain,
+  bare = false,
+}: {
+  chain: ProjectReportingGoal[];
+  bare?: boolean;
+}) {
+  if (bare) {
+    return <ProjectReportingChain chain={chain} />;
+  }
   return (
     <section className="space-y-3">
       <Meta>Reporting chain</Meta>

@@ -35,6 +35,9 @@ export default function EmployeeDashboardPage() {
   const canApplyPermission = useAppSelector((state) =>
     state.permissions.permissions.includes(PERMISSIONS.WORK_PERMISSION_APPLY),
   );
+  const canApplyShiftChange = useAppSelector((state) =>
+    state.permissions.permissions.includes(PERMISSIONS.SHIFT_CHANGE_APPLY),
+  );
   const title = name ? `Good morning, ${name.split(' ')[0]}` : 'Good morning';
   const { data: balanceData } = useGetLeaveBalancesQuery();
   const { data: attendanceData } = useGetAttendanceMeQuery();
@@ -200,6 +203,9 @@ export default function EmployeeDashboardPage() {
             {isProjectLead ? <QuickAction href="/work/priorities/review" label="Team priorities" /> : null}
             <QuickAction href="/leave?apply=1" label="Apply leave" />
             {canApplyPermission ? <QuickAction href="/permission?apply=1" label="Request permission" /> : null}
+            {canApplyShiftChange ? (
+              <QuickAction href="/shift-change" label="Request for shift change" />
+            ) : null}
             <QuickAction href="/attendance" label="Attendance" />
             <QuickAction href="/payslips" label="Payslips" />
             <QuickAction href="/grievance" label="Grievance" />

@@ -54,10 +54,10 @@ export function EmployeeAttendancePanel({
     (assignmentsData?.data ?? []).filter((item) => item.employeeId === employeeId),
   );
   const shifts = (shiftsData?.data ?? []).filter((item) => item.active);
-  const weeks = weeksData?.data ?? [];
+  const weeks = sortAssignmentsCurrentFirst(weeksData?.data ?? []);
   const today = new Date().toISOString().slice(0, 10);
   const currentShift = assignments.find((row) => !row.effectiveTo) ?? assignments[0];
-  const currentWeek = weeks.find((row) => !row.effectiveTo || row.effectiveTo >= today) ?? weeks[0];
+  const currentWeek = weeks.find((row) => !row.effectiveTo) ?? weeks[0];
 
   async function onAssign(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -98,23 +98,22 @@ export function EmployeeAttendancePanel({
       {canManage ? (
         <>
           <section className="space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <Meta className="mb-1">Working week</Meta>
-                <p className="text-sm text-muted">
-                  Week-offs for this person. Same date updates this row. A later date starts a new row. Company
-                  holidays still apply.
-                </p>
-              </div>
-              <Button type="button" size="sm" variant="ghost" onClick={() => setWeekOpen(true)}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Meta className="mb-0">Working week</Meta>
+              <Button type="button" size="sm" variant="outline" onClick={() => setWeekOpen(true)}>
                 {weeks.length ? 'Update working week' : 'Set working week'}
               </Button>
             </div>
+            <p className="text-sm text-muted">
+              Only one working week is Current at a time. When you save an update with a new effective
+              date, that row becomes Current and the previous Current ends the day before. Company
+              holidays still apply.
+            </p>
             <DataTable
               columns={[
                 { id: 'week', header: 'Week-offs', cell: (row) => weekLabel(row.pattern) },
                 { id: 'from', header: 'Effective from', cell: (row) => row.effectiveFrom },
-                { id: 'to', header: 'Effective to', cell: (row) => row.effectiveTo ?? 'Open' },
+                { id: 'to', header: 'Status', cell: (row) => formatAssignmentStatus(row.effectiveTo) },
               ]}
               rows={weeks}
               emptyTitle="Using company working days"
@@ -123,18 +122,16 @@ export function EmployeeAttendancePanel({
           </section>
 
           <section className="space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <Meta className="mb-1">Shift</Meta>
-                <p className="text-sm text-muted">
-                  Only one shift is current at a time. Saving a change closes the previous shift the day before the
-                  effective date. Older rows stay in history as closed.
-                </p>
-              </div>
-              <Button type="button" size="sm" variant="ghost" onClick={() => setShiftOpen(true)}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Meta className="mb-0">Shift</Meta>
+              <Button type="button" size="sm" variant="outline" onClick={() => setShiftOpen(true)}>
                 {assignments.length ? 'Update shift' : 'Assign shift'}
               </Button>
             </div>
+            <p className="text-sm text-muted">
+              Only one shift is current at a time. Saving a change closes the previous shift the day
+              before the effective date. Older rows stay in history as closed.
+            </p>
             <DataTable
               columns={[
                 { id: 'shift', header: 'Shift', cell: (row) => row.shiftName ?? '—' },
@@ -149,9 +146,10 @@ export function EmployeeAttendancePanel({
 
           <Dialog open={weekOpen} onOpenChange={setWeekOpen}>
             <DialogContent>
-              <DialogTitle>Set working week</DialogTitle>
-              <DialogDescription className="sr-only">
-                Choose week-offs and the date they take effect for this employee.
+              <DialogTitle>{weeks.length ? 'Update working week' : 'Set working week'}</DialogTitle>
+              <DialogDescription>
+                The week you save becomes Current. Any previous Current closes the day before this
+                effective date.
               </DialogDescription>
               <form key={`week-${currentWeek?.id ?? 'new'}-${weekOpen}`} onSubmit={onSaveWeek} className="mt-4 space-y-4">
                 <div>
@@ -177,8 +175,11 @@ export function EmployeeAttendancePanel({
                     name="weekFrom"
                     type="date"
                     required
-                    defaultValue={currentWeek?.effectiveFrom ?? today}
+                    defaultValue={today}
                   />
+                  <p className="mt-1 text-xs text-muted">
+                    Change this date when the new week should start. That row becomes Current.
+                  </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button type="submit" disabled={savingWeek}>

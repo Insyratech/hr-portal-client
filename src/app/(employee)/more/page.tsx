@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils';
 
 const MORE_LINKS: readonly { href: string; label: string; icon: IconName }[] = [
   { href: '/leave', label: 'Leave', icon: 'leave' },
+  { href: '/permission', label: 'Permission', icon: 'clock' },
+  { href: '/shift-change', label: 'Request for shift change', icon: 'clock' },
   { href: '/work/history', label: 'Work history', icon: 'calendar' },
   { href: '/payslips', label: 'Payslips', icon: 'file' },
   { href: '/grievance', label: 'Grievance', icon: 'shield' },

@@ -18,6 +18,7 @@ import {
 } from '@/features/work/project-goals-milestones-shared';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
+import { cn } from '@/lib/utils';
 import {
   useActivateProjectMilestoneMutation,
   useCancelProjectMilestoneMutation,
@@ -96,13 +97,17 @@ function MilestoneHistoryDialog({
 export function ProjectActiveMilestoneCard({
   activeMilestone,
   nextUpcoming,
+  hasGoals,
   onActivate,
   activating,
+  onAddGoal,
 }: {
   activeMilestone: ProjectActiveMilestone | null;
   nextUpcoming: ProjectMilestone | null;
+  hasGoals: boolean;
   onActivate: (milestoneId: string) => void;
   activating: boolean;
+  onAddGoal?: () => void;
 }) {
   if (activeMilestone) {
     return (
@@ -133,14 +138,33 @@ export function ProjectActiveMilestoneCard({
         >
           Activate next: {nextUpcoming.name}
         </Button>
+      ) : !hasGoals ? (
+        <div className="mt-3 space-y-3">
+          <p className="text-sm text-muted">
+            First add a goal, then add a milestone under that goal and activate it.
+          </p>
+          {onAddGoal ? (
+            <Button type="button" size="sm" variant="outline" onClick={onAddGoal}>
+              Add goal
+            </Button>
+          ) : null}
+        </div>
       ) : (
-        <p className="mt-3 text-sm text-muted">Add a milestone below, then activate it.</p>
+        <p className="mt-3 text-sm text-muted">
+          Expand a goal below, add a milestone under it, then activate that milestone.
+        </p>
       )}
     </section>
   );
 }
 
-export function ProjectGoalsMilestonesManage({ projectId }: { projectId: string }) {
+export function ProjectGoalsMilestonesManage({
+  projectId,
+  className,
+}: {
+  projectId: string;
+  className?: string;
+}) {
   const toast = useToast();
   const { data, isLoading, refetch } = useGetProjectPlanQuery(projectId);
   const [createGoal, createGoalState] = useCreateProjectGoalMutation();
@@ -159,7 +183,9 @@ export function ProjectGoalsMilestonesManage({ projectId }: { projectId: string 
   const [goalName, setGoalName] = useState('');
   const [goalDescription, setGoalDescription] = useState('');
   const [goalPrimary, setGoalPrimary] = useState(false);
-  const [milestoneDialog, setMilestoneDialog] = useState<{ goalId: string } | null>(null);
+  const [milestoneDialog, setMilestoneDialog] = useState<{ goalId: string; goalName: string } | null>(
+    null,
+  );
   const [milestoneName, setMilestoneName] = useState('');
   const [milestoneDescription, setMilestoneDescription] = useState('');
   const [milestoneStart, setMilestoneStart] = useState('');
@@ -192,22 +218,38 @@ export function ProjectGoalsMilestonesManage({ projectId }: { projectId: string 
     setExpandedGoals((prev) => ({ ...prev, [goalId]: !prev[goalId] }));
   }
 
+  function openMilestoneForGoal(goalId: string, goalName: string) {
+    if (!goals.some((goal) => goal.id === goalId)) {
+      toast.error('Add a goal first. Milestones can only be created under a goal.');
+      return;
+    }
+    setMilestoneName('');
+    setMilestoneDescription('');
+    setMilestoneStart('');
+    setMilestoneTarget('');
+    setMilestoneDialog({ goalId, goalName });
+  }
+
   async function onCreateGoal(event: React.FormEvent) {
     event.preventDefault();
     const name = goalName.trim();
     if (!name) return;
     try {
-      await createGoal({
+      const created = await createGoal({
         projectId,
         name,
         description: goalDescription.trim(),
         isPrimary: goalPrimary,
       }).unwrap();
-      toast.success('Goal added.');
+      toast.success('Goal added. Open it to add milestones.');
       setGoalDialogOpen(false);
       setGoalName('');
       setGoalDescription('');
       setGoalPrimary(false);
+      const newGoalId = created.data?.id;
+      if (newGoalId) {
+        setExpandedGoals((prev) => ({ ...prev, [newGoalId]: true }));
+      }
       await refetch();
     } catch (error) {
       toast.error(apiErrorMessage(error, 'Could not add the goal.'));
@@ -217,18 +259,24 @@ export function ProjectGoalsMilestonesManage({ projectId }: { projectId: string 
   async function onCreateMilestone(event: React.FormEvent) {
     event.preventDefault();
     if (!milestoneDialog) return;
+    const goal = goals.find((row) => row.id === milestoneDialog.goalId);
+    if (!goal) {
+      toast.error('That goal is no longer available. Add a goal first, then add a milestone under it.');
+      setMilestoneDialog(null);
+      return;
+    }
     const name = milestoneName.trim();
     if (!name) return;
     try {
       await createMilestone({
-        goalId: milestoneDialog.goalId,
+        goalId: goal.id,
         name,
         description: milestoneDescription.trim(),
         startDate: milestoneStart || null,
         targetDate: milestoneTarget || null,
         status: 'UPCOMING',
       }).unwrap();
-      toast.success('Milestone added.');
+      toast.success(`Milestone added under “${goal.name}”.`);
       setMilestoneDialog(null);
       setMilestoneName('');
       setMilestoneDescription('');
@@ -325,6 +373,7 @@ export function ProjectGoalsMilestonesManage({ projectId }: { projectId: string 
     if (!window.confirm('Delete this goal and its milestones?')) return;
     try {
       await deleteGoal(goalId).unwrap();
+      if (milestoneDialog?.goalId === goalId) setMilestoneDialog(null);
       toast.success('Goal removed.');
       await refetch();
     } catch (error) {
@@ -344,7 +393,7 @@ export function ProjectGoalsMilestonesManage({ projectId }: { projectId: string 
   }
 
   return (
-    <>
+    <div className={cn('space-y-4', className)}>
       <ProjectActiveMilestoneCard
         activeMilestone={
           activeMilestone
@@ -357,36 +406,57 @@ export function ProjectGoalsMilestonesManage({ projectId }: { projectId: string 
             : null
         }
         nextUpcoming={nextUpcoming}
+        hasGoals={goals.length > 0}
         onActivate={(id) => void onActivate(id)}
         activating={activateState.isLoading}
+        onAddGoal={() => setGoalDialogOpen(true)}
       />
 
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Meta>Goals &amp; milestones</Meta>
+      <section className="rounded border border-border bg-background shadow-card">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+          <div>
+            <Meta>Goals &amp; milestones</Meta>
+            <p className="mt-1 text-sm text-muted">
+              Add a goal first. Expand that goal to add milestones, then activate one.
+            </p>
+          </div>
           <Button type="button" size="sm" variant="outline" onClick={() => setGoalDialogOpen(true)}>
             Add goal
           </Button>
         </div>
+        <div className="space-y-3 px-5 py-4">
         {isLoading ? <PageLoading compact message="Loading plan…" /> : null}
         {!isLoading && goals.length === 0 ? (
-          <p className="text-sm text-muted">Start with one goal, then add milestones and activate one.</p>
+          <div className="rounded border border-dashed border-border px-4 py-6 text-center">
+            <p className="text-sm font-medium text-foreground">No goals yet</p>
+            <p className="mt-2 text-sm text-muted">
+              Milestones belong to a goal. Create a goal before you can add any milestone.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              className="mt-4"
+              onClick={() => setGoalDialogOpen(true)}
+            >
+              Add goal
+            </Button>
+          </div>
         ) : null}
         <div className="space-y-2">
           {goals.map((goal) => {
-            const open = expandedGoals[goal.id] ?? goal.isPrimary;
+            const open = expandedGoals[goal.id] ?? false;
             return (
-              <article key={goal.id} className="rounded border border-border bg-background shadow-card">
+              <article key={goal.id} className="rounded border border-border bg-surface/30">
                 <button
                   type="button"
                   className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
                   onClick={() => toggleGoal(goal.id)}
                 >
                   <div>
-                    <p className="text-sm font-medium">{goal.name}</p>
-                    {goal.isPrimary ? (
-                      <p className="mt-0.5 text-xs uppercase tracking-[0.12em] text-muted">Primary</p>
-                    ) : null}
+                    <p className="text-xs uppercase tracking-[0.12em] text-muted">
+                      Goal{goal.isPrimary ? ' · Primary' : ''}
+                    </p>
+                    <p className="mt-1 text-sm font-medium">{goal.name}</p>
                   </div>
                   <span className="text-xs text-muted">{open ? '−' : '+'}</span>
                 </button>
@@ -398,7 +468,7 @@ export function ProjectGoalsMilestonesManage({ projectId }: { projectId: string 
                         type="button"
                         size="sm"
                         variant="outline"
-                        onClick={() => setMilestoneDialog({ goalId: goal.id })}
+                        onClick={() => openMilestoneForGoal(goal.id, goal.name)}
                       >
                         Add milestone
                       </Button>
@@ -428,7 +498,10 @@ export function ProjectGoalsMilestonesManage({ projectId }: { projectId: string 
                       </Button>
                     </div>
                     {goal.milestones.length === 0 ? (
-                      <p className="text-sm text-muted">No milestones yet.</p>
+                      <p className="text-sm text-muted">
+                        No milestones under this goal yet. Add one to unlock R&amp;D priorities after
+                        activation.
+                      </p>
                     ) : (
                       <ul className="space-y-2">
                         {goal.milestones.map((milestone) => (
@@ -507,6 +580,7 @@ export function ProjectGoalsMilestonesManage({ projectId }: { projectId: string 
             );
           })}
         </div>
+        </div>
       </section>
 
       <Dialog open={goalDialogOpen} onOpenChange={setGoalDialogOpen}>
@@ -540,6 +614,11 @@ export function ProjectGoalsMilestonesManage({ projectId }: { projectId: string 
       <Dialog open={Boolean(milestoneDialog)} onOpenChange={(open) => !open && setMilestoneDialog(null)}>
         <DialogContent className="max-w-md">
           <DialogTitle>Add milestone</DialogTitle>
+          <DialogDescription>
+            {milestoneDialog
+              ? `This milestone will be attached to the goal “${milestoneDialog.goalName}”.`
+              : 'Milestones must be attached to a goal.'}
+          </DialogDescription>
           <form onSubmit={onCreateMilestone} className="mt-4 space-y-4">
             <div>
               <Label htmlFor="new-ms-name">Name</Label>
@@ -567,7 +646,7 @@ export function ProjectGoalsMilestonesManage({ projectId }: { projectId: string 
               <Button type="button" variant="outline" onClick={() => setMilestoneDialog(null)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={createMilestoneState.isLoading}>
+              <Button type="submit" disabled={createMilestoneState.isLoading || !milestoneDialog}>
                 Save
               </Button>
             </div>
@@ -671,6 +750,6 @@ export function ProjectGoalsMilestonesManage({ projectId }: { projectId: string 
         open={Boolean(historyMilestone)}
         onOpenChange={(open) => !open && setHistoryMilestone(null)}
       />
-    </>
+    </div>
   );
 }

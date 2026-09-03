@@ -60,7 +60,9 @@ import type {
   EmployeeWorkProjects,
   LeadProjectSummary,
   LeadProjectDesk,
+  LeadDailyWorkBoard,
   ProjectStatusUpdate,
+  ProjectUpdateTopic,
   ProjectPlan,
   ProjectGoal,
   ProjectGoalListItem,
@@ -77,6 +79,7 @@ import type {
   NotificationItem,
   WorkPermission,
   WorkPermissionMine,
+  ShiftChangeRequest,
 } from '@/types/api';
 
 export const api = createApi({
@@ -117,6 +120,7 @@ export const api = createApi({
     'Notifications',
     'Reports',
     'WorkPermissions',
+    'ShiftChanges',
     'Work',
     'DirectoryEditRequests',
   ],
@@ -568,6 +572,71 @@ export const api = createApi({
       query: (id) => ({ url: `/api/v1/work-permissions/${id}/reject`, method: 'POST' }),
       invalidatesTags: ['WorkPermissions', 'Notifications'],
     }),
+    getMyShiftChanges: builder.query<ApiSuccess<ShiftChangeRequest[]>, void>({
+      query: () => '/api/v1/shift-changes/me',
+      providesTags: ['ShiftChanges'],
+    }),
+    getShiftChangeLeadInbox: builder.query<ApiSuccess<ShiftChangeRequest[]>, void>({
+      query: () => '/api/v1/shift-changes/lead-inbox',
+      providesTags: ['ShiftChanges'],
+    }),
+    getShiftChanges: builder.query<
+      ApiSuccess<ShiftChangeRequest[]>,
+      { status?: ShiftChangeRequest['status'] } | void
+    >({
+      query: (arg) => ({
+        url: '/api/v1/shift-changes',
+        params: arg?.status ? { status: arg.status } : undefined,
+      }),
+      providesTags: ['ShiftChanges'],
+    }),
+    getShiftChangeProjects: builder.query<ApiSuccess<LeaveProjectOption[]>, void>({
+      query: () => '/api/v1/shift-changes/projects',
+      providesTags: ['ShiftChanges'],
+    }),
+    applyShiftChange: builder.mutation<
+      ApiSuccess<ShiftChangeRequest>,
+      {
+        startDate: string;
+        endDate: string;
+        requestedShiftId: string;
+        reason: string;
+        projectId?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/shift-changes', method: 'POST', body }),
+      invalidatesTags: ['ShiftChanges', 'Notifications'],
+    }),
+    acceptShiftChangeProjectLead: builder.mutation<ApiSuccess<ShiftChangeRequest>, string>({
+      query: (id) => ({ url: `/api/v1/shift-changes/${id}/project-lead-accept`, method: 'POST' }),
+      invalidatesTags: ['ShiftChanges', 'Notifications'],
+    }),
+    approveShiftChange: builder.mutation<
+      ApiSuccess<ShiftChangeRequest>,
+      { id: string; comment?: string }
+    >({
+      query: ({ id, comment }) => ({
+        url: `/api/v1/shift-changes/${id}/approve`,
+        method: 'POST',
+        body: comment ? { comment } : {},
+      }),
+      invalidatesTags: ['ShiftChanges', 'Notifications'],
+    }),
+    rejectShiftChange: builder.mutation<
+      ApiSuccess<ShiftChangeRequest>,
+      { id: string; comment?: string }
+    >({
+      query: ({ id, comment }) => ({
+        url: `/api/v1/shift-changes/${id}/reject`,
+        method: 'POST',
+        body: comment ? { comment } : {},
+      }),
+      invalidatesTags: ['ShiftChanges', 'Notifications'],
+    }),
+    cancelShiftChange: builder.mutation<ApiSuccess<ShiftChangeRequest>, string>({
+      query: (id) => ({ url: `/api/v1/shift-changes/${id}/cancel`, method: 'POST' }),
+      invalidatesTags: ['ShiftChanges', 'Notifications'],
+    }),
     updateLeaveType: builder.mutation<
       ApiSuccess<LeaveType>,
       {
@@ -753,18 +822,33 @@ export const api = createApi({
       }),
       providesTags: ['Work'],
     }),
+    getLeadDailyWork: builder.query<
+      ApiSuccess<LeadDailyWorkBoard>,
+      { date?: string; from?: string; to?: string; projectId?: string }
+    >({
+      query: (params) => ({
+        url: '/api/v1/work/lead/daily-work',
+        params: {
+          ...(params.date ? { date: params.date } : {}),
+          ...(params.from ? { from: params.from } : {}),
+          ...(params.to ? { to: params.to } : {}),
+          ...(params.projectId ? { projectId: params.projectId } : {}),
+        },
+      }),
+      providesTags: ['Work'],
+    }),
     getProjectStatusUpdates: builder.query<ApiSuccess<ProjectStatusUpdate[]>, string>({
       query: (projectId) => `/api/v1/work/projects/${projectId}/updates`,
       providesTags: ['Work'],
     }),
     createProjectStatusUpdate: builder.mutation<
       ApiSuccess<ProjectStatusUpdate>,
-      { projectId: string; body: string }
+      { projectId: string; body: string; topic?: ProjectUpdateTopic }
     >({
-      query: ({ projectId, body }) => ({
+      query: ({ projectId, body, topic }) => ({
         url: `/api/v1/work/projects/${projectId}/updates`,
         method: 'POST',
-        body: { body },
+        body: topic ? { body, topic } : { body },
       }),
       invalidatesTags: ['Work'],
     }),
@@ -1438,6 +1522,15 @@ export const {
   useApplyWorkPermissionMutation,
   useApproveWorkPermissionMutation,
   useRejectWorkPermissionMutation,
+  useGetMyShiftChangesQuery,
+  useGetShiftChangeLeadInboxQuery,
+  useGetShiftChangesQuery,
+  useGetShiftChangeProjectsQuery,
+  useApplyShiftChangeMutation,
+  useAcceptShiftChangeProjectLeadMutation,
+  useApproveShiftChangeMutation,
+  useRejectShiftChangeMutation,
+  useCancelShiftChangeMutation,
   useGetAttendanceMeQuery,
   useGetWorkDayQuery,
   useSubmitWorkDayMutation,
@@ -1456,6 +1549,7 @@ export const {
   useGetWorkProjectsQuery,
   useGetLeadProjectsQuery,
   useGetLeadProjectDeskQuery,
+  useGetLeadDailyWorkQuery,
   useGetProjectStatusUpdatesQuery,
   useCreateProjectStatusUpdateMutation,
   useGetProjectMembersQuery,

@@ -19,7 +19,7 @@ export default function HrOverviewPage() {
       <p className="mb-6 max-w-2xl text-sm text-muted">
         Approve leave and permissions, manage organization and leave setup, and oversee employees.
       </p>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5 lg:gap-6">
         <StatCard
           value={String(pendingLeaveCount)}
           label="Leave to review"
@@ -33,6 +33,12 @@ export default function HrOverviewPage() {
           onClick={() => router.push('/hr/grievances')}
         />
         <StatCard value="Queue" label="Permissions" icon="clock" onClick={() => router.push('/hr/permissions')} />
+        <StatCard
+          value="Queue"
+          label="Shift changes"
+          icon="clock"
+          onClick={() => router.push('/hr/shift-changes')}
+        />
         <StatCard value="Org" label="Employees" icon="users" onClick={() => router.push('/hr/employees')} />
       </div>
       <LeavePresenceBoard items={applications?.data ?? []} reviewBase="/hr/leaves" />

@@ -51,6 +51,7 @@ export const MY_WORK_TIME_NAV: readonly NavItem[] = [
   { href: '/leave', label: 'My leave', icon: 'leave' },
   { href: '/leave/holidays', label: 'Holidays', icon: 'calendar' },
   { href: '/permission', label: 'My permission', icon: 'clock' },
+  { href: '/shift-change', label: 'My shift change', icon: 'clock' },
   { href: '/attendance', label: 'Attendance', icon: 'clock' },
 ];
 
@@ -128,6 +129,7 @@ export const HR_LEAVE_NAV: readonly NavItem[] = [
 export const HR_OPS_NAV: readonly NavItem[] = [
   { href: '/hr/shifts', label: 'Shifts', icon: 'clock' },
   { href: '/hr/permissions', label: 'Permissions', icon: 'clock' },
+  { href: '/hr/shift-changes', label: 'Shift change requests', icon: 'clock' },
   { href: '/hr/grievances', label: 'Grievances', icon: 'shield' },
 ];
 
@@ -151,6 +153,7 @@ export const GM_ATTENDANCE_NAV: readonly NavItem[] = [
   { href: '/gm/payroll', label: 'Payroll', icon: 'grid' },
   { href: '/gm/reports', label: 'Reports', icon: 'grid' },
   { href: '/gm/permissions', label: 'Permissions', icon: 'clock' },
+  { href: '/gm/shift-changes', label: 'Shift changes', icon: 'clock' },
 ];
 
 export const GM_LEAVE_NAV: readonly NavItem[] = [
@@ -171,6 +174,7 @@ export const CSO_WORK_NAV: readonly NavItem[] = [
   { href: '/cso/work/projects', label: 'Projects', icon: 'building' },
   { href: '/cso/work/employees', label: 'Employees', icon: 'users' },
   { href: '/cso/work/insights', label: 'Insights', icon: 'overview' },
+  { href: '/cso/shift-changes', label: 'Shift changes', icon: 'clock' },
 ];
 
 export const CSO_NAV: readonly NavItem[] = [...CSO_WORK_NAV];

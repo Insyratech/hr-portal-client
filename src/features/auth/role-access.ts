@@ -91,7 +91,11 @@ export function isSharedPersonalPath(pathname: string): boolean {
   return (
     pathname === '/more/password' ||
     pathname === '/more/profile' ||
-    pathname.startsWith('/leave/handover')
+    pathname.startsWith('/leave/handover') ||
+    pathname.startsWith('/leave/lead') ||
+    pathname.startsWith('/shift-change/lead') ||
+    pathname === '/shift-change' ||
+    pathname.startsWith('/shift-change/')
   );
 }
 
@@ -101,6 +105,7 @@ function isEmployeeWorkspacePath(pathname: string): boolean {
     pathname === '/dashboard' ||
     pathname.startsWith('/leave') ||
     pathname.startsWith('/permission') ||
+    pathname.startsWith('/shift-change') ||
     pathname.startsWith('/attendance') ||
     pathname.startsWith('/payslips') ||
     pathname.startsWith('/more') ||

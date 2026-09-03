@@ -1,7 +1,7 @@
 /** Label for shift / work-week assignment effective-to column. */
 export function formatAssignmentStatus(effectiveTo: string | null | undefined): string {
   if (!effectiveTo) return 'Current';
-  return effectiveTo;
+  return `Until ${effectiveTo}`;
 }
 
 export function sortAssignmentsCurrentFirst<T extends { effectiveFrom: string; effectiveTo?: string | null }>(

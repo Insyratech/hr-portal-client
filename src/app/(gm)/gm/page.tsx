@@ -25,7 +25,7 @@ export default function GmOverviewPage() {
         Upload attendance, run payroll, see who is out, and open weekly PPT packages shared by CSO. Leave
         approval is handled by HR Manager.
       </p>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5 lg:gap-6">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6 lg:gap-6">
         <StatCard
           value={String(imports?.data.length ?? 0)}
           label="Attendance imports"
@@ -49,6 +49,12 @@ export default function GmOverviewPage() {
           label="Who’s out"
           icon="leave"
           onClick={() => router.push('/gm/leave-status')}
+        />
+        <StatCard
+          value="View"
+          label="Shift changes"
+          icon="clock"
+          onClick={() => router.push('/gm/shift-changes')}
         />
         <StatCard
           value="PPT"

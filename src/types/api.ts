@@ -273,13 +273,34 @@ export type LeadProjectSummary = {
   memberCount: number;
 };
 
+export type ProjectUpdateTopic = 'PROGRESS' | 'RISK' | 'BLOCKER' | 'NEXT_STEPS' | 'OTHER';
+
 export type ProjectStatusUpdate = {
   id: string;
   projectId: string;
   authorId: string;
   authorName: string;
   body: string;
+  topic?: ProjectUpdateTopic | null;
   createdAt: string;
+};
+
+export type LeadDailyWorkEntry = {
+  id: string;
+  date: string;
+  employeeId: string;
+  employeeName: string;
+  projectId: string;
+  projectName: string;
+  projectCode: string;
+  category: string;
+  description: string;
+  priorityId: string | null;
+};
+
+export type LeadDailyWorkBoard = {
+  range: { start: string; end: string };
+  entries: LeadDailyWorkEntry[];
 };
 
 export type LeadProjectDesk = {
@@ -826,6 +847,32 @@ export type WorkPermission = {
 export type WorkPermissionMine = {
   quotaMinutes: number;
   items: WorkPermission[];
+};
+
+export type ShiftChangeRequest = {
+  id: string;
+  employeeId: string;
+  employeeName: string | null;
+  projectId: string | null;
+  projectName: string | null;
+  projectCode: string | null;
+  startDate: string;
+  endDate: string;
+  requestedShiftId: string;
+  requestedShiftName: string | null;
+  currentShiftId: string | null;
+  currentShiftName: string | null;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+  projectLeadEmployeeId: string | null;
+  projectLeadName: string | null;
+  projectLeadRequired: boolean;
+  projectLeadAccepted: boolean;
+  projectLeadActedAt: string | null;
+  reviewerEmployeeId: string | null;
+  reviewerComment: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
 };
 
 export type Shift = {

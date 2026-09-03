@@ -291,13 +291,14 @@ export function TodayUpdate() {
           {board.approvalBlockReason ?? board.skipReason ?? 'No update needed today.'}
         </p>
         {board.approvalBlockReason ? (
-          <p className="mt-3 text-sm text-muted">
-            Open{' '}
-            <Link className="underline" href="/work/priorities">
-              My priorities
-            </Link>{' '}
-            to submit or check approval status.
-          </p>
+          <div className="mt-4 space-y-3">
+            <p className="text-sm text-muted">
+              Submit or check your week priorities before logging today’s update.
+            </p>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/work/priorities">My priorities</Link>
+            </Button>
+          </div>
         ) : null}
       </section>
     );

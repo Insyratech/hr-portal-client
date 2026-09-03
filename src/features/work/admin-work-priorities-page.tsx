@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { MyWeekBoard } from '@/features/work/my-week-board';
+import { LeadDailyWorkPanel } from '@/features/work/lead-daily-work-panel';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
@@ -188,7 +189,7 @@ function PrioritiesDesk({
       <div className="mb-6 space-y-4 rounded border border-border bg-background p-5 shadow-card">
         <Meta>Planning week</Meta>
         <p className="text-sm text-muted">
-          Pick any date in the week you want. Both tables below use that week.
+          Pick any date in the week you want. Tables and daily work below use that week.
         </p>
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[11rem]">
@@ -216,6 +217,15 @@ function PrioritiesDesk({
           </p>
         ) : null}
       </div>
+
+      {deskMode === 'lead' ? (
+        <div className="mb-8">
+          <LeadDailyWorkPanel
+            weekDate={weekDate}
+            description="Daily work notes from people on projects you lead. This week is shown by default; open History to choose another date range."
+          />
+        </div>
+      ) : null}
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 sm:max-w-2xl">
         <div>
