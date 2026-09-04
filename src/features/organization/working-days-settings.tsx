@@ -42,7 +42,9 @@ export function WorkingDaysSettings() {
       {isError ? <p className="mb-4 text-sm">Unable to load settings.</p> : null}
       <form onSubmit={onSubmit} className="max-w-lg space-y-6">
         <fieldset>
-          <legend className="mb-3 text-xs uppercase tracking-[0.2em] text-muted">Working days</legend>
+          <legend className="mb-3 text-xs uppercase tracking-[0.2em] text-meta" style={{ color: 'var(--meta)' }}>
+            Working days
+          </legend>
           <p className="mb-3 text-sm text-muted">
             Checked days are the company default. A person’s Attendance tab can set a different week (Sunday only, weekend, or 2nd and 4th Saturday).
             Work-update reminder times and retention are under Super Admin settings.

@@ -69,7 +69,7 @@ export default function ShiftChangePage() {
       {(leadInbox?.data ?? []).length > 0 ? (
         <section className="space-y-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-sm font-medium uppercase tracking-[0.2em] text-muted">Lead inbox</h2>
+            <h2 className="text-sm font-medium uppercase tracking-[0.2em] text-meta">Lead inbox</h2>
             <Link href="/work/team-permissions" className="text-sm text-muted hover:text-foreground">
               Open Team permissions
             </Link>
@@ -82,7 +82,7 @@ export default function ShiftChangePage() {
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-medium uppercase tracking-[0.2em] text-muted">Status</h2>
+          <h2 className="text-sm font-medium uppercase tracking-[0.2em] text-meta">Status</h2>
           <Button type="button" disabled={hasPending} onClick={() => setOpen(true)}>
             {hasPending ? 'Pending request open' : 'Request shift change'}
           </Button>
@@ -119,7 +119,7 @@ export default function ShiftChangePage() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-medium uppercase tracking-[0.2em] text-muted">History</h2>
+        <h2 className="text-sm font-medium uppercase tracking-[0.2em] text-meta">History</h2>
         <DataTable
           columns={[
             { id: 'dates', header: 'Dates', cell: (row) => shiftChangeDateLabel(row) },

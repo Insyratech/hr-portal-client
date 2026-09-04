@@ -27,7 +27,7 @@ export function WorkIndicators({
       <dl className={embedded ? 'mt-3 grid grid-cols-2 gap-4 sm:grid-cols-5' : 'mt-4 grid grid-cols-2 gap-4 sm:grid-cols-5'}>
         {items.map((item) => (
           <div key={item.label}>
-            <dt className="text-xs uppercase tracking-[0.2em] text-muted">{item.label}</dt>
+            <dt className="text-xs uppercase tracking-[0.2em] text-meta">{item.label}</dt>
             <dd className="mt-1 text-lg font-medium">{item.value}</dd>
           </div>
         ))}

@@ -30,7 +30,7 @@ export function ShiftChangeLeadReviewCard({
   return (
     <div className="space-y-4 border border-border bg-background p-4 shadow-card">
       <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-muted">Project lead review</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-meta">Project lead review</p>
         <h2 className="mt-2 text-lg font-semibold tracking-tight">
           {row.employeeName ?? 'Teammate'} · {shiftChangeDateLabel(row)}
         </h2>

@@ -32,9 +32,10 @@ export function SheetContent({
         <div className="relative flex shrink-0 items-center border-b border-border px-6 py-4">
           <DialogPrimitive.Title
             className={cn(
-              'text-xs uppercase tracking-[0.2em] text-muted',
+              'text-xs uppercase tracking-[0.2em] text-meta',
               showClose ? 'pr-12' : undefined,
             )}
+            style={{ color: 'var(--meta)' }}
           >
             {title}
           </DialogPrimitive.Title>

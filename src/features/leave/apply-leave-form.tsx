@@ -211,7 +211,7 @@ export function ApplyLeaveForm({
         variant === 'dialog' ? 'space-y-6' : 'max-w-md space-y-6 border border-border bg-background p-6 shadow-card'
       }
     >
-      <p className="text-xs uppercase tracking-[0.2em] text-muted">{editing ? 'Edit leave' : ruleLine}</p>
+      <p className="text-xs uppercase tracking-[0.2em] text-meta">{editing ? 'Edit leave' : ruleLine}</p>
       <p className="text-sm text-muted">{bookingHint}</p>
       {activeTypes.length === 0 ? (
         <StatusMessage tone="warning">No leave types are allocated to you. Ask HR to add an entitlement first.</StatusMessage>

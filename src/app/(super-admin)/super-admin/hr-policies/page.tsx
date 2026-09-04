@@ -74,7 +74,7 @@ export default function HrPoliciesPage() {
       </p>
 
       <form onSubmit={onCreate} className="mb-10 max-w-2xl space-y-4 border border-border p-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-muted">New policy</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-meta">New policy</p>
         <div>
           <Label htmlFor="title">Title</Label>
           <Input id="title" name="title" required />
@@ -106,7 +106,7 @@ export default function HrPoliciesPage() {
       </form>
 
       <form onSubmit={onPublishNewVersion} className="mb-10 max-w-2xl space-y-4 border border-border p-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-muted">Publish new version</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-meta">Publish new version</p>
         <div>
           <Label htmlFor="policyId">Policy</Label>
           <select

@@ -16,6 +16,9 @@ import {
   formatMilestoneDates,
   MilestoneStatusChip,
 } from '@/features/work/project-goals-milestones-shared';
+import { MilestoneDescriptionSnippet } from '@/features/work/milestone-description';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { isRichTextEmpty, richTextToPlain, sanitizeRichText } from '@/lib/rich-text';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
@@ -78,13 +81,17 @@ function MilestoneHistoryDialog({
                 {rows[0]?.changeReason}
               </p>
               <ul className="mt-2 space-y-1 text-sm">
-                {rows.map((row) => (
-                  <li key={row.id}>
-                    <span className="font-medium">{row.changedField}</span>:{' '}
-                    <span className="text-muted">{row.oldValue ?? '—'}</span> →{' '}
-                    <span>{row.newValue ?? '—'}</span>
-                  </li>
-                ))}
+                {rows.map((row) => {
+                  const isDesc = row.changedField === 'description';
+                  const oldDisplay = isDesc ? richTextToPlain(row.oldValue ?? '') || '—' : (row.oldValue ?? '—');
+                  const newDisplay = isDesc ? richTextToPlain(row.newValue ?? '') || '—' : (row.newValue ?? '—');
+                  return (
+                    <li key={row.id}>
+                      <span className="font-medium">{row.changedField}</span>:{' '}
+                      <span className="text-muted">{oldDisplay}</span> → <span>{newDisplay}</span>
+                    </li>
+                  );
+                })}
               </ul>
             </article>
           ))}
@@ -102,7 +109,7 @@ export function ProjectActiveMilestoneCard({
   activating,
   onAddGoal,
 }: {
-  activeMilestone: ProjectActiveMilestone | null;
+  activeMilestone: (ProjectActiveMilestone & { description?: string; status?: ProjectMilestone['status'] }) | null;
   nextUpcoming: ProjectMilestone | null;
   hasGoals: boolean;
   onActivate: (milestoneId: string) => void;
@@ -118,6 +125,18 @@ export function ProjectActiveMilestoneCard({
           Goal: {activeMilestone.goalName || '—'}
           {activeMilestone.targetDate ? ` · target ${activeMilestone.targetDate}` : ''}
         </p>
+        {activeMilestone.description ? (
+          <MilestoneDescriptionSnippet
+            milestone={{
+              id: activeMilestone.id,
+              name: activeMilestone.name,
+              description: activeMilestone.description,
+              status: activeMilestone.status ?? 'ACTIVE',
+              startDate: null,
+              targetDate: activeMilestone.targetDate,
+            }}
+          />
+        ) : null}
       </section>
     );
   }
@@ -271,7 +290,9 @@ export function ProjectGoalsMilestonesManage({
       await createMilestone({
         goalId: goal.id,
         name,
-        description: milestoneDescription.trim(),
+        description: isRichTextEmpty(milestoneDescription)
+          ? ''
+          : sanitizeRichText(milestoneDescription),
         startDate: milestoneStart || null,
         targetDate: milestoneTarget || null,
         status: 'UPCOMING',
@@ -310,7 +331,7 @@ export function ProjectGoalsMilestonesManage({
         milestoneId: editMilestone.id,
         body: {
           name: editName.trim(),
-          description: editDescription.trim(),
+          description: isRichTextEmpty(editDescription) ? '' : sanitizeRichText(editDescription),
           startDate: editStart || null,
           targetDate: editTarget || null,
           changeReason,
@@ -402,6 +423,8 @@ export function ProjectGoalsMilestonesManage({
                 name: activeMilestone.name,
                 goalName: goals.find((g) => g.id === activeMilestone.goalId)?.name ?? '',
                 targetDate: activeMilestone.targetDate,
+                description: activeMilestone.description,
+                status: activeMilestone.status,
               }
             : null
         }
@@ -453,7 +476,7 @@ export function ProjectGoalsMilestonesManage({
                   onClick={() => toggleGoal(goal.id)}
                 >
                   <div>
-                    <p className="text-xs uppercase tracking-[0.12em] text-muted">
+                    <p className="text-xs uppercase tracking-[0.12em] text-meta" style={{ color: 'var(--meta)' }}>
                       Goal{goal.isPrimary ? ' · Primary' : ''}
                     </p>
                     <p className="mt-1 text-sm font-medium">{goal.name}</p>
@@ -507,9 +530,10 @@ export function ProjectGoalsMilestonesManage({
                         {goal.milestones.map((milestone) => (
                           <li key={milestone.id} className="rounded border border-border px-3 py-2 text-sm">
                             <div className="flex flex-wrap items-start justify-between gap-2">
-                              <div>
+                              <div className="min-w-0 flex-1">
                                 <p className="font-medium">{milestone.name}</p>
                                 <p className="mt-0.5 text-xs text-muted">{formatMilestoneDates(milestone)}</p>
+                                <MilestoneDescriptionSnippet milestone={milestone} />
                               </div>
                               <MilestoneStatusChip status={milestone.status} />
                             </div>
@@ -612,7 +636,7 @@ export function ProjectGoalsMilestonesManage({
       </Dialog>
 
       <Dialog open={Boolean(milestoneDialog)} onOpenChange={(open) => !open && setMilestoneDialog(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogTitle>Add milestone</DialogTitle>
           <DialogDescription>
             {milestoneDialog
@@ -626,10 +650,12 @@ export function ProjectGoalsMilestonesManage({
             </div>
             <div>
               <Label htmlFor="new-ms-desc">Description</Label>
-              <Input
+              <RichTextEditor
+                key={milestoneDialog ? `add-${milestoneDialog.goalId}` : 'add'}
                 id="new-ms-desc"
                 value={milestoneDescription}
-                onChange={(e) => setMilestoneDescription(e.target.value)}
+                onChange={setMilestoneDescription}
+                placeholder="Steps, scope, links, and notes for this milestone…"
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -655,7 +681,7 @@ export function ProjectGoalsMilestonesManage({
       </Dialog>
 
       <Dialog open={Boolean(editMilestone)} onOpenChange={(open) => !open && setEditMilestone(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogTitle>Edit milestone</DialogTitle>
           <form onSubmit={onSaveMilestone} className="mt-4 space-y-4">
             <div>
@@ -664,7 +690,13 @@ export function ProjectGoalsMilestonesManage({
             </div>
             <div>
               <Label htmlFor="edit-ms-desc">Description</Label>
-              <Input id="edit-ms-desc" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+              <RichTextEditor
+                key={editMilestone?.id ?? 'edit'}
+                id="edit-ms-desc"
+                value={editDescription}
+                onChange={setEditDescription}
+                placeholder="Steps, scope, links, and notes for this milestone…"
+              />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>

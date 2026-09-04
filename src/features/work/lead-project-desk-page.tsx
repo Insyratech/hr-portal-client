@@ -207,7 +207,9 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
               <li key={member.employeeId} className="flex justify-between gap-3 py-2.5">
                 <span>{member.fullName}</span>
                 {member.employeeId === project.leadEmployeeId ? (
-                  <span className="text-xs uppercase tracking-[0.12em] text-muted">Lead</span>
+                  <span className="text-xs uppercase tracking-[0.12em] text-meta" style={{ color: 'var(--meta)' }}>
+                    Lead
+                  </span>
                 ) : null}
               </li>
             ))}

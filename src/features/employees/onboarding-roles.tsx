@@ -55,7 +55,9 @@ export function AssignableRoleChecks({
   const assignable = roles.filter((item) => MANAGERIAL_ROLE_CODES.has(item.code));
   return (
     <fieldset className="space-y-2">
-      <legend className="mb-2 block text-xs uppercase tracking-[0.2em] text-muted">Access roles</legend>
+      <legend className="mb-2 block text-xs uppercase tracking-[0.2em] text-meta" style={{ color: 'var(--meta)' }}>
+        Access roles
+      </legend>
       <label className="flex items-center gap-2 text-sm text-muted">
         <input type="checkbox" checked disabled readOnly />
         Employee (always on)

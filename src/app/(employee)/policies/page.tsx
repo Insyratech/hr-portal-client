@@ -74,7 +74,7 @@ export default function PoliciesPage() {
 
       {detail ? (
         <section className="mt-10 max-w-2xl space-y-4 border border-border p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">
+          <p className="text-xs uppercase tracking-[0.2em] text-meta">
             {detail.title} · v{detail.currentVersion?.versionLabel ?? '—'}
           </p>
           <p className="text-sm text-muted">Effective {detail.currentVersion?.effectiveDate ?? '—'}</p>

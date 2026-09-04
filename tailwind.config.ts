@@ -14,6 +14,7 @@ const config: Config = {
         danger: 'var(--danger)',
         success: 'var(--success)',
         warning: 'var(--warning)',
+        meta: 'var(--meta)',
       },
       boxShadow: {
         card: 'var(--shadow-card)',

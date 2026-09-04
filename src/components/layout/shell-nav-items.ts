@@ -52,7 +52,7 @@ function employeeSectionGroups(): NavMenuGroup[] {
 
 function employeeSection(): NavMenuSection {
   return {
-    title: 'Employee',
+    title: 'Employee Features',
     groups: employeeSectionGroups(),
   };
 }

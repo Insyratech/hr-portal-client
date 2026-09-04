@@ -141,7 +141,7 @@ export function GrievanceDrawerPanel({ grievanceId }: { grievanceId: string }) {
       ) : null}
 
       <div className="space-y-3">
-        <p className="text-xs uppercase tracking-[0.2em] text-muted">Thread</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-meta">Thread</p>
         {detail.comments.length === 0 ? <p className="text-sm text-muted">No comments yet.</p> : null}
         {detail.comments.map((comment) => (
           <div key={comment.id} className="border border-border px-3 py-2 text-sm">

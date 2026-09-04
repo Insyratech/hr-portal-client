@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { Meta } from '@/components/layout/meta';
+import { NavSectionTitle } from '@/components/layout/nav-section-title';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import {
@@ -85,7 +86,7 @@ function NavGroup({
   );
 }
 
-/** Major sidebar block: Managerial responsibility vs Employee. */
+/** Major sidebar block: Managerial responsibility vs Employee Features. */
 function NavSection({
   title,
   collapsed,
@@ -100,7 +101,7 @@ function NavSection({
       {collapsed ? (
         <div className="mx-auto h-px w-6 bg-border" aria-hidden />
       ) : (
-        <p className="px-3 text-[11px] font-medium uppercase tracking-[0.16em] text-foreground">{title}</p>
+        <NavSectionTitle>{title}</NavSectionTitle>
       )}
       <div className="space-y-5">{children}</div>
     </section>
@@ -200,7 +201,7 @@ export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'
                 <NavLinks items={MY_PROJECT_NAV} collapsed={collapsed} />
               </NavSection>
             ) : null}
-            <NavSection title="Employee" collapsed={collapsed}>
+            <NavSection title="Employee Features" collapsed={collapsed}>
               <EmployeeNavGroups collapsed={collapsed} />
             </NavSection>
           </>

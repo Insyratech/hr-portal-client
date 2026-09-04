@@ -15,7 +15,9 @@ import { useCreateGrievanceMutation, useGetEmployeeQuery, useGetMeQuery } from '
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-[0.12em] text-muted">{label}</dt>
+      <dt className="text-xs uppercase tracking-[0.12em] text-meta" style={{ color: 'var(--meta)' }}>
+        {label}
+      </dt>
       <dd className="mt-1 text-sm">{value}</dd>
     </div>
   );

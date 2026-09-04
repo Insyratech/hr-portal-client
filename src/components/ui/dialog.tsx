@@ -51,7 +51,8 @@ export function DialogContent({
 export function DialogTitle({ className, children }: { className?: string; children: ReactNode }) {
   return (
     <DialogPrimitive.Title
-      className={cn('pr-10 text-xs uppercase tracking-[0.2em] text-muted', className)}
+      className={cn('pr-10 text-xs uppercase tracking-[0.2em] text-meta', className)}
+      style={{ color: 'var(--meta)' }}
     >
       {children}
     </DialogPrimitive.Title>

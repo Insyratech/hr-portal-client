@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
+import { Meta } from '@/components/layout/meta';
+import { NavSectionTitle } from '@/components/layout/nav-section-title';
 import { Icon } from '@/components/ui/icon';
 import type { NavMenuSection } from '@/components/layout/shell-nav-items';
 import type { NavItem } from '@/constants/nav';
@@ -110,7 +112,7 @@ export function NavHamburgerMenu({
         )}
       >
         <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2.5">
-          <span className="text-xs font-medium uppercase tracking-[0.16em] text-muted">{panelTitle}</span>
+          <Meta className="font-medium">{panelTitle}</Meta>
           <button
             type="button"
             aria-label="Close menu"
@@ -128,16 +130,12 @@ export function NavHamburgerMenu({
                   className={cn(sectionIndex > 0 && 'mt-2 border-t border-border pt-2')}
                   aria-label={section.title}
                 >
-                  <p className="px-3 pb-1 text-[11px] font-medium uppercase tracking-[0.16em] text-foreground">
-                    {section.title}
-                  </p>
+                  <NavSectionTitle className="pb-1">{section.title}</NavSectionTitle>
                   {section.groups.map((group) => {
                     if (group.items.length === 0) return null;
                     return (
                       <div key={group.label ?? section.title} className="space-y-0.5">
-                        {group.label ? (
-                          <p className="px-3 pt-2 text-[11px] uppercase tracking-[0.12em] text-muted">{group.label}</p>
-                        ) : null}
+                        {group.label ? <Meta className="px-3 pt-2">{group.label}</Meta> : null}
                         <ul>
                           {group.items.map((item) => (
                             <li key={item.href}>

@@ -91,7 +91,9 @@ export function DirectoryEditRequestPanel({
 
   return (
     <div className="mb-6 max-w-2xl space-y-3 border border-border bg-surface/40 p-4">
-      <p className="text-xs uppercase tracking-[0.12em] text-muted">Directory edit</p>
+      <p className="text-xs uppercase tracking-[0.12em] text-meta" style={{ color: 'var(--meta)' }}>
+        Directory edit
+      </p>
       {message ? <p className="text-sm text-muted">{message}</p> : null}
       {open?.fieldHints ? <p className="text-sm">Hints: {open.fieldHints}</p> : null}
 

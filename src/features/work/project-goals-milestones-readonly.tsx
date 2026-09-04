@@ -2,6 +2,7 @@
 
 import { PageLoading } from '@/components/ui/page-loading';
 import { useGetProjectPlanQuery } from '@/store/api/api';
+import { MilestoneDescriptionSnippet } from '@/features/work/milestone-description';
 import {
   formatMilestoneDates,
   MilestoneStatusChip,
@@ -24,7 +25,9 @@ export function ProjectGoalsMilestonesReadonly({ projectId }: { projectId: strin
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-sm font-medium text-foreground">{goal.name}</h3>
             {goal.isPrimary ? (
-              <span className="text-xs uppercase tracking-[0.12em] text-muted">Primary goal</span>
+              <span className="text-xs uppercase tracking-[0.12em] text-meta" style={{ color: 'var(--meta)' }}>
+                Primary goal
+              </span>
             ) : null}
           </div>
           {goal.description ? <p className="mt-2 text-sm text-muted">{goal.description}</p> : null}
@@ -37,9 +40,10 @@ export function ProjectGoalsMilestonesReadonly({ projectId }: { projectId: strin
                   key={milestone.id}
                   className="flex flex-wrap items-start justify-between gap-2 rounded border border-border px-3 py-2 text-sm"
                 >
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground">{milestone.name}</p>
                     <p className="mt-0.5 text-xs text-muted">{formatMilestoneDates(milestone)}</p>
+                    <MilestoneDescriptionSnippet milestone={milestone} />
                   </div>
                   <MilestoneStatusChip status={milestone.status} />
                 </li>
