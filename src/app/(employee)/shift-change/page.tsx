@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/dashboard/data-table';
 import { StatusBadge } from '@/components/dashboard/status-badge';
@@ -67,7 +68,12 @@ export default function ShiftChangePage() {
 
       {(leadInbox?.data ?? []).length > 0 ? (
         <section className="space-y-4">
-          <h2 className="text-sm font-medium uppercase tracking-[0.2em] text-muted">Lead inbox</h2>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-medium uppercase tracking-[0.2em] text-muted">Lead inbox</h2>
+            <Link href="/work/team-permissions" className="text-sm text-muted hover:text-foreground">
+              Open Team permissions
+            </Link>
+          </div>
           {(leadInbox?.data ?? []).map((row) => (
             <ShiftChangeLeadReviewCard key={row.id} row={row} />
           ))}

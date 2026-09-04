@@ -35,7 +35,7 @@ export function pathForNotification(item: NotificationItem, roles: string[]): st
     const leadRequest =
       /project lead approval/i.test(item.title) || /project-lead approval/i.test(item.message);
     if (leadRequest) {
-      return `/leave/lead/${encodeURIComponent(id)}`;
+      return '/work/team-permissions';
     }
     return leaveApprovalPath(roles, id);
   }
@@ -87,8 +87,8 @@ export function pathForNotification(item: NotificationItem, roles: string[]): st
   if (item.referenceType === 'shift_change_request') {
     const leadRequest =
       /project lead approval/i.test(item.title) || /project-lead approval/i.test(item.message);
-    if (leadRequest && id) {
-      return `/shift-change/lead/${encodeURIComponent(id)}`;
+    if (leadRequest) {
+      return '/work/team-permissions';
     }
     if (hrManager) {
       return id ? `/hr/shift-changes?id=${encodeURIComponent(id)}` : '/hr/shift-changes';

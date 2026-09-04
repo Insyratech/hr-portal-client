@@ -61,6 +61,7 @@ import type {
   LeadProjectSummary,
   LeadProjectDesk,
   LeadDailyWorkBoard,
+  LeadPermissionsBoard,
   ProjectStatusUpdate,
   ProjectUpdateTopic,
   ProjectPlan,
@@ -511,7 +512,7 @@ export const api = createApi({
     }),
     acceptLeaveProjectLead: builder.mutation<ApiSuccess<LeaveApplication>, string>({
       query: (id) => ({ url: `/api/v1/leaves/${id}/project-lead-accept`, method: 'POST' }),
-      invalidatesTags: ['LeaveApplications', 'LeaveBalances', 'Notifications'],
+      invalidatesTags: ['LeaveApplications', 'LeaveBalances', 'Notifications', 'Work'],
     }),
     getLeaveProjects: builder.query<ApiSuccess<LeaveProjectOption[]>, void>({
       query: () => '/api/v1/leave-projects',
@@ -609,7 +610,7 @@ export const api = createApi({
     }),
     acceptShiftChangeProjectLead: builder.mutation<ApiSuccess<ShiftChangeRequest>, string>({
       query: (id) => ({ url: `/api/v1/shift-changes/${id}/project-lead-accept`, method: 'POST' }),
-      invalidatesTags: ['ShiftChanges', 'Notifications'],
+      invalidatesTags: ['ShiftChanges', 'Notifications', 'Work'],
     }),
     approveShiftChange: builder.mutation<
       ApiSuccess<ShiftChangeRequest>,
@@ -836,6 +837,10 @@ export const api = createApi({
         },
       }),
       providesTags: ['Work'],
+    }),
+    getLeadPermissions: builder.query<ApiSuccess<LeadPermissionsBoard>, void>({
+      query: () => '/api/v1/work/lead/permissions',
+      providesTags: ['Work', 'LeaveApplications', 'ShiftChanges'],
     }),
     getProjectStatusUpdates: builder.query<ApiSuccess<ProjectStatusUpdate[]>, string>({
       query: (projectId) => `/api/v1/work/projects/${projectId}/updates`,
@@ -1550,6 +1555,7 @@ export const {
   useGetLeadProjectsQuery,
   useGetLeadProjectDeskQuery,
   useGetLeadDailyWorkQuery,
+  useGetLeadPermissionsQuery,
   useGetProjectStatusUpdatesQuery,
   useCreateProjectStatusUpdateMutation,
   useGetProjectMembersQuery,

@@ -303,6 +303,25 @@ export type LeadDailyWorkBoard = {
   entries: LeadDailyWorkEntry[];
 };
 
+export type LeadPermissionHistoryItem = {
+  id: string;
+  kind: 'leave' | 'shift_change';
+  employeeName: string;
+  projectName: string | null;
+  projectCode: string | null;
+  summary: string;
+  detail: string | null;
+  actedAt: string;
+  requestStatus: string;
+};
+
+export type LeadPermissionsBoard = {
+  pendingLeaves: LeaveApplication[];
+  pendingShiftChanges: ShiftChangeRequest[];
+  pendingPrioritiesCount: number;
+  history: LeadPermissionHistoryItem[];
+};
+
 export type LeadProjectDesk = {
   project: WorkProject & {
     leadEmployeeId: string;

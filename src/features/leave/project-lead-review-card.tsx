@@ -12,9 +12,13 @@ import type { LeaveApplication } from '@/types/api';
 export function ProjectLeadReviewCard({
   application,
   highlight = false,
+  backHref = '/leave',
+  backLabel = 'Back to leave',
 }: {
   application: LeaveApplication;
   highlight?: boolean;
+  backHref?: string;
+  backLabel?: string;
 }) {
   const { data: me } = useGetMeQuery();
   const [acceptLead, { isLoading }] = useAcceptLeaveProjectLeadMutation();
@@ -80,8 +84,8 @@ export function ProjectLeadReviewCard({
           {isLoading ? 'Approving…' : 'Approve as project lead'}
         </Button>
       ) : (
-        <Link href="/leave" className="mt-4 inline-block text-sm text-muted hover:text-foreground">
-          Back to leave
+        <Link href={backHref} className="mt-4 inline-block text-sm text-muted hover:text-foreground">
+          {backLabel}
         </Link>
       )}
     </div>

@@ -27,6 +27,7 @@ export const EMPLOYEE_WORK_SUBNAV: readonly NavItem[] = [
 export const MY_PROJECT_NAV: readonly NavItem[] = [
   { href: '/work/projects', label: 'Project desk', icon: 'building' },
   { href: '/work/priorities/review', label: 'Team priorities', icon: 'users' },
+  { href: '/work/team-permissions', label: 'Team permissions', icon: 'shield' },
 ];
 
 /**
@@ -260,6 +261,9 @@ export function isMyProjectNavActive(pathname: string, href: string): boolean {
   if (href === '/work/priorities/review') {
     return pathname === href || pathname.startsWith('/work/priorities/review');
   }
+  if (href === '/work/team-permissions') {
+    return pathname === href || pathname.startsWith('/work/team-permissions');
+  }
   return pathname === href;
 }
 
@@ -268,6 +272,8 @@ export function isMyProjectArea(pathname: string): boolean {
     pathname === '/work/projects' ||
     pathname.startsWith('/work/projects/') ||
     pathname === '/work/priorities/review' ||
-    pathname.startsWith('/work/priorities/review')
+    pathname.startsWith('/work/priorities/review') ||
+    pathname === '/work/team-permissions' ||
+    pathname.startsWith('/work/team-permissions/')
   );
 }
