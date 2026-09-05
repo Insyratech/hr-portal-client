@@ -88,8 +88,9 @@ function CsoWeeklyUpdatesInner() {
     <>
       <PageHeader kicker="Work" title="Weekly work updates" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
-        Master archive for this week’s employee PPTs. Download any file, then share the whole package with
-        General Manager in one click. Re-share anytime — each share is kept on the timeline.
+        Master archive for this week’s employee PPTs (max 15 MB). Download any file still in storage, then share the
+        package with General Manager. After GM downloads, emails, or deletes a file, storage is cleared but history
+        remains.
       </p>
 
       {isLoading ? <PageLoading compact message="Loading…" /> : null}
@@ -186,7 +187,7 @@ function CsoWeeklyUpdatesInner() {
                       </div>
                       <div className="flex items-center gap-3">
                         <StatusBadge status={statusTone(person.status)} label={statusLabel(person.status)} />
-                        {person.update ? (
+                        {person.update && person.update.fileAvailable !== false ? (
                           <Button
                             type="button"
                             size="sm"
@@ -195,6 +196,8 @@ function CsoWeeklyUpdatesInner() {
                           >
                             Download
                           </Button>
+                        ) : person.update ? (
+                          <span className="text-xs text-muted">Removed from storage</span>
                         ) : null}
                       </div>
                     </li>

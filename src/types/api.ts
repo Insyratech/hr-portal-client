@@ -413,6 +413,10 @@ export type WeeklyWorkUpdate = {
   uploadCount: number;
   submittedAt: string;
   late: boolean;
+  fileAvailable?: boolean;
+  fileRemovedAt?: string | null;
+  fileRemovedReason?: 'downloaded' | 'emailed' | 'deleted' | null;
+  emailRecipient?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -421,7 +425,7 @@ export type WeeklyWorkUpdateBoard = {
   week: {
     start: string;
     end: string;
-    saturday: string;
+    deadlineDate: string;
     deadlineLabel: string;
     lateAfterLabel: string;
   };
@@ -446,13 +450,87 @@ export type WeeklyWorkUpdateUploadSession = {
   bucket: string;
 };
 
+export type JcPptStatus = 'uploaded' | 'with_gm' | 'downloaded' | 'emailed' | 'deleted';
+
+export type JcPptItem = {
+  id: string;
+  employeeId: string;
+  employeeName?: string;
+  originalFileName: string;
+  systemFileName: string;
+  contentType: string;
+  sizeBytes: number;
+  status: JcPptStatus;
+  fileAvailable: boolean;
+  uploadedAt: string;
+  transferredAt: string | null;
+  transferredBy: string | null;
+  transferredByName: string | null;
+  consumedAt: string | null;
+  consumedBy: string | null;
+  consumedByName: string | null;
+  emailRecipient: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type JcPptEvent = {
+  id: string;
+  jcPptId: string;
+  actorId: string | null;
+  actorName: string | null;
+  eventType: string;
+  note: string;
+  createdAt: string;
+};
+
+export type JcPptEmployeeBoard = {
+  maxBytes: number;
+  pending: JcPptItem | null;
+  items: JcPptItem[];
+  events: JcPptEvent[];
+};
+
+export type JcPptUploadSession = {
+  item: JcPptItem;
+  uploadUrl: string;
+  token: string;
+  path: string;
+  bucket: string;
+};
+
+export type JcPptCsoBoard = {
+  counts: { pending: number; withGm: number; completed: number; total: number };
+  pending: JcPptItem[];
+  withGm: JcPptItem[];
+  history: JcPptItem[];
+  events: JcPptEvent[];
+};
+
+export type JcPptGmBoard = {
+  counts: { inbox: number; completed: number; total: number };
+  inbox: JcPptItem[];
+  history: JcPptItem[];
+  events: JcPptEvent[];
+};
+
+export type JcPptConsumeResult = {
+  item: JcPptItem;
+  download: { fileName: string; contentType: string; contentBase64: string } | null;
+};
+
+export type WeeklyPptConsumeResult = {
+  update: WeeklyWorkUpdate;
+  download: { fileName: string; contentType: string; contentBase64: string } | null;
+};
+
 export type WeeklyPptPersonStatus = 'on_time' | 'late' | 'missing' | 'pending';
 
 export type WeeklyPptAdminBoard = {
   week: {
     start: string;
     end: string;
-    saturday: string;
+    deadlineDate: string;
     deadlineLabel: string;
     lateAfterLabel: string;
   };
@@ -492,11 +570,16 @@ export type WeeklyPptSharePackage = {
   sharedAt: string;
   fileCount: number;
   note: string;
+  availableCount: number;
   files: {
     updateId: string;
     systemFileName: string;
     late: boolean;
     employeeName: string;
+    fileAvailable: boolean;
+    fileRemovedAt: string | null;
+    fileRemovedReason: 'downloaded' | 'emailed' | 'deleted' | null;
+    emailRecipient: string | null;
   }[];
 };
 

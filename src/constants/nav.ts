@@ -19,6 +19,7 @@ export const EMPLOYEE_WORK_SUBNAV: readonly NavItem[] = [
   { href: '/work', label: 'Today', icon: 'clock' },
   { href: '/work/priorities', label: 'Priorities', icon: 'grid' },
   { href: '/work/weekly-update', label: 'My weekly update', icon: 'file' },
+  { href: '/work/jc', label: 'JC', icon: 'file' },
   { href: '/work/trends', label: 'Trends', icon: 'overview' },
   { href: '/work/history', label: 'History', icon: 'calendar' },
 ];
@@ -164,6 +165,7 @@ export const GM_LEAVE_NAV: readonly NavItem[] = [
 
 export const GM_WORK_NAV: readonly NavItem[] = [
   { href: '/gm/weekly-updates', label: 'Shared weekly updates', icon: 'file' },
+  { href: '/gm/jc', label: 'Team JC', icon: 'file' },
 ];
 
 export const GM_NAV: readonly NavItem[] = [...GM_OVERVIEW_NAV, ...GM_ATTENDANCE_NAV, ...GM_LEAVE_NAV, ...GM_WORK_NAV];
@@ -172,6 +174,7 @@ export const CSO_WORK_NAV: readonly NavItem[] = [
   { href: '/cso/work', label: 'Team week', icon: 'calendar' },
   { href: '/cso/work/priorities', label: 'Priorities', icon: 'grid' },
   { href: '/cso/work/weekly-updates', label: 'Weekly work updates', icon: 'file' },
+  { href: '/cso/work/jc', label: 'Team JC', icon: 'file' },
   { href: '/cso/work/projects', label: 'Projects', icon: 'building' },
   { href: '/cso/work/employees', label: 'Employees', icon: 'users' },
   { href: '/cso/work/insights', label: 'Insights', icon: 'overview' },

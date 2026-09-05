@@ -75,6 +75,13 @@ import type {
   WorkHistoryMonth,
   WeeklyWorkUpdateBoard,
   WeeklyWorkUpdateUploadSession,
+  JcPptEmployeeBoard,
+  JcPptUploadSession,
+  JcPptCsoBoard,
+  JcPptGmBoard,
+  JcPptConsumeResult,
+  JcPptItem,
+  WeeklyPptConsumeResult,
   WeeklyPptAdminBoard,
   WeeklyPptGmShares,
   NotificationItem,
@@ -1153,6 +1160,98 @@ export const api = createApi({
         };
       },
     }),
+    getJcPptBoard: builder.query<ApiSuccess<JcPptEmployeeBoard>, void>({
+      query: () => '/api/v1/work/jc',
+      providesTags: ['Work'],
+    }),
+    createJcPptUpload: builder.mutation<
+      ApiSuccess<JcPptUploadSession>,
+      { fileName: string; contentType: string; sizeBytes: number }
+    >({
+      query: (body) => ({ url: '/api/v1/work/jc/upload', method: 'POST', body }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    getJcPptDownload: builder.query<ApiSuccess<{ url: string; fileName: string }>, string>({
+      query: (id) => `/api/v1/work/jc/${id}/download`,
+    }),
+    getJcPptCsoBoard: builder.query<ApiSuccess<JcPptCsoBoard>, void>({
+      query: () => '/api/v1/work/jc/admin',
+      providesTags: ['Work'],
+    }),
+    getJcPptGmBoard: builder.query<ApiSuccess<JcPptGmBoard>, void>({
+      query: () => '/api/v1/work/jc/gm',
+      providesTags: ['Work'],
+    }),
+    transferJcPptToGm: builder.mutation<
+      ApiSuccess<{ item: JcPptItem; recipients: number }>,
+      string
+    >({
+      query: (id) => ({ url: `/api/v1/work/jc/${id}/transfer-to-gm`, method: 'POST' }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    getJcPptPreview: builder.query<ApiSuccess<{ url: string; fileName: string }>, string>({
+      query: (id) => `/api/v1/work/jc/${id}/preview`,
+    }),
+    gmDownloadJcPpt: builder.mutation<ApiSuccess<JcPptConsumeResult>, string>({
+      query: (id) => ({ url: `/api/v1/work/jc/${id}/gm-download`, method: 'POST' }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    gmEmailJcPpt: builder.mutation<ApiSuccess<JcPptConsumeResult>, { id: string; recipientEmail: string }>({
+      query: ({ id, recipientEmail }) => ({
+        url: `/api/v1/work/jc/${id}/gm-email`,
+        method: 'POST',
+        body: { recipientEmail },
+      }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    gmDeleteJcPpt: builder.mutation<ApiSuccess<JcPptConsumeResult>, string>({
+      query: (id) => ({ url: `/api/v1/work/jc/${id}/gm-delete`, method: 'POST' }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    gmDeleteAllJcPpts: builder.mutation<ApiSuccess<{ removed: number }>, void>({
+      query: () => ({ url: '/api/v1/work/jc/gm-delete-all', method: 'POST' }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    gmDownloadWeeklyPpt: builder.mutation<
+      ApiSuccess<WeeklyPptConsumeResult>,
+      { id: string; shareId: string }
+    >({
+      query: ({ id, shareId }) => ({
+        url: `/api/v1/work/weekly-updates/${id}/gm-download`,
+        method: 'POST',
+        body: { shareId },
+      }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    gmEmailWeeklyPpt: builder.mutation<
+      ApiSuccess<WeeklyPptConsumeResult>,
+      { id: string; shareId: string; recipientEmail: string }
+    >({
+      query: ({ id, shareId, recipientEmail }) => ({
+        url: `/api/v1/work/weekly-updates/${id}/gm-email`,
+        method: 'POST',
+        body: { shareId, recipientEmail },
+      }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    gmDeleteWeeklyPpt: builder.mutation<
+      ApiSuccess<WeeklyPptConsumeResult>,
+      { id: string; shareId: string }
+    >({
+      query: ({ id, shareId }) => ({
+        url: `/api/v1/work/weekly-updates/${id}/gm-delete`,
+        method: 'POST',
+        body: { shareId },
+      }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    gmDeleteAllWeeklyPptsInShare: builder.mutation<ApiSuccess<{ removed: number }>, string>({
+      query: (shareId) => ({
+        url: `/api/v1/work/weekly-updates/shares/${shareId}/gm-delete-all`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
     createWorkProject: builder.mutation<
       ApiSuccess<WorkProject>,
       { name: string; code: string; leadEmployeeId: string; employeeIds?: string[] }
@@ -1590,6 +1689,21 @@ export const {
   useShareWeeklyPptToGmMutation,
   useCreateWeeklyWorkUpdateUploadMutation,
   useLazyGetWeeklyWorkUpdateDownloadQuery,
+  useGetJcPptBoardQuery,
+  useCreateJcPptUploadMutation,
+  useLazyGetJcPptDownloadQuery,
+  useGetJcPptCsoBoardQuery,
+  useGetJcPptGmBoardQuery,
+  useTransferJcPptToGmMutation,
+  useLazyGetJcPptPreviewQuery,
+  useGmDownloadJcPptMutation,
+  useGmEmailJcPptMutation,
+  useGmDeleteJcPptMutation,
+  useGmDeleteAllJcPptsMutation,
+  useGmDownloadWeeklyPptMutation,
+  useGmEmailWeeklyPptMutation,
+  useGmDeleteWeeklyPptMutation,
+  useGmDeleteAllWeeklyPptsInShareMutation,
   useCreateWorkProjectMutation,
   useGetAttendanceDayQuery,
   useGetAttendanceImportsQuery,

@@ -55,7 +55,7 @@ export function WeeklyUpdatePage() {
         return;
       }
       if (file.size > board.maxBytes) {
-        toast.error('File must be 1 MB or smaller.');
+        toast.error('File must be 15 MB or smaller.');
         return;
       }
       if (board.uploadsRemaining <= 0) {
@@ -66,7 +66,7 @@ export function WeeklyUpdatePage() {
         const result = await uploadWeeklyWorkUpdate(createUpload, file);
         toast.success(
           result.update.late
-            ? 'Uploaded (marked late — after Saturday 6:00 pm IST).'
+            ? 'Uploaded (marked late — after Sunday 6:00 pm IST).'
             : 'Weekly update uploaded.',
         );
         await refetch();
@@ -95,7 +95,7 @@ export function WeeklyUpdatePage() {
       <PageHeader kicker="Work" title="My weekly update" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
         Upload one PowerPoint that explains what you did this week. Deadline{' '}
-        <span className="font-medium text-foreground">Saturday 23:59 IST</span>. After Saturday 6:00 pm IST the
+        <span className="font-medium text-foreground">Sunday 23:59 IST</span>. After Sunday 6:00 pm IST the
         upload is flagged late. You can replace once (2 uploads max; the second deletes the first).
       </p>
 
@@ -120,9 +120,13 @@ export function WeeklyUpdatePage() {
                   label={board.current.late ? 'Late' : 'On time'}
                 />
                 <span className="font-medium">{board.current.systemFileName}</span>
-                <button type="button" className="underline text-muted hover:text-foreground" onClick={() => onDownload(board.current!.id)}>
-                  Download
-                </button>
+                {board.current.fileAvailable !== false ? (
+                  <button type="button" className="underline text-muted hover:text-foreground" onClick={() => onDownload(board.current!.id)}>
+                    Download
+                  </button>
+                ) : (
+                  <span className="text-xs text-muted">File removed from storage (audit kept)</span>
+                )}
               </div>
             ) : (
               <p className="mt-4 text-sm text-muted">No PPT uploaded for this week yet.</p>
@@ -148,7 +152,7 @@ export function WeeklyUpdatePage() {
             }}
           >
             <Meta>Upload</Meta>
-            <p className="mt-3 text-sm text-muted">Drag and drop a .ppt / .pptx here (max 1 MB), or choose a file.</p>
+            <p className="mt-3 text-sm text-muted">Drag and drop a .ppt / .pptx here (max 15 MB), or choose a file.</p>
             <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
               <label className="inline-flex cursor-pointer">
                 <input
@@ -198,7 +202,7 @@ export function WeeklyUpdatePage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <StatusBadge status={statusTone(week.status)} label={statusLabel(week.status)} />
-                    {week.update ? (
+                    {week.update && week.update.fileAvailable !== false ? (
                       <Button type="button" size="sm" variant="ghost" onClick={() => onDownload(week.update!.id)}>
                         Download
                       </Button>

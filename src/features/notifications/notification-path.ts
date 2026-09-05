@@ -105,7 +105,8 @@ export function pathForNotification(item: NotificationItem, roles: string[]): st
     item.referenceType === 'weekly_work_update' ||
     item.referenceType === 'weekly_ppt_desk' ||
     item.referenceType === 'weekly_ppt_share' ||
-    item.referenceType === 'work_retention'
+    item.referenceType === 'work_retention' ||
+    item.referenceType === 'jc_ppt'
   ) {
     if (superAdmin && item.referenceType === 'work_retention') return '/super-admin/settings';
     if (item.referenceType === 'weekly_ppt_share') {
@@ -118,6 +119,11 @@ export function pathForNotification(item: NotificationItem, roles: string[]): st
     }
     if (item.referenceType === 'weekly_work_update') {
       return '/work/weekly-update';
+    }
+    if (item.referenceType === 'jc_ppt') {
+      if (gm) return '/gm/jc';
+      if (cso) return '/cso/work/jc';
+      return '/work/jc';
     }
     if (item.referenceType === 'weekly_priority' || item.referenceType === 'weekly_plan') {
       if (isLeadPriorityReview(item) && id) {

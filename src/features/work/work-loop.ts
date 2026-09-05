@@ -11,6 +11,7 @@ const WORK_LOOP_HREFS = new Set([
   '/work',
   '/work/priorities',
   '/work/weekly-update',
+  '/work/jc',
   '/work/trends',
   '/work/history',
 ]);
