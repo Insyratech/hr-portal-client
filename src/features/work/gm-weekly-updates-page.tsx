@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import { downloadBase64File } from '@/features/work/jc-helpers';
+import { weeklyPptTimingLabel, weeklyPptTimingTone } from '@/features/work/weekly-ppt-status';
 import {
   useGetWeeklyPptGmSharesQuery,
   useGmDeleteAllWeeklyPptsInShareMutation,
@@ -252,7 +253,12 @@ function GmWeeklyUpdatesInner() {
                                     ) : null}
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    {file.late ? <StatusBadge status="rejected" label="Late" /> : null}
+                                    {file.timing === 'on_time' ? null : (
+                                      <StatusBadge
+                                        status={weeklyPptTimingTone(file.timing)}
+                                        label={weeklyPptTimingLabel(file.timing)}
+                                      />
+                                    )}
                                     {file.fileAvailable ? (
                                       <StatusBadge status="pending" label="In storage" />
                                     ) : (

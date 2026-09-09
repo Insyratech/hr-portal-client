@@ -13,6 +13,12 @@ import { skipsWorkApprovalLoop } from '@/features/work/work-loop';
 import { WorkLoopExcludedNotice } from '@/features/work/work-loop-excluded';
 import { uploadWeeklyWorkUpdate } from '@/features/work/upload-weekly-update';
 import {
+  weeklyPptStatusLabel,
+  weeklyPptStatusTone,
+  weeklyPptTimingLabel,
+  weeklyPptTimingTone,
+} from '@/features/work/weekly-ppt-status';
+import {
   useCreateWeeklyWorkUpdateUploadMutation,
   useGetWeeklyWorkUpdateBoardQuery,
   useLazyGetWeeklyWorkUpdateDownloadQuery,
@@ -20,19 +26,6 @@ import {
 import { useAppSelector } from '@/store/hooks';
 
 const ACCEPT = '.ppt,.pptx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation';
-
-function statusTone(status: string): 'approved' | 'pending' | 'rejected' {
-  if (status === 'on_time') return 'approved';
-  if (status === 'late' || status === 'missing') return 'rejected';
-  return 'pending';
-}
-
-function statusLabel(status: string): string {
-  if (status === 'on_time') return 'On time';
-  if (status === 'late') return 'Late';
-  if (status === 'missing') return 'Missing';
-  return 'Pending';
-}
 
 export function WeeklyUpdatePage() {
   const toast = useToast();
@@ -64,11 +57,13 @@ export function WeeklyUpdatePage() {
       }
       try {
         const result = await uploadWeeklyWorkUpdate(createUpload, file);
-        toast.success(
-          result.update.late
-            ? 'Uploaded (marked late — after Sunday 6:00 pm IST).'
-            : 'Weekly update uploaded.',
-        );
+        if (result.update.timing === 'late') {
+          toast.success('Uploaded (marked late — after Sunday 11:59 pm IST).');
+        } else if (result.update.timing === 'last_hour') {
+          toast.success('Uploaded (last hour submission — still within Sunday).');
+        } else {
+          toast.success('Weekly update uploaded.');
+        }
         await refetch();
       } catch (error) {
         toast.error(apiErrorMessage(error, 'Could not upload the weekly PPT.'));
@@ -95,8 +90,9 @@ export function WeeklyUpdatePage() {
       <PageHeader kicker="Work" title="My weekly update" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
         Upload one PowerPoint that explains what you did this week. Deadline{' '}
-        <span className="font-medium text-foreground">Sunday 23:59 IST</span>. After Sunday 6:00 pm IST the
-        upload is flagged late. You can replace once (2 uploads max; the second deletes the first).
+        <span className="font-medium text-foreground">Sunday 23:59 IST</span>. Uploads from 11:00 pm Sunday are
+        tagged a last hour submission; only uploads after Sunday count as late. You can replace once (2 uploads
+        max; the second deletes the first).
       </p>
 
       {isLoading ? <PageLoading compact message="Loading…" /> : null}
@@ -110,14 +106,14 @@ export function WeeklyUpdatePage() {
               {board.week.start} → {board.week.end}
             </p>
             <p className="mt-2 text-sm text-muted">
-              Deadline {board.week.deadlineLabel}. Late after {board.week.lateAfterLabel}. Uploads left:{' '}
-              {board.uploadsRemaining} of {board.maxUploads}.
+              Deadline {board.week.deadlineLabel}. Last hour submission from {board.week.lastHourAfterLabel}.
+              Uploads left: {board.uploadsRemaining} of {board.maxUploads}.
             </p>
             {board.current ? (
               <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
                 <StatusBadge
-                  status={board.current.late ? 'rejected' : 'approved'}
-                  label={board.current.late ? 'Late' : 'On time'}
+                  status={weeklyPptTimingTone(board.current.timing)}
+                  label={weeklyPptTimingLabel(board.current.timing)}
                 />
                 <span className="font-medium">{board.current.systemFileName}</span>
                 {board.current.fileAvailable !== false ? (
@@ -172,10 +168,14 @@ export function WeeklyUpdatePage() {
             </div>
           </section>
 
-          <section className="grid gap-4 sm:grid-cols-3">
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="border border-border bg-background p-5 shadow-card">
               <Meta>On time</Meta>
               <p className="mt-2 text-2xl font-medium">{board.stats.onTime}</p>
+            </div>
+            <div className="border border-border bg-background p-5 shadow-card">
+              <Meta>Last hour</Meta>
+              <p className="mt-2 text-2xl font-medium">{board.stats.lastHour}</p>
             </div>
             <div className="border border-border bg-background p-5 shadow-card">
               <Meta>Late</Meta>
@@ -201,7 +201,10 @@ export function WeeklyUpdatePage() {
                     ) : null}
                   </div>
                   <div className="flex items-center gap-3">
-                    <StatusBadge status={statusTone(week.status)} label={statusLabel(week.status)} />
+                    <StatusBadge
+                      status={weeklyPptStatusTone(week.status)}
+                      label={weeklyPptStatusLabel(week.status)}
+                    />
                     {week.update && week.update.fileAvailable !== false ? (
                       <Button type="button" size="sm" variant="ghost" onClick={() => onDownload(week.update!.id)}>
                         Download

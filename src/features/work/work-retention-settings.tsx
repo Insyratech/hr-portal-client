@@ -17,6 +17,9 @@ const selectClass =
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
+/** Backend falls back to these when a column is null — keep in sync with ist-clock.ts. */
+const DEFAULT_REMINDER_HOURS = { first: 17, second: 20, third: 23 } as const;
+
 function hourLabel(hour: number): string {
   return `${String(hour).padStart(2, '0')}:00 IST`;
 }
@@ -36,7 +39,8 @@ export function WorkRetentionSettings() {
     const settings = data.data;
     setForm({
       reminderHour: settings.reminderHour,
-      secondReminderHour: settings.secondReminderHour ?? 22,
+      secondReminderHour: settings.secondReminderHour ?? DEFAULT_REMINDER_HOURS.second,
+      thirdReminderHour: settings.thirdReminderHour ?? DEFAULT_REMINDER_HOURS.third,
       retentionDays: settings.retentionDays,
       archiveBeforeDelete: settings.archiveBeforeDelete,
       notifyBeforePurge: settings.notifyBeforePurge,
@@ -61,7 +65,8 @@ export function WorkRetentionSettings() {
     try {
       await updateSettings({
         reminderHour: form.reminderHour,
-        secondReminderHour: form.secondReminderHour ?? 22,
+        secondReminderHour: form.secondReminderHour ?? DEFAULT_REMINDER_HOURS.second,
+        thirdReminderHour: form.thirdReminderHour ?? DEFAULT_REMINDER_HOURS.third,
         retentionDays: form.retentionDays,
         archiveBeforeDelete: form.archiveBeforeDelete,
         notifyBeforePurge: form.notifyBeforePurge,
@@ -79,8 +84,9 @@ export function WorkRetentionSettings() {
       <div>
         <Meta>Work reminders & retention</Meta>
         <p className="mt-2 text-sm text-muted">
-          Reminder hours use {timeZone} (IST). Point cron at the matching local windows. Monday priority reminder
-          is fixed at 16:00 IST (reminder only — submitting is not blocked after that hour). Retention is a rolling
+          Reminder hours use {timeZone} (IST). Daily update reminders go out at these three hours to anyone whose
+          priorities are approved and whose update is still missing. The Monday priority reminder is fixed at 16:00
+          IST, and the Sunday weekly-PPT reminders are fixed at 18:00, 20:00 and 22:00 IST. Retention is a rolling
           window (90 / 180 / 365 days) — never a calendar wipe.
         </p>
       </div>
@@ -104,7 +110,7 @@ export function WorkRetentionSettings() {
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-muted">Default 20:00 IST. Cron: POST /api/v1/jobs/work/daily-reminders</p>
+            <p className="mt-1 text-xs text-muted">Default 17:00 IST (first nudge of the day).</p>
           </div>
 
           <div>
@@ -112,7 +118,7 @@ export function WorkRetentionSettings() {
             <select
               id="work-second-hour"
               className={selectClass}
-              value={form.secondReminderHour ?? 22}
+              value={form.secondReminderHour ?? DEFAULT_REMINDER_HOURS.second}
               onChange={(event) => setForm({ ...form, secondReminderHour: Number(event.target.value) })}
             >
               {HOURS.map((hour) => (
@@ -121,7 +127,27 @@ export function WorkRetentionSettings() {
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-muted">Default 22:00 IST. Same job endpoint — cron must hit this hour too.</p>
+            <p className="mt-1 text-xs text-muted">Default 20:00 IST.</p>
+          </div>
+
+          <div>
+            <Label htmlFor="work-third-hour">Third daily reminder</Label>
+            <select
+              id="work-third-hour"
+              className={selectClass}
+              value={form.thirdReminderHour ?? DEFAULT_REMINDER_HOURS.third}
+              onChange={(event) => setForm({ ...form, thirdReminderHour: Number(event.target.value) })}
+            >
+              {HOURS.map((hour) => (
+                <option key={hour} value={hour}>
+                  {hourLabel(hour)}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted">
+              Default 23:00 IST. All three must be different hours. Each employee gets at most one mail per slot
+              per day.
+            </p>
           </div>
 
           <div>

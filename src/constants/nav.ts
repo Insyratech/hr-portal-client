@@ -31,6 +31,11 @@ export const MY_PROJECT_NAV: readonly NavItem[] = [
   { href: '/work/team-permissions', label: 'Team permissions', icon: 'shield' },
 ];
 
+/** Read-only project view for members who are not the project lead. */
+export const MEMBER_PROJECT_NAV: readonly NavItem[] = [
+  { href: '/work/projects', label: 'My projects', icon: 'building' },
+];
+
 /**
  * Personal employee tools for HR / GM / CSO / Finance sidebars.
  * Desktop: under the Employee major section. Mobile chips: after managerial links.

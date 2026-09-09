@@ -127,6 +127,7 @@ export type WorkSettings = {
   timeZone?: string;
   reminderHour: number;
   secondReminderHour: number | null;
+  thirdReminderHour: number | null;
   retentionDays: 90 | 180 | 365;
   archiveBeforeDelete: boolean;
   notifyBeforePurge: boolean;
@@ -264,13 +265,11 @@ export type MilestoneHistoryEntry = {
   changeReason: string;
 };
 
-export type LeadProjectSummary = {
-  id: string;
-  name: string;
-  code: string;
-  status: string;
-  leadEmployeeId: string;
+/** A project the signed-in employee belongs to. Members get read access; only the lead can edit. */
+export type MyProjectSummary = WorkProject & {
+  leadName: string | null;
   memberCount: number;
+  isLead: boolean;
 };
 
 export type ProjectUpdateTopic = 'PROGRESS' | 'RISK' | 'BLOCKER' | 'NEXT_STEPS' | 'OTHER';
@@ -401,6 +400,12 @@ export type EmployeeWorkProjects = {
   projects: WorkProject[];
 };
 
+/**
+ * How a weekly PPT landed against the Sunday deadline.
+ * `on_time` up to Sun 22:59 IST, `last_hour` Sun 23:00–23:59 IST, `late` after that.
+ */
+export type WeeklyPptTiming = 'on_time' | 'last_hour' | 'late';
+
 export type WeeklyWorkUpdate = {
   id: string;
   employeeId: string;
@@ -412,6 +417,8 @@ export type WeeklyWorkUpdate = {
   sizeBytes: number;
   uploadCount: number;
   submittedAt: string;
+  timing: WeeklyPptTiming;
+  /** Derived from `timing` — true only for submissions after Sunday 23:59 IST. */
   late: boolean;
   fileAvailable?: boolean;
   fileRemovedAt?: string | null;
@@ -427,17 +434,17 @@ export type WeeklyWorkUpdateBoard = {
     end: string;
     deadlineDate: string;
     deadlineLabel: string;
-    lateAfterLabel: string;
+    lastHourAfterLabel: string;
   };
   current: WeeklyWorkUpdate | null;
   uploadsRemaining: number;
   maxUploads: number;
   maxBytes: number;
-  stats: { onTime: number; late: number; missing: number; weeksTracked: number };
+  stats: { onTime: number; lastHour: number; late: number; missing: number; weeksTracked: number };
   weeks: {
     weekStart: string;
     weekEnd: string;
-    status: 'on_time' | 'late' | 'missing' | 'pending';
+    status: WeeklyPptPersonStatus;
     update: WeeklyWorkUpdate | null;
   }[];
 };
@@ -524,7 +531,7 @@ export type WeeklyPptConsumeResult = {
   download: { fileName: string; contentType: string; contentBase64: string } | null;
 };
 
-export type WeeklyPptPersonStatus = 'on_time' | 'late' | 'missing' | 'pending';
+export type WeeklyPptPersonStatus = WeeklyPptTiming | 'missing' | 'pending';
 
 export type WeeklyPptAdminBoard = {
   week: {
@@ -532,11 +539,12 @@ export type WeeklyPptAdminBoard = {
     end: string;
     deadlineDate: string;
     deadlineLabel: string;
-    lateAfterLabel: string;
+    lastHourAfterLabel: string;
   };
   counts: {
     expected: number;
     onTime: number;
+    lastHour: number;
     late: number;
     missing: number;
     pending: number;
@@ -574,6 +582,7 @@ export type WeeklyPptSharePackage = {
   files: {
     updateId: string;
     systemFileName: string;
+    timing: WeeklyPptTiming;
     late: boolean;
     employeeName: string;
     fileAvailable: boolean;
@@ -686,7 +695,7 @@ export type WorkBoard = {
     weekCompletionPct: number;
     approvalStatus: 'none' | 'draft' | 'awaiting' | 'needs_resubmit' | 'approved';
     approvalLabel: string;
-    pptStatus: 'on_time' | 'late' | 'missing' | 'pending';
+    pptStatus: WeeklyPptPersonStatus;
     pptLabel: string;
   }[];
 };

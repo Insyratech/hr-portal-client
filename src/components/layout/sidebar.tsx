@@ -35,7 +35,7 @@ import {
 } from '@/constants/nav';
 import { cn } from '@/lib/utils';
 import type { ShellVariant } from '@/features/auth/role-access';
-import { useIsProjectLead } from '@/features/work/project-lead';
+import { useMyProjectNavItems } from '@/features/work/my-projects';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toggleSidebar } from '@/store/slices/ui-slice';
 
@@ -156,7 +156,7 @@ function ManagerialNavGroups({
 export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'> }) {
   const collapsed = useAppSelector((state) => state.ui.sidebarCollapsed);
   const dispatch = useAppDispatch();
-  const { isProjectLead } = useIsProjectLead();
+  const projectItems = useMyProjectNavItems();
 
   return (
     <aside
@@ -196,9 +196,9 @@ export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'
             <NavSection title="Managerial responsibility" collapsed={collapsed}>
               <ManagerialNavGroups variant={variant} collapsed={collapsed} />
             </NavSection>
-            {isProjectLead ? (
+            {projectItems.length > 0 ? (
               <NavSection title="My project" collapsed={collapsed}>
-                <NavLinks items={MY_PROJECT_NAV} collapsed={collapsed} />
+                <NavLinks items={projectItems} collapsed={collapsed} />
               </NavSection>
             ) : null}
             <NavSection title="Employee Features" collapsed={collapsed}>

@@ -57,10 +57,10 @@ function employeeSection(): NavMenuSection {
   };
 }
 
-function myProjectSection(): NavMenuSection {
+function myProjectSection(items: readonly NavItem[]): NavMenuSection {
   return {
     title: 'My project',
-    groups: [{ items: MY_PROJECT_NAV }],
+    groups: [{ items }],
   };
 }
 
@@ -102,7 +102,7 @@ function managerialSection(variant: Exclude<ShellVariant, 'employee' | 'super-ad
 
 export function shellMobileNavSections(
   variant: Exclude<ShellVariant, 'employee'>,
-  isProjectLead = false,
+  myProjectItems: readonly NavItem[] = [],
 ): NavMenuSection[] {
   if (variant === 'super-admin') {
     return [
@@ -121,7 +121,7 @@ export function shellMobileNavSections(
     ];
   }
   const sections: NavMenuSection[] = [managerialSection(variant)];
-  if (isProjectLead) sections.push(myProjectSection());
+  if (myProjectItems.length > 0) sections.push(myProjectSection(myProjectItems));
   sections.push(employeeSection());
   return sections;
 }

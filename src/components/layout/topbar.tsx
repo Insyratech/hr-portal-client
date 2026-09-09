@@ -9,7 +9,6 @@ import {
   isMyProjectNavActive,
   isNavActive,
   isWorkSubnavActive,
-  MY_PROJECT_NAV,
 } from '@/constants/nav';
 import { useWorkNavGroups } from '@/components/layout/employee-work-sidebar';
 import { Meta } from '@/components/layout/meta';
@@ -23,7 +22,7 @@ import { openConfirmDialog, setCommandPaletteOpen, toggleNotificationsOpen } fro
 import { cn } from '@/lib/utils';
 import { primaryRoleCode, type ShellVariant } from '@/features/auth/role-access';
 import { roleLabel } from '@/features/employees/onboarding-roles';
-import { useIsProjectLead } from '@/features/work/project-lead';
+import { useMyProjectNavItems } from '@/features/work/my-projects';
 
 function EmployeeWorkMenu() {
   const pathname = usePathname();
@@ -129,7 +128,7 @@ function EmployeeWorkMenu() {
 
 function MyProjectMenu() {
   const pathname = usePathname();
-  const { isProjectLead } = useIsProjectLead();
+  const projectItems = useMyProjectNavItems();
   const projectActive = isMyProjectArea(pathname);
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -169,7 +168,7 @@ function MyProjectMenu() {
     };
   }, []);
 
-  if (!isProjectLead) return null;
+  if (projectItems.length === 0) return null;
 
   return (
     <div
@@ -204,7 +203,7 @@ function MyProjectMenu() {
           onMouseEnter={openMenu}
           onMouseLeave={scheduleClose}
         >
-          {MY_PROJECT_NAV.map((item) => {
+          {projectItems.map((item) => {
             const active = isMyProjectNavActive(pathname, item.href);
             return (
               <Link

@@ -58,7 +58,7 @@ import type {
   WorkPriority,
   WorkProject,
   EmployeeWorkProjects,
-  LeadProjectSummary,
+  MyProjectSummary,
   LeadProjectDesk,
   LeadDailyWorkBoard,
   LeadPermissionsBoard,
@@ -782,6 +782,7 @@ export const api = createApi({
       {
         reminderHour?: number;
         secondReminderHour?: number | null;
+        thirdReminderHour?: number | null;
         retentionDays?: 90 | 180 | 365;
         archiveBeforeDelete?: boolean;
         notifyBeforePurge?: boolean;
@@ -816,8 +817,8 @@ export const api = createApi({
       query: () => '/api/v1/work/projects',
       providesTags: ['Work'],
     }),
-    getLeadProjects: builder.query<ApiSuccess<LeadProjectSummary[]>, void>({
-      query: () => '/api/v1/work/lead/projects',
+    getMyProjects: builder.query<ApiSuccess<MyProjectSummary[]>, void>({
+      query: () => '/api/v1/work/my-projects',
       providesTags: ['Work'],
     }),
     getLeadProjectDesk: builder.query<
@@ -1651,7 +1652,7 @@ export const {
   useCreateWorkFeedbackMutation,
   useGetWorkWeekQuery,
   useGetWorkProjectsQuery,
-  useGetLeadProjectsQuery,
+  useGetMyProjectsQuery,
   useGetLeadProjectDeskQuery,
   useGetLeadDailyWorkQuery,
   useGetLeadPermissionsQuery,

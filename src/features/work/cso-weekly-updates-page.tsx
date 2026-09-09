@@ -9,24 +9,12 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
+import { weeklyPptStatusLabel, weeklyPptStatusTone } from '@/features/work/weekly-ppt-status';
 import {
   useGetWeeklyPptAdminBoardQuery,
   useLazyGetWeeklyWorkUpdateDownloadQuery,
   useShareWeeklyPptToGmMutation,
 } from '@/store/api/api';
-
-function statusTone(status: string): 'approved' | 'pending' | 'rejected' {
-  if (status === 'on_time') return 'approved';
-  if (status === 'late' || status === 'missing') return 'rejected';
-  return 'pending';
-}
-
-function statusLabel(status: string): string {
-  if (status === 'on_time') return 'On time';
-  if (status === 'late') return 'Late';
-  if (status === 'missing') return 'Missing';
-  return 'Pending';
-}
 
 function shiftWeekStart(weekStart: string, deltaWeeks: number): string {
   const date = new Date(`${weekStart}T00:00:00.000Z`);
@@ -105,7 +93,7 @@ function CsoWeeklyUpdatesInner() {
                 {board.week.start} → {board.week.end}
               </p>
               <p className="mt-1 text-xs text-muted">
-                Deadline {board.week.deadlineLabel}. Late after {board.week.lateAfterLabel}.
+                Deadline {board.week.deadlineLabel}. Last hour submission from {board.week.lastHourAfterLabel}.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -146,7 +134,7 @@ function CsoWeeklyUpdatesInner() {
             </p>
           ) : (
             <>
-              <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
                 <div className="border border-border bg-background p-4 shadow-card">
                   <Meta>Expected</Meta>
                   <p className="mt-2 text-2xl font-medium">{board.counts.expected}</p>
@@ -154,6 +142,10 @@ function CsoWeeklyUpdatesInner() {
                 <div className="border border-border bg-background p-4 shadow-card">
                   <Meta>On time</Meta>
                   <p className="mt-2 text-2xl font-medium">{board.counts.onTime}</p>
+                </div>
+                <div className="border border-border bg-background p-4 shadow-card">
+                  <Meta>Last hour</Meta>
+                  <p className="mt-2 text-2xl font-medium">{board.counts.lastHour}</p>
                 </div>
                 <div className="border border-border bg-background p-4 shadow-card">
                   <Meta>Late</Meta>
@@ -186,7 +178,10 @@ function CsoWeeklyUpdatesInner() {
                         )}
                       </div>
                       <div className="flex items-center gap-3">
-                        <StatusBadge status={statusTone(person.status)} label={statusLabel(person.status)} />
+                        <StatusBadge
+                          status={weeklyPptStatusTone(person.status)}
+                          label={weeklyPptStatusLabel(person.status)}
+                        />
                         {person.update && person.update.fileAvailable !== false ? (
                           <Button
                             type="button"

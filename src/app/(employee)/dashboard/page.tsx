@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { ActivityTimeline } from '@/components/dashboard/activity-timeline';
 import { QuickAction } from '@/components/dashboard/quick-action';
 import { PageHeader } from '@/components/layout/page-header';
@@ -21,11 +22,12 @@ import {
   useGetMyPayslipsQuery,
   useGetMyWorkPermissionsQuery,
 } from '@/store/api/api';
-import { useIsProjectLead } from '@/features/work/project-lead';
+import { useMyProjects } from '@/features/work/my-projects';
 import { remainingInMonth, remainingText } from '@/features/work-permissions/format';
 import { DashboardMyProjectsCard } from '@/features/work/dashboard-my-projects-card';
 import { DashboardWorkCard } from '@/features/work/dashboard-work-card';
 import { useAppSelector } from '@/store/hooks';
+import { greetingForHour, greetingWithName } from '@/lib/greeting';
 import { PERMISSIONS } from '@/types/permissions';
 
 const DASHBOARD_CODES = ['CL', 'SL', 'EL', 'ML'];
@@ -38,7 +40,15 @@ export default function EmployeeDashboardPage() {
   const canApplyShiftChange = useAppSelector((state) =>
     state.permissions.permissions.includes(PERMISSIONS.SHIFT_CHANGE_APPLY),
   );
-  const title = name ? `Good morning, ${name.split(' ')[0]}` : 'Good morning';
+  // Resolved after mount so the greeting follows the viewer's clock, not the server's.
+  const [greeting, setGreeting] = useState<string | null>(null);
+  useEffect(() => {
+    const apply = () => setGreeting(greetingForHour(new Date().getHours()));
+    apply();
+    const timer = setInterval(apply, 60_000);
+    return () => clearInterval(timer);
+  }, []);
+  const title = greetingWithName(greeting ?? 'Welcome', name);
   const { data: balanceData } = useGetLeaveBalancesQuery();
   const { data: attendanceData } = useGetAttendanceMeQuery();
   const { data: me } = useGetMeQuery();
@@ -46,7 +56,7 @@ export default function EmployeeDashboardPage() {
   const { data: assignedGrievances } = useGetGrievancesQuery({ scope: 'assigned' });
   const { data: permissionData } = useGetMyWorkPermissionsQuery(undefined, { skip: !canApplyPermission });
   const { data: payslipData } = useGetMyPayslipsQuery();
-  const { isProjectLead } = useIsProjectLead();
+  const { hasProjects, isProjectLead } = useMyProjects();
   const latestSlip = payslipData?.data[0];
 
   const balances = (balanceData?.data ?? [])
@@ -199,7 +209,9 @@ export default function EmployeeDashboardPage() {
           <Meta className="mb-4">Quick actions</Meta>
           <div className="flex flex-wrap gap-3">
             <QuickAction href="/work" label="My week" />
-            {isProjectLead ? <QuickAction href="/work/projects" label="Project desk" /> : null}
+            {hasProjects ? (
+              <QuickAction href="/work/projects" label={isProjectLead ? 'Project desk' : 'My projects'} />
+            ) : null}
             {isProjectLead ? <QuickAction href="/work/priorities/review" label="Team priorities" /> : null}
             <QuickAction href="/leave?apply=1" label="Apply leave" />
             {canApplyPermission ? <QuickAction href="/permission?apply=1" label="Request permission" /> : null}
