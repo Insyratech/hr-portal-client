@@ -26,11 +26,14 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
+  const hydrated = useAppSelector((state) => state.auth.hydrated);
   const user = useAppSelector((state) => state.auth.user);
   const { data, isError, isFetching } = useGetHealthQuery();
   const [message, setMessage] = useState<{ tone: StatusTone; text: string } | null>(null);
   const [pending, setPending] = useState(false);
   const apiLabel = isFetching ? 'Checking' : data?.success ? 'OK' : isError ? 'Down' : 'Idle';
+  const skipAutoEnter =
+    searchParams.get('reset') === 'success' || searchParams.get('reason') === 'credential_expired';
 
   function destination(roles: string[]): string {
     return destinationAfterLogin(roles, searchParams.get('next'));
@@ -52,14 +55,13 @@ export function LoginForm() {
     }
   }, [searchParams]);
 
+  // After SessionBootstrap restores a Supabase session, take the employee straight home.
   useEffect(() => {
-    if (searchParams.get('reset') === 'success') {
+    if (!hydrated || skipAutoEnter || !user) {
       return;
     }
-    if (user) {
-      router.replace(destination(user.roles));
-    }
-  }, [router, user, searchParams]);
+    router.replace(destination(user.roles));
+  }, [hydrated, router, searchParams, skipAutoEnter, user]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -118,9 +120,11 @@ export function LoginForm() {
     }
   }
 
+  const entering = pending || !hydrated || (Boolean(user) && !skipAutoEnter);
+
   return (
     <>
-      <LoadingOverlay open={pending || Boolean(user)} message="We are almost there…" />
+      <LoadingOverlay open={entering} message="We are almost there…" />
       <form onSubmit={onSubmit} className="space-y-6" autoComplete="off">
         <div>
           <Meta className="mb-3">HR Portal</Meta>
