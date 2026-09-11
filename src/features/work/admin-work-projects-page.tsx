@@ -18,6 +18,7 @@ import { PageLoading } from '@/components/ui/page-loading';
 import { CheckboxIdPicker } from '@/features/work/checkbox-id-picker';
 import { ProjectStatusUpdateList } from '@/features/work/project-status-updates';
 import { ProjectGoalsMilestonesReadonly } from '@/features/work/project-goals-milestones-readonly';
+import { ProjectMembersCountButton, ProjectMembersList } from '@/features/work/project-members-card';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
@@ -34,12 +35,6 @@ import type { WorkProject } from '@/types/api';
 
 const selectClass =
   'h-10 w-full rounded border border-border bg-background px-3 text-sm text-foreground shadow-card outline-none focus:border-foreground';
-
-function memberNames(project: WorkProject): string {
-  const members = project.members ?? [];
-  if (members.length === 0) return '—';
-  return members.map((member) => member.fullName).join(', ');
-}
 
 function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(' ');
@@ -117,32 +112,13 @@ function ProjectDetailDialog({
                     <dt className="text-xs uppercase tracking-[0.12em] text-muted">Status</dt>
                     <dd className="mt-1 capitalize text-foreground">{project.status}</dd>
                   </div>
-                  <div className="sm:col-span-2">
-                    <dt className="text-xs uppercase tracking-[0.12em] text-muted">Project lead</dt>
-                    <dd className="mt-1 text-foreground">{project.leadName ?? '—'}</dd>
-                  </div>
                 </dl>
                 <div>
-                  <p className="text-xs uppercase tracking-[0.12em] text-muted">
-                    Members · {project.memberCount ?? members.length}
-                  </p>
-                  {members.length === 0 ? (
-                    <p className="mt-2 text-sm text-muted">No members assigned yet.</p>
-                  ) : (
-                    <ul className="mt-2 space-y-1 rounded border border-border bg-background p-3 shadow-card">
-                      {members.map((member) => (
-                        <li
-                          key={member.employeeId}
-                          className="flex items-center justify-between gap-3 text-sm text-foreground"
-                        >
-                          <span>{member.fullName}</span>
-                          {member.employeeId === leadId ? (
-                            <span className="text-xs uppercase tracking-[0.12em] text-muted">Lead</span>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <ProjectMembersList
+                    members={members}
+                    leadEmployeeId={leadId}
+                    leadName={project.leadName}
+                  />
                 </div>
                 <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
                   {canManage && project.status === 'active' ? (
@@ -464,7 +440,16 @@ export function AdminWorkProjectsPage() {
             id: 'members',
             header: 'Members',
             cell: (row) => (
-              <span className="block max-w-md text-sm leading-relaxed">{memberNames(row)}</span>
+              <ProjectMembersCountButton
+                project={{
+                  name: row.name,
+                  code: row.code,
+                  leadEmployeeId: row.leadEmployeeId,
+                  leadName: row.leadName,
+                  members: row.members ?? [],
+                  memberCount: row.memberCount ?? row.members?.length ?? 0,
+                }}
+              />
             ),
           },
           { id: 'status', header: 'Status', cell: (row) => row.status },

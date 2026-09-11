@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/dashboard/status-badge';
 import { LeadDailyWorkPanel } from '@/features/work/lead-daily-work-panel';
 import { ProjectGoalsMilestonesManage } from '@/features/work/project-goals-milestones-manage';
 import { ProjectReportingChainSection } from '@/features/work/project-reporting-chain';
+import { ProjectMembersList } from '@/features/work/project-members-card';
 import { ProjectStatusUpdatesSection } from '@/features/work/project-status-updates';
 import { WorkDeskSection } from '@/features/work/work-desk-section';
 import { useToast } from '@/hooks/use-toast';
@@ -202,18 +203,12 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
         <ProjectGoalsMilestonesManage projectId={projectId} className="md:col-span-2" />
 
         <WorkDeskSection title={`Members · ${project.memberCount}`} bodyClassName="max-h-[28rem]">
-          <ul className="divide-y divide-border text-sm">
-            {project.members.map((member) => (
-              <li key={member.employeeId} className="flex justify-between gap-3 py-2.5">
-                <span>{member.fullName}</span>
-                {member.employeeId === project.leadEmployeeId ? (
-                  <span className="text-xs uppercase tracking-[0.12em] text-meta" style={{ color: 'var(--meta)' }}>
-                    Lead
-                  </span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          <ProjectMembersList
+            members={project.members}
+            leadEmployeeId={project.leadEmployeeId}
+            leadName={project.leadName}
+            compact
+          />
         </WorkDeskSection>
 
         <LeadDailyWorkPanel

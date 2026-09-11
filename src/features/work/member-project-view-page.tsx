@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { PageLoading } from '@/components/ui/page-loading';
 import { findMyProject, useMyProjects } from '@/features/work/my-projects';
 import { ProjectGoalsMilestonesReadonly } from '@/features/work/project-goals-milestones-readonly';
+import { ProjectMembersCountButton } from '@/features/work/project-members-card';
 
 /** Read-only project view for a member who is not the project lead. */
 export function MemberProjectViewPage({ projectId }: { projectId: string }) {
@@ -41,8 +42,19 @@ export function MemberProjectViewPage({ projectId }: { projectId: string }) {
         <div>
           <PageHeader kicker="My project" title={project.name} />
           <p className="mt-2 text-sm text-muted">
-            {project.code} · Lead · {project.leadName ?? 'Not assigned'} · {project.memberCount} member
-            {project.memberCount === 1 ? '' : 's'}
+            {project.code} · Lead · {project.leadName ?? 'Not assigned'} ·{' '}
+            <ProjectMembersCountButton
+              project={{
+                name: project.name,
+                code: project.code,
+                leadEmployeeId: project.leadEmployeeId,
+                leadName: project.leadName,
+                members: project.members,
+                memberCount: project.memberCount,
+              }}
+            >
+              {project.memberCount} member{project.memberCount === 1 ? '' : 's'}
+            </ProjectMembersCountButton>
           </p>
         </div>
         <Button asChild type="button" variant="outline" size="sm">

@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import { useTheme } from '@/components/theme-provider';
 import { CHART, CHART_SERIES, chartTooltipStyle } from '@/features/reports/chart-theme';
+import { ProjectMembersCountButton } from '@/features/work/project-members-card';
 import {
   useGetCompaniesQuery,
   useGetEmployeesQuery,
@@ -553,7 +554,22 @@ export function SuperAdminDashboard() {
               cell: (row) => <StatusBadge status={projectStatusTone(row.status)} label={row.status} />,
             },
             { id: 'lead', header: 'Lead', cell: (row) => row.leadName ?? '—' },
-            { id: 'members', header: 'Members', cell: (row) => String(row.memberCount) },
+            {
+              id: 'members',
+              header: 'Members',
+              cell: (row) => (
+                <ProjectMembersCountButton
+                  project={{
+                    name: row.name,
+                    code: row.code,
+                    leadEmployeeId: row.leadEmployeeId,
+                    leadName: row.leadName,
+                    members: row.members,
+                    memberCount: row.memberCount,
+                  }}
+                />
+              ),
+            },
             {
               id: 'milestone',
               header: 'Active milestone',

@@ -5,6 +5,7 @@ import { DataTable } from '@/components/dashboard/data-table';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import { useMyProjects } from '@/features/work/my-projects';
+import { ProjectMembersCountButton } from '@/features/work/project-members-card';
 
 export function MyProjectsPage() {
   const { projects, isLoading, isProjectLead } = useMyProjects();
@@ -15,7 +16,8 @@ export function MyProjectsPage() {
       <p className="max-w-2xl text-sm text-muted">
         Every active project you are part of. On projects you lead, open the desk to post status updates, see
         members, this week’s priorities, and related daily work. On the others you have read access to the goals
-        and milestones the project lead maintains.
+        and milestones the project lead maintains. Click a member count to see who is on the project and who leads
+        it.
       </p>
       <DataTable
         columns={[
@@ -23,7 +25,22 @@ export function MyProjectsPage() {
           { id: 'name', header: 'Name', cell: (row) => row.name },
           { id: 'role', header: 'My role', cell: (row) => (row.isLead ? 'Lead' : 'Member') },
           { id: 'lead', header: 'Project lead', cell: (row) => row.leadName ?? '—' },
-          { id: 'members', header: 'Members', cell: (row) => String(row.memberCount) },
+          {
+            id: 'members',
+            header: 'Members',
+            cell: (row) => (
+              <ProjectMembersCountButton
+                project={{
+                  name: row.name,
+                  code: row.code,
+                  leadEmployeeId: row.leadEmployeeId,
+                  leadName: row.leadName,
+                  members: row.members,
+                  memberCount: row.memberCount,
+                }}
+              />
+            ),
+          },
           {
             id: 'open',
             header: '',

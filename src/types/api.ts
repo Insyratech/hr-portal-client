@@ -269,6 +269,7 @@ export type MilestoneHistoryEntry = {
 export type MyProjectSummary = WorkProject & {
   leadName: string | null;
   memberCount: number;
+  members: WorkProjectMember[];
   isLead: boolean;
 };
 
@@ -1365,6 +1366,7 @@ export type ReportsOverview = {
       leadEmployeeId: string | null;
       leadName: string | null;
       memberCount: number;
+      members: WorkProjectMember[];
       activeMilestoneName: string | null;
     }[];
     byStatus: { status: string; count: number }[];
