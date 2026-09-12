@@ -45,10 +45,3 @@ export function leaveBalanceToneStroke(tone: LeaveBalanceTone): string {
       return 'var(--warning)';
   }
 }
-
-export function leaveRemainingPercent(available: number, allocated: number): number {
-  const remaining = Math.max(0, Number(available) || 0);
-  const total = Math.max(0, Number(allocated) || 0);
-  if (total <= 0) return remaining > 0 ? 100 : 0;
-  return Math.min(100, Math.round((remaining / total) * 100));
-}
