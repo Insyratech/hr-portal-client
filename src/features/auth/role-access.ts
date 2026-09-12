@@ -107,6 +107,7 @@ function isEmployeeWorkspacePath(pathname: string): boolean {
     pathname.startsWith('/permission') ||
     pathname.startsWith('/shift-change') ||
     pathname.startsWith('/attendance') ||
+    pathname.startsWith('/schedule') ||
     pathname.startsWith('/payslips') ||
     pathname.startsWith('/more') ||
     pathname.startsWith('/grievance') ||

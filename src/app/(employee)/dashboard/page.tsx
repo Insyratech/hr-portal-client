@@ -26,6 +26,7 @@ import { useMyProjects } from '@/features/work/my-projects';
 import { remainingInMonth, remainingText } from '@/features/work-permissions/format';
 import { DashboardMyProjectsCard } from '@/features/work/dashboard-my-projects-card';
 import { DashboardWorkCard } from '@/features/work/dashboard-work-card';
+import { DashboardScheduleCard } from '@/features/schedule/dashboard-schedule-card';
 import { useAppSelector } from '@/store/hooks';
 import { greetingForHour, greetingWithName } from '@/lib/greeting';
 import { PERMISSIONS } from '@/types/permissions';
@@ -126,6 +127,8 @@ export default function EmployeeDashboardPage() {
 
         <LeaveBalanceCard items={balances} />
 
+        <DashboardScheduleCard />
+
         {assignedCases.length > 0 ? (
           <section className="space-y-4 lg:col-span-2">
             <div className="flex items-baseline justify-between gap-3">
@@ -219,6 +222,7 @@ export default function EmployeeDashboardPage() {
               <QuickAction href="/shift-change" label="Request for shift change" />
             ) : null}
             <QuickAction href="/attendance" label="Attendance" />
+            <QuickAction href="/schedule" label="Shift & calendar" />
             <QuickAction href="/payslips" label="Payslips" />
             <QuickAction href="/grievance" label="Grievance" />
             <QuickAction href="/policies" label="Policies" />

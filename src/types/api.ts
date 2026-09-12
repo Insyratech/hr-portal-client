@@ -1126,6 +1126,37 @@ export type WorkWeek = {
   effectiveTo: string | null;
 };
 
+/** Signed-in employee's shift and working-week assignments (self-scoped). */
+export type MyScheduleShift = {
+  id: string;
+  shiftId: string;
+  shiftName: string;
+  startTime: string | null;
+  endTime: string | null;
+  flexible: boolean;
+  minimumDurationMinutes: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+};
+
+export type MyScheduleWorkWeek = {
+  id: string;
+  pattern: WorkWeek['pattern'];
+  effectiveFrom: string;
+  effectiveTo: string | null;
+};
+
+export type MySchedule = {
+  shift: {
+    current: MyScheduleShift | null;
+    history: MyScheduleShift[];
+  };
+  workWeek: {
+    current: MyScheduleWorkWeek | null;
+    history: MyScheduleWorkWeek[];
+  };
+};
+
 export type GrievanceCategory =
   | 'WORKPLACE'
   | 'SALARY'

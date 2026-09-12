@@ -36,6 +36,7 @@ import type {
   LeavePolicy,
   LeaveType,
   MeData,
+  MySchedule,
   NamedEntity,
   OrganizationSettings,
   PaymentDetails,
@@ -123,6 +124,7 @@ export const api = createApi({
     'AttendanceImports',
     'Shifts',
     'WorkWeeks',
+    'MySchedule',
     'Grievances',
     'Policies',
     'Notifications',
@@ -320,7 +322,14 @@ export const api = createApi({
       { id: string; body: { pattern: WorkWeek['pattern']; effectiveFrom: string } }
     >({
       query: ({ id, body }) => ({ url: `/api/v1/employees/${id}/work-week`, method: 'PUT', body }),
-      invalidatesTags: (_result, _error, { id }) => [{ type: 'WorkWeeks', id }],
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'WorkWeeks', id }, 'MySchedule'],
+    }),
+    deleteEmployeeWorkWeek: builder.mutation<ApiSuccess<{ id: string }>, { employeeId: string; weekId: string }>({
+      query: ({ employeeId, weekId }) => ({
+        url: `/api/v1/employees/${employeeId}/work-week/${weekId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_result, _error, { employeeId }) => [{ type: 'WorkWeeks', id: employeeId }, 'MySchedule'],
     }),
     getCompanies: builder.query<ApiSuccess<Company[]>, void>({
       query: () => '/api/v1/companies',
@@ -671,6 +680,10 @@ export const api = createApi({
         params: arg && 'period' in arg && arg.period ? { period: arg.period } : undefined,
       }),
       providesTags: ['Attendance'],
+    }),
+    getMySchedule: builder.query<ApiSuccess<MySchedule>, void>({
+      query: () => '/api/v1/me/schedule',
+      providesTags: ['MySchedule'],
     }),
     getWorkDay: builder.query<ApiSuccess<WorkDayBoard>, string>({
       query: (date) => `/api/v1/work/days/${date}`,
@@ -1384,7 +1397,11 @@ export const api = createApi({
       { employeeId: string; shiftId: string; effectiveFrom?: string }
     >({
       query: (body) => ({ url: '/api/v1/shift-assignments', method: 'POST', body }),
-      invalidatesTags: ['Shifts', 'Notifications'],
+      invalidatesTags: ['Shifts', 'Notifications', 'MySchedule'],
+    }),
+    deleteShiftAssignment: builder.mutation<ApiSuccess<{ id: string }>, string>({
+      query: (id) => ({ url: `/api/v1/shift-assignments/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Shifts', 'Notifications', 'MySchedule'],
     }),
     getGrievances: builder.query<
       ApiSuccess<Grievance[]>,
@@ -1637,6 +1654,7 @@ export const {
   useRejectShiftChangeMutation,
   useCancelShiftChangeMutation,
   useGetAttendanceMeQuery,
+  useGetMyScheduleQuery,
   useGetWorkDayQuery,
   useSubmitWorkDayMutation,
   useGetWorkHistoryQuery,
@@ -1728,8 +1746,10 @@ export const {
   useUpdateShiftMutation,
   useGetShiftAssignmentsQuery,
   useCreateShiftAssignmentMutation,
+  useDeleteShiftAssignmentMutation,
   useGetEmployeeWorkWeekQuery,
   useSaveEmployeeWorkWeekMutation,
+  useDeleteEmployeeWorkWeekMutation,
   useGetGrievancesQuery,
   useGetGrievanceCountsQuery,
   useGetGrievanceHandlersQuery,

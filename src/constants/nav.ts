@@ -57,6 +57,7 @@ export const MY_WORK_LINK: NavItem = {
 export const MY_WORK_TIME_NAV: readonly NavItem[] = [
   { href: '/leave', label: 'My leave', icon: 'leave' },
   { href: '/leave/holidays', label: 'Holidays', icon: 'calendar' },
+  { href: '/schedule', label: 'My schedule', icon: 'calendar' },
   { href: '/permission', label: 'My permission', icon: 'clock' },
   { href: '/shift-change', label: 'My shift change', icon: 'clock' },
   { href: '/attendance', label: 'Attendance', icon: 'clock' },

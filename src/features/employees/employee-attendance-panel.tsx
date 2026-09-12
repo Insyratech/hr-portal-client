@@ -8,10 +8,14 @@ import { Meta } from '@/components/layout/meta';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { DataTable } from '@/components/dashboard/data-table';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { EditIconButton } from '@/components/ui/edit-icon-button';
+import { IconButton } from '@/components/ui/icon-button';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
   useCreateShiftAssignmentMutation,
+  useDeleteEmployeeWorkWeekMutation,
+  useDeleteShiftAssignmentMutation,
   useGetAttendanceDayQuery,
   useGetEmployeeWorkWeekQuery,
   useGetShiftAssignmentsQuery,
@@ -20,17 +24,8 @@ import {
 } from '@/store/api/api';
 import { formatShiftOption } from '@/features/attendance/shift-label';
 import { formatAssignmentStatus, sortAssignmentsCurrentFirst } from '@/features/attendance/assignment-status';
-import type { WorkWeek } from '@/types/api';
-
-const WEEK_OPTIONS: { value: WorkWeek['pattern']; label: string }[] = [
-  { value: 'SUNDAY_OFF', label: 'Sunday off (works Saturday)' },
-  { value: 'WEEKEND_OFF', label: 'Saturday and Sunday off' },
-  { value: 'SECOND_FOURTH_SATURDAY', label: 'Sunday off, plus 2nd and 4th Saturday off' },
-];
-
-function weekLabel(pattern: WorkWeek['pattern']): string {
-  return WEEK_OPTIONS.find((item) => item.value === pattern)?.label ?? pattern;
-}
+import { WORK_WEEK_OPTIONS, workWeekLabel } from '@/features/attendance/work-week-label';
+import type { ShiftAssignment, WorkWeek } from '@/types/api';
 
 export function EmployeeAttendancePanel({
   employeeId,
@@ -45,9 +40,13 @@ export function EmployeeAttendancePanel({
   const { data: shiftsData } = useGetShiftsQuery();
   const { data: weeksData } = useGetEmployeeWorkWeekQuery(employeeId);
   const [assignShift, { isLoading }] = useCreateShiftAssignmentMutation();
+  const [deleteShift] = useDeleteShiftAssignmentMutation();
   const [saveWeek, { isLoading: savingWeek }] = useSaveEmployeeWorkWeekMutation();
+  const [deleteWeek] = useDeleteEmployeeWorkWeekMutation();
   const [weekOpen, setWeekOpen] = useState(false);
   const [shiftOpen, setShiftOpen] = useState(false);
+  const [editingShift, setEditingShift] = useState<ShiftAssignment | null>(null);
+  const [editingWeek, setEditingWeek] = useState<WorkWeek | null>(null);
 
   const records = (dayData?.data.records ?? []).filter((item) => item.employeeId === employeeId);
   const assignments = sortAssignmentsCurrentFirst(
@@ -58,6 +57,28 @@ export function EmployeeAttendancePanel({
   const today = new Date().toISOString().slice(0, 10);
   const currentShift = assignments.find((row) => !row.effectiveTo) ?? assignments[0];
   const currentWeek = weeks.find((row) => !row.effectiveTo) ?? weeks[0];
+  const shiftDraft = editingShift ?? currentShift;
+  const weekDraft = editingWeek ?? currentWeek;
+
+  function openNewShift() {
+    setEditingShift(null);
+    setShiftOpen(true);
+  }
+
+  function openEditShift(row: ShiftAssignment) {
+    setEditingShift(row);
+    setShiftOpen(true);
+  }
+
+  function openNewWeek() {
+    setEditingWeek(null);
+    setWeekOpen(true);
+  }
+
+  function openEditWeek(row: WorkWeek) {
+    setEditingWeek(row);
+    setWeekOpen(true);
+  }
 
   async function onAssign(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -68,10 +89,24 @@ export function EmployeeAttendancePanel({
         shiftId: String(form.get('shiftId') ?? ''),
         effectiveFrom: String(form.get('effectiveFrom') ?? '') || undefined,
       }).unwrap();
-      toast.success('Shift saved.');
+      toast.success(editingShift ? 'Shift updated.' : 'Shift saved.');
       setShiftOpen(false);
+      setEditingShift(null);
     } catch (cause) {
       toast.error(apiErrorMessage(cause, 'Unable to save shift.'));
+    }
+  }
+
+  async function onDeleteShift(row: ShiftAssignment) {
+    try {
+      await deleteShift(row.id).unwrap();
+      toast.success('Shift assignment removed.');
+      if (editingShift?.id === row.id) {
+        setShiftOpen(false);
+        setEditingShift(null);
+      }
+    } catch (cause) {
+      toast.error(apiErrorMessage(cause, 'Unable to remove shift.'));
     }
   }
 
@@ -86,10 +121,24 @@ export function EmployeeAttendancePanel({
           effectiveFrom: String(form.get('weekFrom') ?? ''),
         },
       }).unwrap();
-      toast.success('Working week saved.');
+      toast.success(editingWeek ? 'Working week updated.' : 'Working week saved.');
       setWeekOpen(false);
+      setEditingWeek(null);
     } catch (cause) {
       toast.error(apiErrorMessage(cause, 'Unable to save working week.'));
+    }
+  }
+
+  async function onDeleteWeek(row: WorkWeek) {
+    try {
+      await deleteWeek({ employeeId, weekId: row.id }).unwrap();
+      toast.success('Working week removed.');
+      if (editingWeek?.id === row.id) {
+        setWeekOpen(false);
+        setEditingWeek(null);
+      }
+    } catch (cause) {
+      toast.error(apiErrorMessage(cause, 'Unable to remove working week.'));
     }
   }
 
@@ -100,20 +149,37 @@ export function EmployeeAttendancePanel({
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <Meta className="mb-0">Working week</Meta>
-              <Button type="button" size="sm" variant="outline" onClick={() => setWeekOpen(true)}>
+              <Button type="button" size="sm" variant="outline" onClick={openNewWeek}>
                 {weeks.length ? 'Update working week' : 'Set working week'}
               </Button>
             </div>
             <p className="text-sm text-muted">
-              Only one working week is Current at a time. When you save an update with a new effective
-              date, that row becomes Current and the previous Current ends the day before. Company
-              holidays still apply.
+              Only one working week is Current at a time. When you save an update with a new effective date, that
+              row becomes Current and the previous Current ends the day before. Use the row actions to edit or
+              remove a mistaken entry. Company holidays still apply.
             </p>
             <DataTable
               columns={[
-                { id: 'week', header: 'Week-offs', cell: (row) => weekLabel(row.pattern) },
+                { id: 'week', header: 'Week-offs', cell: (row) => workWeekLabel(row.pattern) },
                 { id: 'from', header: 'Effective from', cell: (row) => row.effectiveFrom },
                 { id: 'to', header: 'Status', cell: (row) => formatAssignmentStatus(row.effectiveTo) },
+                {
+                  id: 'actions',
+                  header: 'Actions',
+                  cell: (row) => (
+                    <div className="flex gap-2">
+                      <EditIconButton
+                        label={`Edit working week from ${row.effectiveFrom}`}
+                        onClick={() => openEditWeek(row)}
+                      />
+                      <IconButton
+                        label={`Remove working week from ${row.effectiveFrom}`}
+                        icon="trash"
+                        onClick={() => void onDeleteWeek(row)}
+                      />
+                    </div>
+                  ),
+                },
               ]}
               rows={weeks}
               emptyTitle="Using company working days"
@@ -124,19 +190,37 @@ export function EmployeeAttendancePanel({
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <Meta className="mb-0">Shift</Meta>
-              <Button type="button" size="sm" variant="outline" onClick={() => setShiftOpen(true)}>
+              <Button type="button" size="sm" variant="outline" onClick={openNewShift}>
                 {assignments.length ? 'Update shift' : 'Assign shift'}
               </Button>
             </div>
             <p className="text-sm text-muted">
-              Only one shift is current at a time. Saving a change closes the previous shift the day
-              before the effective date. Older rows stay in history as closed.
+              Only one shift is current at a time. Saving a change closes the previous shift the day before the
+              effective date. Use the row actions to edit or remove a mistaken assignment. Older rows stay in
+              history as closed.
             </p>
             <DataTable
               columns={[
-                { id: 'shift', header: 'Shift', cell: (row) => row.shiftName ?? '‚Äî' },
+                { id: 'shift', header: 'Shift', cell: (row) => row.shiftName ?? 'ù' },
                 { id: 'from', header: 'Effective from', cell: (row) => row.effectiveFrom },
                 { id: 'to', header: 'Status', cell: (row) => formatAssignmentStatus(row.effectiveTo) },
+                {
+                  id: 'actions',
+                  header: 'Actions',
+                  cell: (row) => (
+                    <div className="flex gap-2">
+                      <EditIconButton
+                        label={`Edit ${row.shiftName ?? 'shift'} from ${row.effectiveFrom}`}
+                        onClick={() => openEditShift(row)}
+                      />
+                      <IconButton
+                        label={`Remove ${row.shiftName ?? 'shift'} from ${row.effectiveFrom}`}
+                        icon="trash"
+                        onClick={() => void onDeleteShift(row)}
+                      />
+                    </div>
+                  ),
+                },
               ]}
               rows={assignments}
               emptyTitle="No shift assigned"
@@ -144,14 +228,27 @@ export function EmployeeAttendancePanel({
             />
           </section>
 
-          <Dialog open={weekOpen} onOpenChange={setWeekOpen}>
+          <Dialog
+            open={weekOpen}
+            onOpenChange={(open) => {
+              setWeekOpen(open);
+              if (!open) setEditingWeek(null);
+            }}
+          >
             <DialogContent>
-              <DialogTitle>{weeks.length ? 'Update working week' : 'Set working week'}</DialogTitle>
+              <DialogTitle>
+                {editingWeek ? 'Edit working week' : weeks.length ? 'Update working week' : 'Set working week'}
+              </DialogTitle>
               <DialogDescription>
-                The week you save becomes Current. Any previous Current closes the day before this
-                effective date.
+                {editingWeek
+                  ? 'Saving with the same effective date updates that row. A new date becomes Current and closes the previous Current.'
+                  : 'The week you save becomes Current. Any previous Current closes the day before this effective date.'}
               </DialogDescription>
-              <form key={`week-${currentWeek?.id ?? 'new'}-${weekOpen}`} onSubmit={onSaveWeek} className="mt-4 space-y-4">
+              <form
+                key={`week-${weekDraft?.id ?? 'new'}-${weekOpen}-${editingWeek?.id ?? 'create'}`}
+                onSubmit={onSaveWeek}
+                className="mt-4 space-y-4"
+              >
                 <div>
                   <Label htmlFor="pattern">Week-offs</Label>
                   <select
@@ -159,9 +256,9 @@ export function EmployeeAttendancePanel({
                     name="pattern"
                     className="h-10 w-full border border-border bg-background px-3 text-sm"
                     required
-                    defaultValue={currentWeek?.pattern ?? 'SUNDAY_OFF'}
+                    defaultValue={weekDraft?.pattern ?? 'SUNDAY_OFF'}
                   >
-                    {WEEK_OPTIONS.map((item) => (
+                    {WORK_WEEK_OPTIONS.map((item) => (
                       <option key={item.value} value={item.value}>
                         {item.label}
                       </option>
@@ -175,7 +272,7 @@ export function EmployeeAttendancePanel({
                     name="weekFrom"
                     type="date"
                     required
-                    defaultValue={today}
+                    defaultValue={editingWeek?.effectiveFrom ?? today}
                   />
                   <p className="mt-1 text-xs text-muted">
                     Change this date when the new week should start. That row becomes Current.
@@ -183,9 +280,17 @@ export function EmployeeAttendancePanel({
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button type="submit" disabled={savingWeek}>
-                    {savingWeek ? 'Saving‚Ä¶' : 'Save working week'}
+                    {savingWeek ? 'Savingù' : 'Save working week'}
                   </Button>
-                  <Button type="button" variant="ghost" disabled={savingWeek} onClick={() => setWeekOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={savingWeek}
+                    onClick={() => {
+                      setWeekOpen(false);
+                      setEditingWeek(null);
+                    }}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -193,14 +298,22 @@ export function EmployeeAttendancePanel({
             </DialogContent>
           </Dialog>
 
-          <Dialog open={shiftOpen} onOpenChange={setShiftOpen}>
+          <Dialog
+            open={shiftOpen}
+            onOpenChange={(open) => {
+              setShiftOpen(open);
+              if (!open) setEditingShift(null);
+            }}
+          >
             <DialogContent>
-              <DialogTitle>Save shift</DialogTitle>
+              <DialogTitle>{editingShift ? 'Edit shift' : 'Save shift'}</DialogTitle>
               <DialogDescription>
-                Pick the shift and the date it starts. The previous current shift will close automatically.
+                {editingShift
+                  ? 'Saving with the same effective date updates that row. A new date becomes Current and closes the previous Current.'
+                  : 'Pick the shift and the date it starts. The previous current shift will close automatically.'}
               </DialogDescription>
               <form
-                key={`shift-${currentShift?.id ?? 'new'}-${shiftOpen}`}
+                key={`shift-${shiftDraft?.id ?? 'new'}-${shiftOpen}-${editingShift?.id ?? 'create'}`}
                 onSubmit={onAssign}
                 className="mt-4 space-y-4"
               >
@@ -211,7 +324,7 @@ export function EmployeeAttendancePanel({
                     name="shiftId"
                     className="h-10 w-full border border-border bg-background px-3 text-sm"
                     required
-                    defaultValue={currentShift?.shiftId ?? ''}
+                    defaultValue={shiftDraft?.shiftId ?? ''}
                   >
                     <option value="" disabled>
                       Select shift
@@ -229,14 +342,22 @@ export function EmployeeAttendancePanel({
                     id="effectiveFrom"
                     name="effectiveFrom"
                     type="date"
-                    defaultValue={currentShift?.effectiveFrom ?? today}
+                    defaultValue={editingShift?.effectiveFrom ?? shiftDraft?.effectiveFrom ?? today}
                   />
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button type="submit" disabled={isLoading || shifts.length === 0}>
-                    {isLoading ? 'Saving‚Ä¶' : 'Save shift'}
+                    {isLoading ? 'Savingù' : 'Save shift'}
                   </Button>
-                  <Button type="button" variant="ghost" disabled={isLoading} onClick={() => setShiftOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={isLoading}
+                    onClick={() => {
+                      setShiftOpen(false);
+                      setEditingShift(null);
+                    }}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -254,8 +375,8 @@ export function EmployeeAttendancePanel({
           <ul className="space-y-3 text-sm">
             {records.map((row) => (
               <li key={row.id} className="border border-border px-4 py-3">
-                {row.attendanceDate} ¬∑ {row.status}
-                {row.shiftName ? ` ¬∑ ${row.shiftName}` : ''}
+                {row.attendanceDate} ù {row.status}
+                {row.shiftName ? ` ù ${row.shiftName}` : ''}
               </li>
             ))}
           </ul>

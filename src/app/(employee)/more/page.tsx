@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 
 const MORE_LINKS: readonly { href: string; label: string; icon: IconName }[] = [
   { href: '/leave', label: 'Leave', icon: 'leave' },
+  { href: '/schedule', label: 'Shift & calendar', icon: 'calendar' },
   { href: '/permission', label: 'Permission', icon: 'clock' },
   { href: '/shift-change', label: 'Request for shift change', icon: 'clock' },
   { href: '/work/history', label: 'Work history', icon: 'calendar' },
@@ -19,7 +20,9 @@ export default function MorePage() {
   return (
     <div className="space-y-8">
       <PageHeader kicker="More" title="More" />
-      <p className="max-w-md text-sm text-muted">Shortcuts you use less often — leave, documents, and account.</p>
+      <p className="max-w-md text-sm text-muted">
+        Shortcuts you use less often — leave, schedule, documents, and account.
+      </p>
       <ul className="grid max-w-md grid-cols-1 gap-1 sm:max-w-xl sm:grid-cols-2">
         {MORE_LINKS.map((item) => (
           <li key={item.href}>
