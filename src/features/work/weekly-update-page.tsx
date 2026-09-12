@@ -19,6 +19,10 @@ import {
   weeklyPptTimingTone,
 } from '@/features/work/weekly-ppt-status';
 import {
+  WEEKLY_UPDATE_TEMPLATE_FILENAME,
+  WEEKLY_UPDATE_TEMPLATE_HREF,
+} from '@/features/work/weekly-update-template';
+import {
   useCreateWeeklyWorkUpdateUploadMutation,
   useGetWeeklyWorkUpdateBoardQuery,
   useLazyGetWeeklyWorkUpdateDownloadQuery,
@@ -94,6 +98,21 @@ export function WeeklyUpdatePage() {
         tagged a last hour submission; only uploads after Sunday count as late. You can replace once (2 uploads
         max; the second deletes the first).
       </p>
+
+      <section className="mb-8 border border-border bg-background p-5 shadow-card">
+        <Meta>Weekly update template</Meta>
+        <p className="mt-2 max-w-2xl text-sm text-muted">
+          Download the standard format, fill in your week, then upload below. New and existing employees use the
+          same template.
+        </p>
+        <div className="mt-4">
+          <Button asChild type="button" size="sm" variant="outline">
+            <a href={WEEKLY_UPDATE_TEMPLATE_HREF} download={WEEKLY_UPDATE_TEMPLATE_FILENAME}>
+              Download template
+            </a>
+          </Button>
+        </div>
+      </section>
 
       {isLoading ? <PageLoading compact message="Loading…" /> : null}
       {isError ? <p className="text-sm">Unable to load weekly updates.</p> : null}
