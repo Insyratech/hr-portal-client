@@ -201,7 +201,7 @@ export function EmployeeAttendancePanel({
             </p>
             <DataTable
               columns={[
-                { id: 'shift', header: 'Shift', cell: (row) => row.shiftName ?? 'ù' },
+                { id: 'shift', header: 'Shift', cell: (row) => row.shiftName ?? '‚Äî' },
                 { id: 'from', header: 'Effective from', cell: (row) => row.effectiveFrom },
                 { id: 'to', header: 'Status', cell: (row) => formatAssignmentStatus(row.effectiveTo) },
                 {
@@ -280,7 +280,7 @@ export function EmployeeAttendancePanel({
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button type="submit" disabled={savingWeek}>
-                    {savingWeek ? 'Savingù' : 'Save working week'}
+                    {savingWeek ? 'Saving‚Ä¶' : 'Save working week'}
                   </Button>
                   <Button
                     type="button"
@@ -347,7 +347,7 @@ export function EmployeeAttendancePanel({
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button type="submit" disabled={isLoading || shifts.length === 0}>
-                    {isLoading ? 'Savingù' : 'Save shift'}
+                    {isLoading ? 'Saving‚Ä¶' : 'Save shift'}
                   </Button>
                   <Button
                     type="button"
@@ -375,8 +375,8 @@ export function EmployeeAttendancePanel({
           <ul className="space-y-3 text-sm">
             {records.map((row) => (
               <li key={row.id} className="border border-border px-4 py-3">
-                {row.attendanceDate} ù {row.status}
-                {row.shiftName ? ` ù ${row.shiftName}` : ''}
+                {row.attendanceDate} ¬∑ {row.status}
+                {row.shiftName ? ` ¬∑ ${row.shiftName}` : ''}
               </li>
             ))}
           </ul>
