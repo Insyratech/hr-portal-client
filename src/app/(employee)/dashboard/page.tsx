@@ -26,12 +26,11 @@ import { useMyProjects } from '@/features/work/my-projects';
 import { remainingInMonth, remainingText } from '@/features/work-permissions/format';
 import { DashboardMyProjectsCard } from '@/features/work/dashboard-my-projects-card';
 import { DashboardWorkCard } from '@/features/work/dashboard-work-card';
+import { DashboardHolidaysCard } from '@/features/schedule/dashboard-holidays-card';
 import { DashboardScheduleCard } from '@/features/schedule/dashboard-schedule-card';
 import { useAppSelector } from '@/store/hooks';
 import { greetingForHour, greetingWithName } from '@/lib/greeting';
 import { PERMISSIONS } from '@/types/permissions';
-
-const DASHBOARD_CODES = ['CL', 'SL', 'EL', 'ML'];
 
 export default function EmployeeDashboardPage() {
   const name = useAppSelector((state) => state.auth.user?.name);
@@ -60,9 +59,11 @@ export default function EmployeeDashboardPage() {
   const { hasProjects, isProjectLead } = useMyProjects();
   const latestSlip = payslipData?.data[0];
 
-  const balances = (balanceData?.data ?? [])
-    .filter((item) => DASHBOARD_CODES.includes(item.code))
-    .map((item) => ({ code: item.code, days: item.available }));
+  const balances = (balanceData?.data ?? []).map((item) => ({
+    code: item.code,
+    available: item.available,
+    allocated: item.allocated,
+  }));
 
   const myLeaves = (applicationsData?.data ?? []).filter(
     (row) => row.employeeId === me?.data.employeeId && (row.status === 'PENDING' || row.status === 'APPROVED'),
@@ -125,9 +126,11 @@ export default function EmployeeDashboardPage() {
           </p>
         </section>
 
-        <LeaveBalanceCard items={balances} />
+        <LeaveBalanceCard items={balances} actionHref="/leave" actionLabel="Open leave" />
 
         <DashboardScheduleCard />
+
+        <DashboardHolidaysCard />
 
         {assignedCases.length > 0 ? (
           <section className="space-y-4 lg:col-span-2">

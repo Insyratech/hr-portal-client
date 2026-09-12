@@ -3,36 +3,24 @@
 import Link from 'next/link';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { Meta } from '@/components/layout/meta';
+import { Button } from '@/components/ui/button';
+import { CardSkeleton } from '@/components/ui/skeleton';
 import { formatShiftSummary } from '@/features/attendance/shift-label';
 import { workWeekLabel } from '@/features/attendance/work-week-label';
-import { useGetHolidaysQuery, useGetMyScheduleQuery } from '@/store/api/api';
-import { CardSkeleton } from '@/components/ui/skeleton';
+import { useGetMyScheduleQuery } from '@/store/api/api';
 
-function upcomingHolidays(
-  rows: { name: string; date: string; optional: boolean }[],
-  today: string,
-  limit = 3,
-) {
-  return [...rows]
-    .filter((row) => row.date.slice(0, 10) >= today)
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(0, limit);
-}
-
-/** Compact dashboard card — current shift, working week, and next holidays. */
+/** Dashboard card: current shift and working week only. */
 export function DashboardScheduleCard() {
-  const { data: scheduleData, isLoading: scheduleLoading } = useGetMyScheduleQuery();
-  const { data: holidaysData, isLoading: holidaysLoading } = useGetHolidaysQuery();
-  const today = new Date().toISOString().slice(0, 10);
+  const { data: scheduleData, isLoading } = useGetMyScheduleQuery();
 
-  if (scheduleLoading || holidaysLoading) {
+  if (isLoading) {
     return <CardSkeleton />;
   }
 
   const schedule = scheduleData?.data;
   const currentShift = schedule?.shift.current ?? null;
   const currentWeek = schedule?.workWeek.current ?? null;
-  const nextHolidays = upcomingHolidays(holidaysData?.data ?? [], today);
+  const empty = !currentShift && !currentWeek;
 
   return (
     <section className="border border-border bg-background p-5 shadow-card">
@@ -43,70 +31,56 @@ export function DashboardScheduleCard() {
         </Link>
       </div>
 
-      <dl className="mt-4 space-y-3 text-sm">
-        <div>
-          <dt className="text-xs uppercase tracking-[0.12em] text-muted">Current shift</dt>
-          <dd className="mt-1 text-foreground">
+      {empty ? (
+        <div className="mt-4">
+          <EmptyState
+            title="Nothing assigned yet"
+            description="When HR sets your shift or working week, they appear here."
+          />
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-3">
+          <div className="rounded border border-border bg-surface/40 p-3.5 transition-colors hover:bg-surface">
+            <p className="text-xs uppercase tracking-[0.12em] text-muted">Current shift</p>
             {currentShift ? (
               <>
-                <span className="font-medium">{currentShift.shiftName}</span>
-                <span className="text-muted">
-                  {' '}
-                  ·{' '}
+                <p className="mt-2 text-base font-medium text-foreground">{currentShift.shiftName}</p>
+                <p className="mt-1 text-sm text-muted">
                   {formatShiftSummary({
                     flexible: currentShift.flexible,
                     minimumDurationMinutes: currentShift.minimumDurationMinutes,
                     startTime: currentShift.startTime ?? '00:00:00',
                     endTime: currentShift.endTime ?? '00:00:00',
                   })}
-                </span>
+                </p>
+                <p className="mt-2 text-xs text-muted">From {currentShift.effectiveFrom}</p>
               </>
             ) : (
-              <span className="text-muted">Not assigned yet</span>
+              <p className="mt-2 text-sm text-muted">Not assigned yet</p>
             )}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-[0.12em] text-muted">Working week</dt>
-          <dd className="mt-1 text-foreground">
-            {currentWeek ? (
-              workWeekLabel(currentWeek.pattern)
-            ) : (
-              <span className="text-muted">Company calendar</span>
-            )}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-[0.12em] text-muted">Upcoming holidays</dt>
-          <dd className="mt-1">
-            {nextHolidays.length === 0 ? (
-              <span className="text-muted">None scheduled</span>
-            ) : (
-              <ul className="space-y-1">
-                {nextHolidays.map((row) => (
-                  <li key={`${row.date}-${row.name}`} className="text-foreground">
-                    <span className="font-medium">{row.name}</span>
-                    <span className="text-muted">
-                      {' '}
-                      · {row.date.slice(0, 10)}
-                      {row.optional ? ' · optional' : ''}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </dd>
-        </div>
-      </dl>
+          </div>
 
-      {!currentShift && !currentWeek && nextHolidays.length === 0 ? (
-        <div className="mt-4">
-          <EmptyState
-            title="Nothing assigned yet"
-            description="When HR sets your shift or working week, they appear here. Holidays follow the company calendar."
-          />
+          <div className="rounded border border-border bg-surface/40 p-3.5 transition-colors hover:bg-surface">
+            <p className="text-xs uppercase tracking-[0.12em] text-muted">Working week</p>
+            {currentWeek ? (
+              <>
+                <p className="mt-2 text-base font-medium text-foreground">
+                  {workWeekLabel(currentWeek.pattern)}
+                </p>
+                <p className="mt-2 text-xs text-muted">From {currentWeek.effectiveFrom}</p>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-muted">Company calendar</p>
+            )}
+          </div>
         </div>
-      ) : null}
+      )}
+
+      <div className="mt-4">
+        <Button asChild type="button" size="sm" variant="outline">
+          <Link href="/schedule">Open schedule</Link>
+        </Button>
+      </div>
     </section>
   );
 }

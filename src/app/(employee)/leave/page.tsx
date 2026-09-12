@@ -94,7 +94,11 @@ function LeavePageBody() {
       row.employeeId !== myId,
   );
   const covering = takenHandovers(data?.data ?? [], myId);
-  const balances = (balanceData?.data ?? []).map((item) => ({ code: item.code, days: item.available }));
+  const balances = (balanceData?.data ?? []).map((item) => ({
+    code: item.code,
+    available: item.available,
+    allocated: item.allocated,
+  }));
 
   return (
     <>
