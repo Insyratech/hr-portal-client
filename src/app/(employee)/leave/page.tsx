@@ -171,7 +171,7 @@ function LeavePageBody() {
       ) : null}
       <LeaveStats items={mine} />
       <div className="mb-10">
-        <LeaveBalanceCard items={balances} />
+        <LeaveBalanceCard items={balances} variant="rings" />
       </div>
       <Button type="button" className="mb-10" onClick={() => setApplyOpen(true)}>
         Apply leave
