@@ -121,7 +121,9 @@ export function EmployeePayrollPanel({
       <form key={`compensation-${current?.id ?? 'new'}`} onSubmit={onSavePay} className="space-y-5">
         <Meta>Compensation</Meta>
         <p className="text-sm text-muted">
-          A new effective date keeps history. Same date updates that row. Published salary slips are not changed.
+          {canManage
+            ? 'A new effective date keeps history. Same date updates that row. Published salary slips are not changed.'
+            : 'Compensation, deductions, PAN, and bank details. Published salary slips stay under Payroll.'}
         </p>
         <div>
           <Label htmlFor="effectiveFrom">Effective from</Label>

@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { LeavePresenceBoard } from '@/features/leave/leave-presence-board';
 import {
   useGetAttendanceImportsQuery,
+  useGetEmployeesQuery,
   useGetLeaveApplicationsQuery,
   useGetPayrollRunsQuery,
   useGetReportsOverviewQuery,
@@ -16,16 +17,23 @@ export default function GmOverviewPage() {
   const { data: imports } = useGetAttendanceImportsQuery();
   const { data: payrollRuns } = useGetPayrollRunsQuery();
   const { data: reports } = useGetReportsOverviewQuery();
+  const { data: employees } = useGetEmployeesQuery();
   const { data: applications } = useGetLeaveApplicationsQuery();
 
   return (
     <>
       <PageHeader kicker="General Manager" title="Overview" />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Upload attendance, run payroll, see who is out, and open weekly PPT packages shared by CSO. Leave
-        approval is handled by HR Manager.
+        Upload attendance, run payroll, open the employee directory (both companies), see who is out, and open
+        weekly PPT packages shared by CSO. Leave approval is handled by HR Manager.
       </p>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6 lg:gap-6">
+        <StatCard
+          value={String(employees?.data.length ?? 0)}
+          label="Employees"
+          icon="users"
+          onClick={() => router.push('/gm/employees')}
+        />
         <StatCard
           value={String(imports?.data.length ?? 0)}
           label="Attendance imports"

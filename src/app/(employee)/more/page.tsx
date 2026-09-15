@@ -10,6 +10,8 @@ const MORE_LINKS: readonly { href: string; label: string; icon: IconName }[] = [
   { href: '/shift-change', label: 'Request for shift change', icon: 'clock' },
   { href: '/work/history', label: 'Work history', icon: 'calendar' },
   { href: '/payslips', label: 'Payslips', icon: 'file' },
+  { href: '/indents', label: 'Purchase indents', icon: 'file' },
+  { href: '/expense-claims', label: 'Expense claims', icon: 'file' },
   { href: '/grievance', label: 'Grievance', icon: 'shield' },
   { href: '/policies', label: 'Policies', icon: 'file' },
   { href: '/more/profile', label: 'Profile details', icon: 'user' },

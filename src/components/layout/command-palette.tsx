@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { isHrManager, isSuperAdmin } from '@/features/auth/role-access';
+import { isGeneralManager, isHrManager, isSuperAdmin } from '@/features/auth/role-access';
 import { PERMISSIONS } from '@/types/permissions';
 import { useLazyGetEmployeesQuery } from '@/store/api/api';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -21,7 +21,9 @@ export function CommandPalette() {
     ? '/super-admin/employees'
     : isHrManager(roles)
       ? '/hr/employees'
-      : null;
+      : isGeneralManager(roles)
+        ? '/gm/employees'
+        : null;
   const canSearchEmployees =
     Boolean(directoryBase) &&
     (permissions.includes(PERMISSIONS.USERS_VIEW) || permissions.includes(PERMISSIONS.USERS_MANAGE));

@@ -1604,3 +1604,866 @@ export type PayrollRunDetail = {
   skipped?: { employeeId: string; name: string; reason: string }[];
 };
 
+/** Finance Phase 0 */
+export type FinanceOrganization = {
+  id: string;
+  legalName: string;
+  tradeName: string;
+  cin: string | null;
+  pan: string | null;
+  gstin: string | null;
+  industry: string | null;
+  countryCode: string;
+  stateCode: string | null;
+  stateName: string | null;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  postalCode: string;
+  baseCurrency: string;
+  language: string;
+  timeZone: string;
+  fiscalYearStartMonth: number;
+  gstRegistered: boolean;
+  gstRegistrationType: 'regular' | 'composition' | 'unregistered' | null;
+  setupCompletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FinanceAccount = {
+  id: string;
+  code: string;
+  name: string;
+  accountType: 'asset' | 'liability' | 'equity' | 'income' | 'expense';
+  systemRole: string | null;
+  isSystem: boolean;
+  isActive: boolean;
+  parentId: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FinanceTaxRate = {
+  id: string;
+  name: string;
+  ratePercent: number;
+  taxType: 'cgst' | 'sgst' | 'igst' | 'cess' | 'tds';
+  isActive: boolean;
+};
+
+export type FinanceTaxGroup = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  rateIds: string[];
+  rates: FinanceTaxRate[];
+};
+
+export type FinanceTdsRate = {
+  id: string;
+  section: string;
+  name: string;
+  ratePercent: number;
+  isActive: boolean;
+};
+
+export type FinanceCustomer = {
+  id: string;
+  displayName: string;
+  companyName: string;
+  email: string | null;
+  phone: string | null;
+  gstin: string | null;
+  pan: string | null;
+  stateCode: string | null;
+  stateName: string | null;
+  billingAddress: string;
+  shippingAddress: string;
+  paymentTermsDays: number;
+  currencyCode: string;
+  status: 'active' | 'inactive';
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FinanceVendor = {
+  id: string;
+  displayName: string;
+  companyName: string;
+  email: string | null;
+  phone: string | null;
+  gstin: string | null;
+  pan: string | null;
+  stateCode: string | null;
+  stateName: string | null;
+  billingAddress: string;
+  paymentTermsDays: number;
+  currencyCode: string;
+  status: 'active' | 'inactive';
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FinanceItem = {
+  id: string;
+  code: string;
+  name: string;
+  itemType: 'goods' | 'service';
+  hsnSac: string | null;
+  unit: string;
+  saleRate: number;
+  purchaseRate: number;
+  incomeAccountId: string | null;
+  expenseAccountId: string | null;
+  taxGroupId: string | null;
+  description: string;
+  status: 'active' | 'inactive';
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FinanceNumberSeries = {
+  id: string;
+  documentType: string;
+  prefix: string;
+  padLength: number;
+  nextNumber: number;
+  fiscalYearLabel: string;
+  resetYearly: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FinanceSetupChecklist = {
+  organizationReady: boolean;
+  hasTaxGroups: boolean;
+  hasAccounts: boolean;
+  hasCustomer: boolean;
+  hasVendor: boolean;
+  hasItem: boolean;
+  hasSeries: boolean;
+  percentComplete: number;
+  steps: { id: string; label: string; done: boolean; href: string }[];
+};
+
+/** Finance Phase 1 — procurement */
+export type PurchaseIndentLine = {
+  id: string;
+  itemId?: string | null;
+  description: string;
+  quantity: number;
+  unit?: string;
+  estimatedRate: number;
+  lineOrder: number;
+  amount: number;
+};
+
+export type PurchaseIndent = {
+  id: string;
+  documentNumber: string;
+  requestedBy: string;
+  requesterName: string | null;
+  departmentId: string | null;
+  requiredDate: string | null;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  purpose: string;
+  justification: string;
+  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'cancelled' | 'converted';
+  estimatedTotal: number;
+  reviewerId: string | null;
+  reviewerComment: string | null;
+  decidedAt: string | null;
+  lines: PurchaseIndentLine[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PurchaseOrderLine = {
+  id: string;
+  itemId?: string | null;
+  description: string;
+  quantity: number;
+  unit?: string;
+  rate: number;
+  taxPercent: number;
+  lineOrder: number;
+  amount: number;
+  taxAmount: number;
+  quantityReceived: number;
+  quantityBilled: number;
+};
+
+export type PurchaseOrder = {
+  id: string;
+  documentNumber: string;
+  vendorId: string;
+  vendorName: string | null;
+  indentId: string | null;
+  rfqId: string | null;
+  vendorQuoteId: string | null;
+  orderDate: string;
+  expectedDelivery: string | null;
+  billingAddress: string;
+  deliveryAddress: string;
+  paymentTermsDays: number;
+  notes: string;
+  status: string;
+  subtotal: number;
+  taxTotal: number;
+  grandTotal: number;
+  lines: PurchaseOrderLine[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PurchaseReceiptLine = {
+  id: string;
+  purchaseOrderLineId: string;
+  quantityReceived: number;
+  description: string;
+};
+
+export type PurchaseReceipt = {
+  id: string;
+  documentNumber: string;
+  purchaseOrderId: string;
+  purchaseOrderNumber: string | null;
+  receiptDate: string;
+  notes: string;
+  status: string;
+  lines: PurchaseReceiptLine[];
+  createdAt: string;
+};
+
+export type VendorBillLine = {
+  id: string;
+  purchaseOrderLineId: string | null;
+  itemId: string | null;
+  expenseAccountId: string | null;
+  description: string;
+  quantity: number;
+  unit: string;
+  rate: number;
+  taxPercent: number;
+  amount: number;
+  taxAmount: number;
+};
+
+export type VendorBill = {
+  id: string;
+  documentNumber: string;
+  vendorId: string;
+  vendorName: string | null;
+  purchaseOrderId: string | null;
+  receiptId: string | null;
+  billDate: string;
+  dueDate: string | null;
+  vendorInvoiceNumber: string | null;
+  notes: string;
+  status: string;
+  matchStatus: string;
+  matchNotes: string;
+  subtotal: number;
+  taxTotal: number;
+  grandTotal: number;
+  amountPaid: number;
+  amountDue: number;
+  lines: VendorBillLine[];
+  createdAt: string;
+};
+
+export type VendorPaymentAllocation = {
+  billId: string;
+  billNumber: string | null;
+  amount: number;
+};
+
+export type VendorPayment = {
+  id: string;
+  documentNumber: string;
+  vendorId: string;
+  vendorName: string | null;
+  paymentDate: string;
+  amount: number;
+  bankAccountId: string | null;
+  method: string;
+  reference: string;
+  notes: string;
+  status: string;
+  allocations: VendorPaymentAllocation[];
+  createdAt: string;
+};
+
+export type VendorCredit = {
+  id: string;
+  documentNumber: string;
+  vendorId: string;
+  vendorName: string | null;
+  billId: string | null;
+  creditDate: string;
+  reason: string;
+  status: string;
+  subtotal: number;
+  taxTotal: number;
+  grandTotal: number;
+  lines: {
+    id: string;
+    description: string;
+    quantity: number;
+    rate: number;
+    taxPercent: number;
+    amount: number;
+    taxAmount: number;
+  }[];
+  createdAt: string;
+};
+
+export type Rfq = {
+  id: string;
+  documentNumber: string;
+  indentId: string | null;
+  title: string;
+  status: string;
+  notes: string;
+  vendorIds: string[];
+  lines: { id: string; itemId: string | null; description: string; quantity: number; unit: string }[];
+  createdAt: string;
+};
+
+export type VendorQuote = {
+  id: string;
+  documentNumber: string;
+  rfqId: string;
+  vendorId: string;
+  vendorName: string | null;
+  quoteDate: string;
+  deliveryDays: number;
+  shippingAmount: number;
+  notes: string;
+  status: string;
+  subtotal: number;
+  taxTotal: number;
+  grandTotal: number;
+  lines: {
+    id: string;
+    description: string;
+    quantity: number;
+    unit: string;
+    rate: number;
+    taxPercent: number;
+    amount: number;
+    taxAmount: number;
+  }[];
+  createdAt: string;
+};
+
+export type PurchaseOrderPrint = {
+  organization: {
+    legalName: string;
+    tradeName: string;
+    gstin: string | null;
+    addressLine1: string;
+    city: string;
+    stateName: string | null;
+    postalCode: string;
+  };
+  order: PurchaseOrder;
+  vendor: {
+    displayName: string;
+    gstin: string | null;
+    billingAddress: string;
+    stateName: string | null;
+  };
+};
+
+export type SalesQuoteLine = {
+  id: string;
+  itemId?: string | null;
+  description: string;
+  quantity: number;
+  unit?: string;
+  rate: number;
+  taxPercent: number;
+  lineOrder: number;
+  amount: number;
+  taxAmount: number;
+};
+
+export type SalesQuote = {
+  id: string;
+  documentNumber: string;
+  customerId: string;
+  customerName: string | null;
+  quoteDate: string;
+  expiryDate: string | null;
+  status: 'draft' | 'sent' | 'accepted' | 'declined' | 'expired' | 'converted' | 'cancelled';
+  notes: string;
+  terms: string;
+  subtotal: number;
+  taxTotal: number;
+  grandTotal: number;
+  lines: SalesQuoteLine[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SalesOrderLine = {
+  id: string;
+  itemId?: string | null;
+  description: string;
+  quantity: number;
+  unit?: string;
+  rate: number;
+  taxPercent: number;
+  lineOrder: number;
+  amount: number;
+  taxAmount: number;
+  quantityDelivered: number;
+  quantityInvoiced: number;
+};
+
+export type SalesOrder = {
+  id: string;
+  documentNumber: string;
+  customerId: string;
+  customerName: string | null;
+  quoteId: string | null;
+  orderDate: string;
+  expectedDelivery: string | null;
+  billingAddress: string;
+  shippingAddress: string;
+  notes: string;
+  status: string;
+  subtotal: number;
+  taxTotal: number;
+  grandTotal: number;
+  lines: SalesOrderLine[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DeliveryNoteLine = {
+  id: string;
+  salesOrderLineId: string;
+  quantityDelivered: number;
+  description: string;
+};
+
+export type DeliveryNote = {
+  id: string;
+  documentNumber: string;
+  salesOrderId: string;
+  salesOrderNumber: string | null;
+  customerId: string;
+  customerName: string | null;
+  deliveryDate: string;
+  notes: string;
+  status: string;
+  lines: DeliveryNoteLine[];
+  createdAt: string;
+};
+
+export type InvoiceLine = {
+  id: string;
+  salesOrderLineId: string | null;
+  itemId: string | null;
+  incomeAccountId: string | null;
+  description: string;
+  quantity: number;
+  unit: string;
+  rate: number;
+  taxPercent: number;
+  amount: number;
+  taxAmount: number;
+};
+
+export type SalesInvoice = {
+  id: string;
+  documentNumber: string;
+  customerId: string;
+  customerName: string | null;
+  salesOrderId: string | null;
+  deliveryNoteId: string | null;
+  quoteId: string | null;
+  invoiceDate: string;
+  dueDate: string | null;
+  notes: string;
+  status: string;
+  subtotal: number;
+  taxTotal: number;
+  grandTotal: number;
+  amountPaid: number;
+  journalId: string | null;
+  lines: InvoiceLine[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CustomerPaymentAllocation = {
+  id: string;
+  invoiceId: string;
+  invoiceNumber: string | null;
+  amount: number;
+};
+
+export type CustomerPayment = {
+  id: string;
+  documentNumber: string;
+  customerId: string;
+  customerName: string | null;
+  paymentDate: string;
+  amount: number;
+  bankAccountId: string | null;
+  method: string;
+  reference: string;
+  notes: string;
+  status: string;
+  journalId: string | null;
+  allocations: CustomerPaymentAllocation[];
+  createdAt: string;
+};
+
+export type CreditNoteLine = {
+  id: string;
+  description: string;
+  quantity: number;
+  rate: number;
+  taxPercent: number;
+  amount: number;
+  taxAmount: number;
+};
+
+export type CustomerCreditNote = {
+  id: string;
+  documentNumber: string;
+  customerId: string;
+  customerName: string | null;
+  invoiceId: string | null;
+  creditDate: string;
+  reason: string;
+  status: string;
+  subtotal: number;
+  taxTotal: number;
+  grandTotal: number;
+  journalId: string | null;
+  lines: CreditNoteLine[];
+  createdAt: string;
+};
+
+export type SalesDocumentPrint = {
+  organization: {
+    legalName: string;
+    tradeName: string;
+    addressLine1: string;
+    city: string;
+    postalCode: string;
+    gstin: string | null;
+  };
+  customer: {
+    displayName: string;
+    gstin: string | null;
+    billingAddress: string;
+  };
+  document: {
+    type: 'quote' | 'invoice' | 'delivery_note';
+    documentNumber: string;
+    date: string;
+    status: string;
+    notes: string;
+    subtotal?: number;
+    taxTotal?: number;
+    grandTotal?: number;
+    lines: Array<{
+      description: string;
+      quantity: number;
+      unit?: string;
+      rate?: number;
+      taxPercent?: number;
+      amount?: number;
+      taxAmount?: number;
+    }>;
+  };
+};
+
+export type ExpenseCategory = {
+  id: string;
+  name: string;
+  expenseAccountId: string;
+  description: string;
+  isActive: boolean;
+  sortOrder: number;
+};
+
+export type DirectExpense = {
+  id: string;
+  documentNumber: string;
+  expenseDate: string;
+  categoryId: string | null;
+  categoryName: string | null;
+  vendorId: string | null;
+  vendorName: string | null;
+  expenseAccountId: string;
+  description: string;
+  amount: number;
+  taxPercent: number;
+  taxAmount: number;
+  grandTotal: number;
+  paidThrough: 'cash' | 'bank' | 'accounts_payable';
+  bankAccountId: string | null;
+  vendorInvoiceNumber: string;
+  receiptUrl: string;
+  notes: string;
+  status: 'draft' | 'posted' | 'void';
+  journalId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ExpenseClaim = {
+  id: string;
+  documentNumber: string;
+  employeeId: string;
+  employeeName: string | null;
+  departmentId: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
+  expenseAccountId: string | null;
+  claimDate: string;
+  description: string;
+  amount: number;
+  taxPercent: number;
+  taxAmount: number;
+  grandTotal: number;
+  vendorName: string;
+  billNumber: string;
+  receiptUrl: string;
+  notes: string;
+  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'reimbursed' | 'cancelled';
+  reviewerId: string | null;
+  reviewerComment: string | null;
+  decidedAt: string | null;
+  amountReimbursed: number;
+  amountDue: number;
+  journalId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ReimbursementAllocation = {
+  id: string;
+  claimId: string;
+  claimNumber: string | null;
+  amount: number;
+};
+
+export type ExpenseReimbursement = {
+  id: string;
+  documentNumber: string;
+  employeeId: string;
+  employeeName: string | null;
+  paymentDate: string;
+  amount: number;
+  bankAccountId: string | null;
+  method: string;
+  reference: string;
+  notes: string;
+  status: 'draft' | 'posted' | 'void';
+  journalId: string | null;
+  allocations: ReimbursementAllocation[];
+  createdAt: string;
+};
+
+export type JournalLine = {
+  id: string;
+  accountId: string;
+  accountCode: string | null;
+  accountName: string | null;
+  description: string;
+  debit: number;
+  credit: number;
+  lineOrder: number;
+};
+
+export type JournalEntry = {
+  id: string;
+  entryNumber: string;
+  entryDate: string;
+  memo: string;
+  sourceType: string;
+  sourceId: string | null;
+  status: 'draft' | 'posted' | 'reversed';
+  reversesJournalId: string | null;
+  reversedByJournalId: string | null;
+  lines: JournalLine[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type LedgerLine = {
+  journalId: string;
+  entryNumber: string;
+  entryDate: string;
+  memo: string;
+  sourceType: string;
+  description: string;
+  debit: number;
+  credit: number;
+  runningBalance: number;
+};
+
+export type GeneralLedger = {
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  accountType: string;
+  fromDate: string | null;
+  toDate: string | null;
+  openingBalance: number;
+  lines: LedgerLine[];
+  closingBalance: number;
+};
+
+export type TrialBalanceRow = {
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  accountType: string;
+  debit: number;
+  credit: number;
+};
+
+export type TrialBalance = {
+  asOfDate: string;
+  rows: TrialBalanceRow[];
+  totalDebit: number;
+  totalCredit: number;
+  isBalanced: boolean;
+};
+
+export type PeriodLock = {
+  id: string;
+  periodYear: number;
+  periodMonth: number;
+  lockedAt: string;
+  lockedBy: string | null;
+  lockedByName: string | null;
+  notes: string;
+};
+
+export type OpeningBalanceLine = {
+  id: string;
+  accountId: string;
+  accountCode: string | null;
+  accountName: string | null;
+  debit: number;
+  credit: number;
+};
+
+export type OpeningBalanceSet = {
+  id: string;
+  asOfDate: string;
+  memo: string;
+  status: 'draft' | 'posted' | 'void';
+  journalId: string | null;
+  lines: OpeningBalanceLine[];
+  totalDebit: number;
+  totalCredit: number;
+  createdAt: string;
+};
+
+export type BankAccount = {
+  id: string;
+  glAccountId: string;
+  glAccountCode: string | null;
+  glAccountName: string | null;
+  displayName: string;
+  accountKind: 'bank' | 'cash';
+  bankName: string;
+  accountNumberMasked: string;
+  currencyCode: string;
+  isActive: boolean;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BankTransaction = {
+  id: string;
+  documentNumber: string;
+  bankAccountId: string;
+  bankAccountName: string | null;
+  transactionDate: string;
+  description: string;
+  reference: string;
+  transactionType: 'credit' | 'debit';
+  amount: number;
+  source: 'manual' | 'import';
+  importBatchId: string | null;
+  status: 'unmatched' | 'matched' | 'categorized' | 'excluded';
+  matchType: 'customer_payment' | 'vendor_payment' | 'expense' | 'expense_reimbursement' | 'transfer' | null;
+  matchId: string | null;
+  matchLabel: string | null;
+  categoryAccountId: string | null;
+  categoryAccountName: string | null;
+  journalId: string | null;
+  transferBankAccountId: string | null;
+  notes: string;
+  createdAt: string;
+};
+
+export type BankImportBatch = {
+  id: string;
+  bankAccountId: string;
+  filename: string;
+  importedAt: string;
+  importedBy: string | null;
+  rowCount: number;
+  notes: string;
+};
+
+export type BankMatchCandidate = {
+  id: string;
+  type: 'customer_payment' | 'vendor_payment' | 'expense' | 'expense_reimbursement';
+  documentNumber: string;
+  date: string;
+  amount: number;
+  partyName: string | null;
+  label: string;
+};
+
+export type BankReconciliationReport = {
+  bankAccountId: string;
+  bankAccountName: string;
+  asOfDate: string;
+  statementEndingBalance: number;
+  bookEndingBalance: number;
+  difference: number;
+  matchedCount: number;
+  unmatchedCount: number;
+  unmatchedAmount: number;
+  categorizedCount: number;
+  excludedCount: number;
+  unmatchedTransactions: BankTransaction[];
+};
+
+export type BankReconciliation = {
+  id: string;
+  bankAccountId: string;
+  bankAccountName: string | null;
+  statementDate: string;
+  statementEndingBalance: number;
+  bookEndingBalance: number;
+  difference: number;
+  unmatchedCount: number;
+  unmatchedAmount: number;
+  matchedCount: number;
+  status: 'draft' | 'completed';
+  notes: string;
+  completedAt: string | null;
+  createdAt: string;
+};
+

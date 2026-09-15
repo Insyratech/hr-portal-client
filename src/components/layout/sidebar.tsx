@@ -9,9 +9,17 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import {
   CSO_WORK_NAV,
+  FINANCE_ACCOUNTANT_NAV,
+  FINANCE_BANKING_NAV,
+  FINANCE_EXPENSES_NAV,
+  FINANCE_ITEMS_NAV,
   FINANCE_OVERVIEW_NAV,
+  FINANCE_PURCHASES_NAV,
+  FINANCE_SALES_NAV,
+  FINANCE_SETTINGS_NAV,
   GM_ATTENDANCE_NAV,
   GM_LEAVE_NAV,
+  GM_ORG_NAV,
   GM_OVERVIEW_NAV,
   GM_WORK_NAV,
   HR_LEAVE_NAV,
@@ -141,6 +149,7 @@ function ManagerialNavGroups({
     return (
       <>
         <NavGroup label="Overview" items={GM_OVERVIEW_NAV} collapsed={collapsed} />
+        <NavGroup label="People" items={GM_ORG_NAV} collapsed={collapsed} />
         <NavGroup label="Attendance" items={GM_ATTENDANCE_NAV} collapsed={collapsed} />
         <NavGroup label="Leave" items={GM_LEAVE_NAV} collapsed={collapsed} />
         <NavGroup label="Work" items={GM_WORK_NAV} collapsed={collapsed} />
@@ -150,7 +159,18 @@ function ManagerialNavGroups({
   if (variant === 'cso') {
     return <NavGroup label="Work" items={CSO_WORK_NAV} collapsed={collapsed} />;
   }
-  return <NavGroup label="Overview" items={FINANCE_OVERVIEW_NAV} collapsed={collapsed} />;
+  return (
+    <>
+      <NavGroup label="Overview" items={FINANCE_OVERVIEW_NAV} collapsed={collapsed} />
+      <NavGroup label="Sales" items={FINANCE_SALES_NAV} collapsed={collapsed} />
+      <NavGroup label="Purchases" items={FINANCE_PURCHASES_NAV} collapsed={collapsed} />
+      <NavGroup label="Expenses" items={FINANCE_EXPENSES_NAV} collapsed={collapsed} />
+      <NavGroup label="Banking" items={FINANCE_BANKING_NAV} collapsed={collapsed} />
+      <NavGroup label="Items" items={FINANCE_ITEMS_NAV} collapsed={collapsed} />
+      <NavGroup label="Accountant" items={FINANCE_ACCOUNTANT_NAV} collapsed={collapsed} />
+      <NavGroup label="Settings" items={FINANCE_SETTINGS_NAV} collapsed={collapsed} />
+    </>
+  );
 }
 
 export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'> }) {

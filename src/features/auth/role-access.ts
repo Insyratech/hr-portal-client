@@ -112,7 +112,11 @@ function isEmployeeWorkspacePath(pathname: string): boolean {
     pathname.startsWith('/more') ||
     pathname.startsWith('/grievance') ||
     pathname.startsWith('/policies') ||
-    pathname.startsWith('/work')
+    pathname.startsWith('/work') ||
+    pathname === '/indents' ||
+    pathname.startsWith('/indents/') ||
+    pathname === '/expense-claims' ||
+    pathname.startsWith('/expense-claims/')
   );
 }
 

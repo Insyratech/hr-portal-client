@@ -17,11 +17,17 @@ import { EmployeeLeavesPanel } from '@/features/employees/employee-leaves-panel'
 import { EmployeeOverviewEditor } from '@/features/employees/employee-overview-editor';
 import { EmployeePayrollPanel } from '@/features/employees/employee-payroll-panel';
 import { EmployeeWorkPanel } from '@/features/employees/employee-work-panel';
-import { useGetDirectoryEditRequestForEmployeeQuery, useGetEmployeeAuditQuery, useGetEmployeeQuery } from '@/store/api/api';
+import {
+  useGetDirectoryEditRequestForEmployeeQuery,
+  useGetEmployeeAuditQuery,
+  useGetEmployeeQuery,
+  useGetEmployeesQuery,
+} from '@/store/api/api';
 import { useAppSelector } from '@/store/hooks';
 import {
   canEditDirectoryRecord,
   canLifecycleDirectoryRecord,
+  isGeneralManager,
   isHrManager,
   isSuperAdmin,
 } from '@/features/auth/role-access';
@@ -43,10 +49,13 @@ export function EmployeeProfile({ basePath = '/hr/employees' }: { basePath?: str
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab') ?? 'overview';
   const justCreated = searchParams.get('created') === '1';
-  const { data, isError, isFetching } = useGetEmployeeQuery(params.id);
-  const { data: editUnlock } = useGetDirectoryEditRequestForEmployeeQuery(params.id);
-  const { data: audit } = useGetEmployeeAuditQuery(params.id, { skip: tab !== 'activity' });
   const roles = useAppSelector((state) => state.auth.user?.roles ?? []);
+  const { data, isError, isFetching } = useGetEmployeeQuery(params.id);
+  const { data: directory } = useGetEmployeesQuery();
+  const { data: editUnlock } = useGetDirectoryEditRequestForEmployeeQuery(params.id, {
+    skip: !isHrManager(roles) && !isSuperAdmin(roles),
+  });
+  const { data: audit } = useGetEmployeeAuditQuery(params.id, { skip: tab !== 'activity' });
   const permissions = useAppSelector((state) => state.permissions.permissions);
   const employee = data?.data;
   const actorEmployeeId = useAppSelector((state) => state.auth.user?.employeeId);
@@ -89,6 +98,7 @@ export function EmployeeProfile({ basePath = '/hr/employees' }: { basePath?: str
     !employee?.roleCodes.includes('SUPER_ADMIN');
   const canViewWork =
     permissions.includes(PERMISSIONS.WORK_VIEW) || permissions.includes(PERMISSIONS.WORK_ASSIGN);
+  const managerName = directory?.data.find((row) => row.id === employee?.managerId)?.fullName ?? null;
   const canAssignAccessRoles =
     isSuperAdmin(roles) &&
     Boolean(employee) &&
@@ -146,6 +156,12 @@ export function EmployeeProfile({ basePath = '/hr/employees' }: { basePath?: str
           Access roles do not need an unlock. Company, shift, leave, and pay are set by HR Manager.
         </p>
       ) : null}
+      {isGeneralManager(roles) ? (
+        <p className="mb-4 max-w-2xl text-sm text-muted">
+          Full employee record is view-only here, including compensation and bank details for both companies. HR
+          Manager maintains these records. Payroll runs stay under Payroll.
+        </p>
+      ) : null}
       <nav className="mb-8 flex gap-1 overflow-x-auto border-b border-border">
         {tabs.map((item) => (
           <Link
@@ -168,12 +184,16 @@ export function EmployeeProfile({ basePath = '/hr/employees' }: { basePath?: str
             <EmployeeOverviewEditor employee={employee} />
           ) : (
             <dl className="grid max-w-2xl gap-6 sm:grid-cols-2">
+              <Field label="Employee ID" value={employee.employeeCode} />
               <Field label="Email" value={employee.email} />
+              <Field label="Notification email" value={employee.notificationEmail ?? '—'} />
               <Field label="Phone" value={employee.phone ?? '—'} />
+              <Field label="Date of birth" value={dateValue(employee.dateOfBirth)} />
               <Field label="Company" value={employee.companyName ?? '—'} />
               <Field label="Department" value={employee.departmentName ?? '—'} />
               <Field label="Designation (job title)" value={employee.designationName ?? '—'} />
-              <Field label="Joining date" value={employee.joiningDate} />
+              <Field label="Reporting manager" value={managerName ?? '—'} />
+              <Field label="Joining date" value={dateValue(employee.joiningDate)} />
               <Field label="Employment type" value={employee.employmentType.replaceAll('_', ' ')} />
               <Field
                 label="Status"
@@ -228,6 +248,11 @@ export function EmployeeProfile({ basePath = '/hr/employees' }: { basePath?: str
       ) : null}
     </>
   );
+}
+
+function dateValue(value: string | null | undefined): string {
+  if (!value) return '—';
+  return value.slice(0, 10);
 }
 
 function Field({ label, value }: { label: string; value: string }) {

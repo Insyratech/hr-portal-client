@@ -9,6 +9,12 @@ import type {
   AttendanceReviewCard,
   AttendanceReviewDay,
   AuditLog,
+  BankAccount,
+  BankImportBatch,
+  BankMatchCandidate,
+  BankReconciliation,
+  BankReconciliationReport,
+  BankTransaction,
   ConfirmedPayrollImport,
   CalculatePayrollInput,
   PayrollPreview,
@@ -20,6 +26,41 @@ import type {
   DirectoryEditRequestStatus,
   Employee,
   EmployeePayroll,
+  FinanceAccount,
+  FinanceCustomer,
+  FinanceItem,
+  FinanceNumberSeries,
+  FinanceOrganization,
+  FinanceSetupChecklist,
+  FinanceTaxGroup,
+  FinanceTaxRate,
+  FinanceTdsRate,
+  FinanceVendor,
+  PurchaseIndent,
+  PurchaseOrder,
+  PurchaseOrderPrint,
+  PurchaseReceipt,
+  Rfq,
+  SalesDocumentPrint,
+  SalesInvoice,
+  SalesOrder,
+  SalesQuote,
+  DeliveryNote,
+  CustomerPayment,
+  CustomerCreditNote,
+  DirectExpense,
+  ExpenseCategory,
+  ExpenseClaim,
+  ExpenseReimbursement,
+  GeneralLedger,
+  JournalEntry,
+  OpeningBalanceSet,
+  PeriodLock,
+  TrialBalance,
+  VendorBill,
+  VendorCredit,
+  VendorPayment,
+  VendorQuote,
   Grievance,
   GrievanceCounts,
   GrievanceDetail,
@@ -133,6 +174,40 @@ export const api = createApi({
     'ShiftChanges',
     'Work',
     'DirectoryEditRequests',
+    'FinanceSetup',
+    'FinanceOrganization',
+    'FinanceAccounts',
+    'FinanceTax',
+    'FinanceCustomers',
+    'FinanceVendors',
+    'FinanceItems',
+    'FinanceSeries',
+    'FinanceIndents',
+    'FinanceRfqs',
+    'FinanceQuotes',
+    'FinancePurchaseOrders',
+    'FinanceReceipts',
+    'FinanceBills',
+    'FinancePayments',
+    'FinanceCredits',
+    'FinanceSalesQuotes',
+    'FinanceSalesOrders',
+    'FinanceDeliveryNotes',
+    'FinanceInvoices',
+    'FinanceCustomerPayments',
+    'FinanceCreditNotes',
+    'FinanceExpenseCategories',
+    'FinanceExpenses',
+    'FinanceExpenseClaims',
+    'FinanceReimbursements',
+    'FinanceJournals',
+    'FinanceLedger',
+    'FinanceTrialBalance',
+    'FinancePeriodLocks',
+    'FinanceOpeningBalances',
+    'FinanceBankAccounts',
+    'FinanceBankTransactions',
+    'FinanceBankReconciliations',
   ],
   endpoints: (builder) => ({
     getHealth: builder.query<ApiSuccess<HealthData>, void>({
@@ -352,6 +427,1160 @@ export const api = createApi({
     >({
       query: ({ id, ...body }) => ({ url: `/api/v1/companies/${id}/logo`, method: 'POST', body }),
     }),
+
+    getFinanceSetup: builder.query<ApiSuccess<FinanceSetupChecklist>, void>({
+      query: () => '/api/v1/finance/setup',
+      providesTags: ['FinanceSetup'],
+    }),
+    getFinanceOrganization: builder.query<ApiSuccess<FinanceOrganization>, void>({
+      query: () => '/api/v1/finance/organization',
+      providesTags: ['FinanceOrganization'],
+    }),
+    updateFinanceOrganization: builder.mutation<
+      ApiSuccess<FinanceOrganization>,
+      Partial<FinanceOrganization> & { markSetupComplete?: boolean }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/organization', method: 'PATCH', body }),
+      invalidatesTags: ['FinanceOrganization', 'FinanceSetup'],
+    }),
+    getFinanceAccounts: builder.query<ApiSuccess<FinanceAccount[]>, void>({
+      query: () => '/api/v1/finance/accounts',
+      providesTags: ['FinanceAccounts'],
+    }),
+    createFinanceAccount: builder.mutation<
+      ApiSuccess<FinanceAccount>,
+      { code: string; name: string; accountType: FinanceAccount['accountType']; sortOrder?: number }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/accounts', method: 'POST', body }),
+      invalidatesTags: ['FinanceAccounts', 'FinanceSetup'],
+    }),
+    updateFinanceAccount: builder.mutation<
+      ApiSuccess<FinanceAccount>,
+      { id: string; body: { name?: string; isActive?: boolean; sortOrder?: number } }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/accounts/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['FinanceAccounts'],
+    }),
+    getFinanceTaxRates: builder.query<ApiSuccess<FinanceTaxRate[]>, void>({
+      query: () => '/api/v1/finance/tax-rates',
+      providesTags: ['FinanceTax'],
+    }),
+    getFinanceTaxGroups: builder.query<ApiSuccess<FinanceTaxGroup[]>, void>({
+      query: () => '/api/v1/finance/tax-groups',
+      providesTags: ['FinanceTax'],
+    }),
+    getFinanceTdsRates: builder.query<ApiSuccess<FinanceTdsRate[]>, void>({
+      query: () => '/api/v1/finance/tds-rates',
+      providesTags: ['FinanceTax'],
+    }),
+    getFinanceCustomers: builder.query<ApiSuccess<FinanceCustomer[]>, void>({
+      query: () => '/api/v1/finance/customers',
+      providesTags: ['FinanceCustomers'],
+    }),
+    createFinanceCustomer: builder.mutation<
+      ApiSuccess<FinanceCustomer>,
+      {
+        displayName: string;
+        companyName?: string;
+        email?: string | null;
+        phone?: string | null;
+        gstin?: string | null;
+        pan?: string | null;
+        stateCode?: string | null;
+        stateName?: string | null;
+        billingAddress?: string;
+        shippingAddress?: string;
+        paymentTermsDays?: number;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/customers', method: 'POST', body }),
+      invalidatesTags: ['FinanceCustomers', 'FinanceSetup'],
+    }),
+    updateFinanceCustomer: builder.mutation<
+      ApiSuccess<FinanceCustomer>,
+      { id: string; body: Partial<FinanceCustomer> }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/customers/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['FinanceCustomers'],
+    }),
+    getFinanceVendors: builder.query<ApiSuccess<FinanceVendor[]>, void>({
+      query: () => '/api/v1/finance/vendors',
+      providesTags: ['FinanceVendors'],
+    }),
+    createFinanceVendor: builder.mutation<
+      ApiSuccess<FinanceVendor>,
+      {
+        displayName: string;
+        companyName?: string;
+        email?: string | null;
+        phone?: string | null;
+        gstin?: string | null;
+        pan?: string | null;
+        stateCode?: string | null;
+        stateName?: string | null;
+        billingAddress?: string;
+        paymentTermsDays?: number;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/vendors', method: 'POST', body }),
+      invalidatesTags: ['FinanceVendors', 'FinanceSetup'],
+    }),
+    updateFinanceVendor: builder.mutation<
+      ApiSuccess<FinanceVendor>,
+      { id: string; body: Partial<FinanceVendor> }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/vendors/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['FinanceVendors'],
+    }),
+    getFinanceItems: builder.query<ApiSuccess<FinanceItem[]>, void>({
+      query: () => '/api/v1/finance/items',
+      providesTags: ['FinanceItems'],
+    }),
+    createFinanceItem: builder.mutation<
+      ApiSuccess<FinanceItem>,
+      {
+        code: string;
+        name: string;
+        itemType: 'goods' | 'service';
+        hsnSac?: string | null;
+        unit?: string;
+        saleRate?: number;
+        purchaseRate?: number;
+        incomeAccountId?: string | null;
+        expenseAccountId?: string | null;
+        taxGroupId?: string | null;
+        description?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/items', method: 'POST', body }),
+      invalidatesTags: ['FinanceItems', 'FinanceSetup'],
+    }),
+    updateFinanceItem: builder.mutation<
+      ApiSuccess<FinanceItem>,
+      { id: string; body: Partial<FinanceItem> }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/items/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['FinanceItems'],
+    }),
+    getFinanceNumberSeries: builder.query<ApiSuccess<FinanceNumberSeries[]>, void>({
+      query: () => '/api/v1/finance/number-series',
+      providesTags: ['FinanceSeries'],
+    }),
+    updateFinanceNumberSeries: builder.mutation<
+      ApiSuccess<FinanceNumberSeries>,
+      { id: string; body: Partial<Pick<FinanceNumberSeries, 'prefix' | 'padLength' | 'nextNumber' | 'resetYearly'>> }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/number-series/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['FinanceSeries'],
+    }),
+
+    getFinanceIndents: builder.query<ApiSuccess<PurchaseIndent[]>, void>({
+      query: () => '/api/v1/finance/indents',
+      providesTags: ['FinanceIndents'],
+    }),
+    getFinanceIndent: builder.query<ApiSuccess<PurchaseIndent>, string>({
+      query: (id) => `/api/v1/finance/indents/${id}`,
+      providesTags: ['FinanceIndents'],
+    }),
+    createFinanceIndent: builder.mutation<
+      ApiSuccess<PurchaseIndent>,
+      {
+        departmentId?: string | null;
+        requiredDate?: string | null;
+        priority?: PurchaseIndent['priority'];
+        purpose: string;
+        justification?: string;
+        lines: {
+          itemId?: string | null;
+          description: string;
+          quantity: number;
+          unit?: string;
+          estimatedRate: number;
+        }[];
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/indents', method: 'POST', body }),
+      invalidatesTags: ['FinanceIndents'],
+    }),
+    updateFinanceIndent: builder.mutation<
+      ApiSuccess<PurchaseIndent>,
+      {
+        id: string;
+        body: {
+          departmentId?: string | null;
+          requiredDate?: string | null;
+          priority?: PurchaseIndent['priority'];
+          purpose?: string;
+          justification?: string;
+          lines?: {
+            itemId?: string | null;
+            description: string;
+            quantity: number;
+            unit?: string;
+            estimatedRate: number;
+          }[];
+        };
+      }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/indents/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['FinanceIndents'],
+    }),
+    submitFinanceIndent: builder.mutation<ApiSuccess<PurchaseIndent>, string>({
+      query: (id) => ({ url: `/api/v1/finance/indents/${id}/submit`, method: 'POST' }),
+      invalidatesTags: ['FinanceIndents'],
+    }),
+    decideFinanceIndent: builder.mutation<
+      ApiSuccess<PurchaseIndent>,
+      { id: string; body: { decision: 'approve' | 'reject'; comment?: string } }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/indents/${id}/decide`, method: 'POST', body }),
+      invalidatesTags: ['FinanceIndents'],
+    }),
+
+    getFinanceRfqs: builder.query<ApiSuccess<Rfq[]>, void>({
+      query: () => '/api/v1/finance/rfqs',
+      providesTags: ['FinanceRfqs'],
+    }),
+    getFinanceRfq: builder.query<ApiSuccess<Rfq>, string>({
+      query: (id) => `/api/v1/finance/rfqs/${id}`,
+      providesTags: ['FinanceRfqs'],
+    }),
+    createFinanceRfqFromIndent: builder.mutation<
+      ApiSuccess<Rfq>,
+      { indentId: string; vendorIds: string[]; title?: string; notes?: string }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/rfqs/from-indent', method: 'POST', body }),
+      invalidatesTags: ['FinanceRfqs', 'FinanceIndents'],
+    }),
+    closeFinanceRfq: builder.mutation<ApiSuccess<Rfq>, string>({
+      query: (id) => ({ url: `/api/v1/finance/rfqs/${id}/close`, method: 'POST' }),
+      invalidatesTags: ['FinanceRfqs', 'FinanceQuotes'],
+    }),
+
+    getFinanceRfqQuotes: builder.query<ApiSuccess<VendorQuote[]>, string>({
+      query: (rfqId) => `/api/v1/finance/rfqs/${rfqId}/quotes`,
+      providesTags: ['FinanceQuotes'],
+    }),
+    createFinanceVendorQuote: builder.mutation<
+      ApiSuccess<VendorQuote>,
+      {
+        rfqId: string;
+        body: {
+          vendorId: string;
+          quoteDate?: string;
+          deliveryDays?: number;
+          shippingAmount?: number;
+          notes?: string;
+          lines: {
+            rfqLineId?: string | null;
+            description: string;
+            quantity: number;
+            unit?: string;
+            rate: number;
+            taxPercent: number;
+          }[];
+        };
+      }
+    >({
+      query: ({ rfqId, body }) => ({ url: `/api/v1/finance/rfqs/${rfqId}/quotes`, method: 'POST', body }),
+      invalidatesTags: ['FinanceQuotes', 'FinanceRfqs'],
+    }),
+    selectFinanceVendorQuote: builder.mutation<ApiSuccess<VendorQuote>, string>({
+      query: (id) => ({ url: `/api/v1/finance/vendor-quotes/${id}/select`, method: 'POST' }),
+      invalidatesTags: ['FinanceQuotes', 'FinanceRfqs'],
+    }),
+
+    getFinancePurchaseOrders: builder.query<ApiSuccess<PurchaseOrder[]>, void>({
+      query: () => '/api/v1/finance/purchase-orders',
+      providesTags: ['FinancePurchaseOrders'],
+    }),
+    getFinancePurchaseOrder: builder.query<ApiSuccess<PurchaseOrder>, string>({
+      query: (id) => `/api/v1/finance/purchase-orders/${id}`,
+      providesTags: ['FinancePurchaseOrders'],
+    }),
+    getFinancePurchaseOrderPrint: builder.query<ApiSuccess<PurchaseOrderPrint>, string>({
+      query: (id) => `/api/v1/finance/purchase-orders/${id}/print`,
+    }),
+    createFinancePurchaseOrder: builder.mutation<
+      ApiSuccess<PurchaseOrder>,
+      {
+        vendorId: string;
+        indentId?: string | null;
+        rfqId?: string | null;
+        vendorQuoteId?: string | null;
+        orderDate?: string;
+        expectedDelivery?: string | null;
+        billingAddress?: string;
+        deliveryAddress?: string;
+        paymentTermsDays?: number;
+        notes?: string;
+        lines: {
+          itemId?: string | null;
+          description: string;
+          quantity: number;
+          unit?: string;
+          rate: number;
+          taxPercent: number;
+        }[];
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/purchase-orders', method: 'POST', body }),
+      invalidatesTags: ['FinancePurchaseOrders', 'FinanceIndents'],
+    }),
+    createFinancePurchaseOrderFromQuote: builder.mutation<
+      ApiSuccess<PurchaseOrder>,
+      {
+        quoteId: string;
+        orderDate?: string;
+        expectedDelivery?: string | null;
+        billingAddress?: string;
+        deliveryAddress?: string;
+        paymentTermsDays?: number;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/purchase-orders/from-quote', method: 'POST', body }),
+      invalidatesTags: ['FinancePurchaseOrders', 'FinanceQuotes', 'FinanceRfqs', 'FinanceIndents'],
+    }),
+    approveFinancePurchaseOrder: builder.mutation<ApiSuccess<PurchaseOrder>, string>({
+      query: (id) => ({ url: `/api/v1/finance/purchase-orders/${id}/approve`, method: 'POST' }),
+      invalidatesTags: ['FinancePurchaseOrders'],
+    }),
+    issueFinancePurchaseOrder: builder.mutation<ApiSuccess<PurchaseOrder>, string>({
+      query: (id) => ({ url: `/api/v1/finance/purchase-orders/${id}/issue`, method: 'POST' }),
+      invalidatesTags: ['FinancePurchaseOrders'],
+    }),
+
+    getFinanceReceipts: builder.query<ApiSuccess<PurchaseReceipt[]>, void>({
+      query: () => '/api/v1/finance/receipts',
+      providesTags: ['FinanceReceipts'],
+    }),
+    getFinanceReceipt: builder.query<ApiSuccess<PurchaseReceipt>, string>({
+      query: (id) => `/api/v1/finance/receipts/${id}`,
+      providesTags: ['FinanceReceipts'],
+    }),
+    createFinanceReceipt: builder.mutation<
+      ApiSuccess<PurchaseReceipt>,
+      {
+        purchaseOrderId: string;
+        receiptDate?: string;
+        notes?: string;
+        lines: { purchaseOrderLineId: string; quantityReceived: number; description?: string }[];
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/receipts', method: 'POST', body }),
+      invalidatesTags: ['FinanceReceipts', 'FinancePurchaseOrders'],
+    }),
+    postFinanceReceipt: builder.mutation<ApiSuccess<PurchaseReceipt>, string>({
+      query: (id) => ({ url: `/api/v1/finance/receipts/${id}/post`, method: 'POST' }),
+      invalidatesTags: ['FinanceReceipts', 'FinancePurchaseOrders'],
+    }),
+
+    getFinanceBills: builder.query<ApiSuccess<VendorBill[]>, void>({
+      query: () => '/api/v1/finance/bills',
+      providesTags: ['FinanceBills'],
+    }),
+    getFinanceBill: builder.query<ApiSuccess<VendorBill>, string>({
+      query: (id) => `/api/v1/finance/bills/${id}`,
+      providesTags: ['FinanceBills'],
+    }),
+    createFinanceBill: builder.mutation<
+      ApiSuccess<VendorBill>,
+      {
+        purchaseOrderId: string;
+        receiptId?: string | null;
+        billDate?: string;
+        dueDate?: string | null;
+        vendorInvoiceNumber?: string | null;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/bills/from-purchase-order', method: 'POST', body }),
+      invalidatesTags: ['FinanceBills', 'FinancePurchaseOrders'],
+    }),
+    postFinanceBill: builder.mutation<ApiSuccess<VendorBill>, string>({
+      query: (id) => ({ url: `/api/v1/finance/bills/${id}/post`, method: 'POST' }),
+      invalidatesTags: ['FinanceBills', 'FinancePurchaseOrders'],
+    }),
+
+    getFinancePayments: builder.query<ApiSuccess<VendorPayment[]>, void>({
+      query: () => '/api/v1/finance/payments',
+      providesTags: ['FinancePayments'],
+    }),
+    getFinancePayment: builder.query<ApiSuccess<VendorPayment>, string>({
+      query: (id) => `/api/v1/finance/payments/${id}`,
+      providesTags: ['FinancePayments'],
+    }),
+    createFinancePayment: builder.mutation<
+      ApiSuccess<VendorPayment>,
+      {
+        vendorId: string;
+        paymentDate?: string;
+        amount: number;
+        bankAccountId?: string | null;
+        method?: string;
+        reference?: string;
+        notes?: string;
+        allocations: { billId: string; amount: number }[];
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/payments', method: 'POST', body }),
+      invalidatesTags: ['FinancePayments', 'FinanceBills'],
+    }),
+    postFinancePayment: builder.mutation<ApiSuccess<VendorPayment>, string>({
+      query: (id) => ({ url: `/api/v1/finance/payments/${id}/post`, method: 'POST' }),
+      invalidatesTags: ['FinancePayments', 'FinanceBills'],
+    }),
+
+    getFinanceVendorCredits: builder.query<ApiSuccess<VendorCredit[]>, void>({
+      query: () => '/api/v1/finance/vendor-credits',
+      providesTags: ['FinanceCredits'],
+    }),
+    getFinanceVendorCredit: builder.query<ApiSuccess<VendorCredit>, string>({
+      query: (id) => `/api/v1/finance/vendor-credits/${id}`,
+      providesTags: ['FinanceCredits'],
+    }),
+    createFinanceVendorCredit: builder.mutation<
+      ApiSuccess<VendorCredit>,
+      {
+        vendorId: string;
+        billId?: string | null;
+        creditDate?: string;
+        reason?: string;
+        lines: { description: string; quantity: number; rate: number; taxPercent: number }[];
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/vendor-credits', method: 'POST', body }),
+      invalidatesTags: ['FinanceCredits', 'FinanceBills'],
+    }),
+    postFinanceVendorCredit: builder.mutation<ApiSuccess<VendorCredit>, string>({
+      query: (id) => ({ url: `/api/v1/finance/vendor-credits/${id}/post`, method: 'POST' }),
+      invalidatesTags: ['FinanceCredits', 'FinanceBills'],
+    }),
+
+    getFinanceSalesQuotes: builder.query<ApiSuccess<SalesQuote[]>, void>({
+      query: () => '/api/v1/finance/quotes',
+      providesTags: ['FinanceSalesQuotes'],
+    }),
+    getFinanceSalesQuote: builder.query<ApiSuccess<SalesQuote>, string>({
+      query: (id) => `/api/v1/finance/quotes/${id}`,
+      providesTags: ['FinanceSalesQuotes'],
+    }),
+    getFinanceSalesQuotePrint: builder.query<ApiSuccess<SalesDocumentPrint>, string>({
+      query: (id) => `/api/v1/finance/quotes/${id}/print`,
+    }),
+    createFinanceSalesQuote: builder.mutation<
+      ApiSuccess<SalesQuote>,
+      {
+        customerId: string;
+        quoteDate?: string;
+        expiryDate?: string | null;
+        notes?: string;
+        terms?: string;
+        lines: {
+          itemId?: string | null;
+          description: string;
+          quantity: number;
+          unit?: string;
+          rate: number;
+          taxPercent: number;
+        }[];
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/quotes', method: 'POST', body }),
+      invalidatesTags: ['FinanceSalesQuotes'],
+    }),
+    updateFinanceSalesQuote: builder.mutation<
+      ApiSuccess<SalesQuote>,
+      {
+        id: string;
+        body: {
+          quoteDate?: string;
+          expiryDate?: string | null;
+          notes?: string;
+          terms?: string;
+          lines?: {
+            itemId?: string | null;
+            description: string;
+            quantity: number;
+            unit?: string;
+            rate: number;
+            taxPercent: number;
+          }[];
+        };
+      }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/quotes/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['FinanceSalesQuotes'],
+    }),
+    sendFinanceSalesQuote: builder.mutation<ApiSuccess<SalesQuote>, string>({
+      query: (id) => ({ url: `/api/v1/finance/quotes/${id}/send`, method: 'POST' }),
+      invalidatesTags: ['FinanceSalesQuotes'],
+    }),
+    decideFinanceSalesQuote: builder.mutation<
+      ApiSuccess<SalesQuote>,
+      { id: string; decision: 'accept' | 'decline' }
+    >({
+      query: ({ id, decision }) => ({
+        url: `/api/v1/finance/quotes/${id}/decide`,
+        method: 'POST',
+        body: { decision },
+      }),
+      invalidatesTags: ['FinanceSalesQuotes'],
+    }),
+    expireFinanceSalesQuote: builder.mutation<ApiSuccess<SalesQuote>, string>({
+      query: (id) => ({ url: `/api/v1/finance/quotes/${id}/expire`, method: 'POST' }),
+      invalidatesTags: ['FinanceSalesQuotes'],
+    }),
+    convertFinanceSalesQuoteToOrder: builder.mutation<ApiSuccess<SalesOrder>, string>({
+      query: (id) => ({ url: `/api/v1/finance/quotes/${id}/convert-to-order`, method: 'POST' }),
+      invalidatesTags: ['FinanceSalesQuotes', 'FinanceSalesOrders'],
+    }),
+    convertFinanceSalesQuoteToInvoice: builder.mutation<ApiSuccess<SalesInvoice>, string>({
+      query: (id) => ({ url: `/api/v1/finance/quotes/${id}/convert-to-invoice`, method: 'POST' }),
+      invalidatesTags: ['FinanceSalesQuotes', 'FinanceInvoices'],
+    }),
+
+    getFinanceSalesOrders: builder.query<ApiSuccess<SalesOrder[]>, void>({
+      query: () => '/api/v1/finance/sales-orders',
+      providesTags: ['FinanceSalesOrders'],
+    }),
+    getFinanceSalesOrder: builder.query<ApiSuccess<SalesOrder>, string>({
+      query: (id) => `/api/v1/finance/sales-orders/${id}`,
+      providesTags: ['FinanceSalesOrders'],
+    }),
+    createFinanceSalesOrder: builder.mutation<
+      ApiSuccess<SalesOrder>,
+      {
+        customerId: string;
+        quoteId?: string | null;
+        orderDate?: string;
+        expectedDelivery?: string | null;
+        billingAddress?: string;
+        shippingAddress?: string;
+        notes?: string;
+        lines: {
+          itemId?: string | null;
+          description: string;
+          quantity: number;
+          unit?: string;
+          rate: number;
+          taxPercent: number;
+        }[];
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/sales-orders', method: 'POST', body }),
+      invalidatesTags: ['FinanceSalesOrders'],
+    }),
+    createFinanceSalesOrderFromQuote: builder.mutation<
+      ApiSuccess<SalesOrder>,
+      {
+        quoteId: string;
+        orderDate?: string;
+        expectedDelivery?: string | null;
+        billingAddress?: string;
+        shippingAddress?: string;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/sales-orders/from-quote', method: 'POST', body }),
+      invalidatesTags: ['FinanceSalesOrders', 'FinanceSalesQuotes'],
+    }),
+    confirmFinanceSalesOrder: builder.mutation<ApiSuccess<SalesOrder>, string>({
+      query: (id) => ({ url: `/api/v1/finance/sales-orders/${id}/confirm`, method: 'POST' }),
+      invalidatesTags: ['FinanceSalesOrders'],
+    }),
+
+    getFinanceDeliveryNotes: builder.query<ApiSuccess<DeliveryNote[]>, void>({
+      query: () => '/api/v1/finance/delivery-notes',
+      providesTags: ['FinanceDeliveryNotes'],
+    }),
+    getFinanceDeliveryNote: builder.query<ApiSuccess<DeliveryNote>, string>({
+      query: (id) => `/api/v1/finance/delivery-notes/${id}`,
+      providesTags: ['FinanceDeliveryNotes'],
+    }),
+    getFinanceDeliveryNotePrint: builder.query<ApiSuccess<SalesDocumentPrint>, string>({
+      query: (id) => `/api/v1/finance/delivery-notes/${id}/print`,
+    }),
+    createFinanceDeliveryNoteFromSalesOrder: builder.mutation<
+      ApiSuccess<DeliveryNote>,
+      {
+        salesOrderId: string;
+        deliveryDate?: string;
+        notes?: string;
+        lines: { salesOrderLineId: string; quantityDelivered: number }[];
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/delivery-notes/from-sales-order', method: 'POST', body }),
+      invalidatesTags: ['FinanceDeliveryNotes', 'FinanceSalesOrders'],
+    }),
+    postFinanceDeliveryNote: builder.mutation<ApiSuccess<DeliveryNote>, string>({
+      query: (id) => ({ url: `/api/v1/finance/delivery-notes/${id}/post`, method: 'POST' }),
+      invalidatesTags: ['FinanceDeliveryNotes', 'FinanceSalesOrders'],
+    }),
+
+    getFinanceInvoices: builder.query<ApiSuccess<SalesInvoice[]>, void>({
+      query: () => '/api/v1/finance/invoices',
+      providesTags: ['FinanceInvoices'],
+    }),
+    getFinanceInvoice: builder.query<ApiSuccess<SalesInvoice>, string>({
+      query: (id) => `/api/v1/finance/invoices/${id}`,
+      providesTags: ['FinanceInvoices'],
+    }),
+    getFinanceInvoicePrint: builder.query<ApiSuccess<SalesDocumentPrint>, string>({
+      query: (id) => `/api/v1/finance/invoices/${id}/print`,
+    }),
+    createFinanceInvoiceFromSalesOrder: builder.mutation<
+      ApiSuccess<SalesInvoice>,
+      {
+        salesOrderId: string;
+        deliveryNoteId?: string | null;
+        invoiceDate?: string;
+        dueDate?: string | null;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/invoices/from-sales-order', method: 'POST', body }),
+      invalidatesTags: ['FinanceInvoices', 'FinanceSalesOrders'],
+    }),
+    createFinanceInvoiceFromQuote: builder.mutation<
+      ApiSuccess<SalesInvoice>,
+      {
+        quoteId: string;
+        invoiceDate?: string;
+        dueDate?: string | null;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/invoices/from-quote', method: 'POST', body }),
+      invalidatesTags: ['FinanceInvoices', 'FinanceSalesQuotes'],
+    }),
+    sendFinanceInvoice: builder.mutation<ApiSuccess<SalesInvoice>, string>({
+      query: (id) => ({ url: `/api/v1/finance/invoices/${id}/send`, method: 'POST' }),
+      invalidatesTags: ['FinanceInvoices'],
+    }),
+    postFinanceInvoice: builder.mutation<ApiSuccess<SalesInvoice>, string>({
+      query: (id) => ({ url: `/api/v1/finance/invoices/${id}/post`, method: 'POST' }),
+      invalidatesTags: ['FinanceInvoices', 'FinanceSalesOrders'],
+    }),
+
+    getFinanceCustomerPayments: builder.query<ApiSuccess<CustomerPayment[]>, void>({
+      query: () => '/api/v1/finance/customer-payments',
+      providesTags: ['FinanceCustomerPayments'],
+    }),
+    getFinanceCustomerPayment: builder.query<ApiSuccess<CustomerPayment>, string>({
+      query: (id) => `/api/v1/finance/customer-payments/${id}`,
+      providesTags: ['FinanceCustomerPayments'],
+    }),
+    createFinanceCustomerPayment: builder.mutation<
+      ApiSuccess<CustomerPayment>,
+      {
+        customerId: string;
+        paymentDate?: string;
+        amount: number;
+        bankAccountId: string;
+        method?: string;
+        reference?: string;
+        notes?: string;
+        allocations: { invoiceId: string; amount: number }[];
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/customer-payments', method: 'POST', body }),
+      invalidatesTags: ['FinanceCustomerPayments', 'FinanceInvoices'],
+    }),
+    postFinanceCustomerPayment: builder.mutation<ApiSuccess<CustomerPayment>, string>({
+      query: (id) => ({ url: `/api/v1/finance/customer-payments/${id}/post`, method: 'POST' }),
+      invalidatesTags: ['FinanceCustomerPayments', 'FinanceInvoices'],
+    }),
+
+    getFinanceCreditNotes: builder.query<ApiSuccess<CustomerCreditNote[]>, void>({
+      query: () => '/api/v1/finance/credit-notes',
+      providesTags: ['FinanceCreditNotes'],
+    }),
+    getFinanceCreditNote: builder.query<ApiSuccess<CustomerCreditNote>, string>({
+      query: (id) => `/api/v1/finance/credit-notes/${id}`,
+      providesTags: ['FinanceCreditNotes'],
+    }),
+    createFinanceCreditNote: builder.mutation<
+      ApiSuccess<CustomerCreditNote>,
+      {
+        customerId: string;
+        invoiceId?: string | null;
+        creditDate?: string;
+        reason?: string;
+        lines: { description: string; quantity: number; rate: number; taxPercent: number }[];
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/credit-notes', method: 'POST', body }),
+      invalidatesTags: ['FinanceCreditNotes', 'FinanceInvoices'],
+    }),
+    postFinanceCreditNote: builder.mutation<ApiSuccess<CustomerCreditNote>, string>({
+      query: (id) => ({ url: `/api/v1/finance/credit-notes/${id}/post`, method: 'POST' }),
+      invalidatesTags: ['FinanceCreditNotes', 'FinanceInvoices'],
+    }),
+
+    getFinanceExpenseCategories: builder.query<ApiSuccess<ExpenseCategory[]>, void>({
+      query: () => '/api/v1/finance/expense-categories',
+      providesTags: ['FinanceExpenseCategories'],
+    }),
+
+    getFinanceExpenses: builder.query<ApiSuccess<DirectExpense[]>, void>({
+      query: () => '/api/v1/finance/expenses',
+      providesTags: ['FinanceExpenses'],
+    }),
+    getFinanceExpense: builder.query<ApiSuccess<DirectExpense>, string>({
+      query: (id) => `/api/v1/finance/expenses/${id}`,
+      providesTags: ['FinanceExpenses'],
+    }),
+    createFinanceExpense: builder.mutation<
+      ApiSuccess<DirectExpense>,
+      {
+        expenseDate?: string;
+        categoryId?: string | null;
+        vendorId?: string | null;
+        expenseAccountId?: string | null;
+        description: string;
+        amount: number;
+        taxPercent?: number;
+        paidThrough: 'cash' | 'bank' | 'accounts_payable';
+        bankAccountId?: string | null;
+        vendorInvoiceNumber?: string;
+        receiptUrl?: string;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/expenses', method: 'POST', body }),
+      invalidatesTags: ['FinanceExpenses'],
+    }),
+    updateFinanceExpense: builder.mutation<
+      ApiSuccess<DirectExpense>,
+      {
+        id: string;
+        body: {
+          expenseDate?: string;
+          categoryId?: string | null;
+          vendorId?: string | null;
+          expenseAccountId?: string | null;
+          description?: string;
+          amount?: number;
+          taxPercent?: number;
+          paidThrough?: 'cash' | 'bank' | 'accounts_payable';
+          bankAccountId?: string | null;
+          vendorInvoiceNumber?: string;
+          receiptUrl?: string;
+          notes?: string;
+        };
+      }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/expenses/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['FinanceExpenses'],
+    }),
+    postFinanceExpense: builder.mutation<ApiSuccess<DirectExpense>, string>({
+      query: (id) => ({ url: `/api/v1/finance/expenses/${id}/post`, method: 'POST' }),
+      invalidatesTags: ['FinanceExpenses'],
+    }),
+
+    getFinanceExpenseClaims: builder.query<ApiSuccess<ExpenseClaim[]>, void>({
+      query: () => '/api/v1/finance/expense-claims',
+      providesTags: ['FinanceExpenseClaims'],
+    }),
+    getFinanceExpenseClaim: builder.query<ApiSuccess<ExpenseClaim>, string>({
+      query: (id) => `/api/v1/finance/expense-claims/${id}`,
+      providesTags: ['FinanceExpenseClaims'],
+    }),
+    createFinanceExpenseClaim: builder.mutation<
+      ApiSuccess<ExpenseClaim>,
+      {
+        categoryId?: string | null;
+        claimDate?: string;
+        description: string;
+        amount: number;
+        taxPercent?: number;
+        vendorName?: string;
+        billNumber?: string;
+        receiptUrl?: string;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/expense-claims', method: 'POST', body }),
+      invalidatesTags: ['FinanceExpenseClaims'],
+    }),
+    updateFinanceExpenseClaim: builder.mutation<
+      ApiSuccess<ExpenseClaim>,
+      {
+        id: string;
+        body: {
+          categoryId?: string | null;
+          claimDate?: string;
+          description?: string;
+          amount?: number;
+          taxPercent?: number;
+          vendorName?: string;
+          billNumber?: string;
+          receiptUrl?: string;
+          notes?: string;
+        };
+      }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/expense-claims/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['FinanceExpenseClaims'],
+    }),
+    submitFinanceExpenseClaim: builder.mutation<ApiSuccess<ExpenseClaim>, string>({
+      query: (id) => ({ url: `/api/v1/finance/expense-claims/${id}/submit`, method: 'POST' }),
+      invalidatesTags: ['FinanceExpenseClaims'],
+    }),
+    decideFinanceExpenseClaim: builder.mutation<
+      ApiSuccess<ExpenseClaim>,
+      { id: string; body: { decision: 'approve' | 'reject'; comment?: string } }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/expense-claims/${id}/decide`, method: 'POST', body }),
+      invalidatesTags: ['FinanceExpenseClaims'],
+    }),
+    cancelFinanceExpenseClaim: builder.mutation<ApiSuccess<ExpenseClaim>, string>({
+      query: (id) => ({ url: `/api/v1/finance/expense-claims/${id}/cancel`, method: 'POST' }),
+      invalidatesTags: ['FinanceExpenseClaims'],
+    }),
+
+    getFinanceExpenseReimbursements: builder.query<ApiSuccess<ExpenseReimbursement[]>, void>({
+      query: () => '/api/v1/finance/expense-reimbursements',
+      providesTags: ['FinanceReimbursements'],
+    }),
+    getFinanceExpenseReimbursement: builder.query<ApiSuccess<ExpenseReimbursement>, string>({
+      query: (id) => `/api/v1/finance/expense-reimbursements/${id}`,
+      providesTags: ['FinanceReimbursements'],
+    }),
+    createFinanceExpenseReimbursement: builder.mutation<
+      ApiSuccess<ExpenseReimbursement>,
+      {
+        employeeId: string;
+        paymentDate?: string;
+        amount: number;
+        bankAccountId: string;
+        method?: string;
+        reference?: string;
+        notes?: string;
+        allocations: { claimId: string; amount: number }[];
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/expense-reimbursements', method: 'POST', body }),
+      invalidatesTags: ['FinanceReimbursements', 'FinanceExpenseClaims'],
+    }),
+    postFinanceExpenseReimbursement: builder.mutation<ApiSuccess<ExpenseReimbursement>, string>({
+      query: (id) => ({ url: `/api/v1/finance/expense-reimbursements/${id}/post`, method: 'POST' }),
+      invalidatesTags: ['FinanceReimbursements', 'FinanceExpenseClaims'],
+    }),
+
+    getFinanceJournals: builder.query<
+      ApiSuccess<JournalEntry[]>,
+      { fromDate?: string; toDate?: string; status?: 'draft' | 'posted' | 'reversed' } | void
+    >({
+      query: (arg) => ({
+        url: '/api/v1/finance/journals',
+        params: arg
+          ? {
+              ...(arg.fromDate ? { fromDate: arg.fromDate } : {}),
+              ...(arg.toDate ? { toDate: arg.toDate } : {}),
+              ...(arg.status ? { status: arg.status } : {}),
+            }
+          : undefined,
+      }),
+      providesTags: ['FinanceJournals'],
+    }),
+    getFinanceJournal: builder.query<ApiSuccess<JournalEntry>, string>({
+      query: (id) => `/api/v1/finance/journals/${id}`,
+      providesTags: ['FinanceJournals'],
+    }),
+    createFinanceJournal: builder.mutation<
+      ApiSuccess<JournalEntry>,
+      {
+        entryDate: string;
+        memo?: string;
+        lines: Array<{ accountId: string; description?: string; debit: number; credit: number }>;
+        post?: boolean;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/journals', method: 'POST', body }),
+      invalidatesTags: ['FinanceJournals', 'FinanceLedger', 'FinanceTrialBalance'],
+    }),
+    updateFinanceJournal: builder.mutation<
+      ApiSuccess<JournalEntry>,
+      {
+        id: string;
+        body: {
+          entryDate?: string;
+          memo?: string;
+          lines?: Array<{ accountId: string; description?: string; debit: number; credit: number }>;
+        };
+      }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/journals/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['FinanceJournals', 'FinanceLedger', 'FinanceTrialBalance'],
+    }),
+    postFinanceJournal: builder.mutation<ApiSuccess<JournalEntry>, string>({
+      query: (id) => ({ url: `/api/v1/finance/journals/${id}/post`, method: 'POST' }),
+      invalidatesTags: ['FinanceJournals', 'FinanceLedger', 'FinanceTrialBalance'],
+    }),
+    reverseFinanceJournal: builder.mutation<ApiSuccess<JournalEntry>, string>({
+      query: (id) => ({ url: `/api/v1/finance/journals/${id}/reverse`, method: 'POST' }),
+      invalidatesTags: ['FinanceJournals', 'FinanceLedger', 'FinanceTrialBalance'],
+    }),
+
+    getFinanceLedger: builder.query<
+      ApiSuccess<GeneralLedger>,
+      { accountId: string; fromDate?: string; toDate?: string }
+    >({
+      query: ({ accountId, fromDate, toDate }) => ({
+        url: '/api/v1/finance/ledger',
+        params: {
+          accountId,
+          ...(fromDate ? { fromDate } : {}),
+          ...(toDate ? { toDate } : {}),
+        },
+      }),
+      providesTags: ['FinanceLedger'],
+    }),
+    getFinanceTrialBalance: builder.query<ApiSuccess<TrialBalance>, { asOfDate: string }>({
+      query: ({ asOfDate }) => ({
+        url: '/api/v1/finance/trial-balance',
+        params: { asOfDate },
+      }),
+      providesTags: ['FinanceTrialBalance'],
+    }),
+
+    getFinancePeriodLocks: builder.query<ApiSuccess<PeriodLock[]>, void>({
+      query: () => '/api/v1/finance/period-locks',
+      providesTags: ['FinancePeriodLocks'],
+    }),
+    lockFinancePeriod: builder.mutation<
+      ApiSuccess<PeriodLock>,
+      { periodYear: number; periodMonth: number; notes?: string }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/period-locks', method: 'POST', body }),
+      invalidatesTags: ['FinancePeriodLocks'],
+    }),
+    unlockFinancePeriod: builder.mutation<
+      ApiSuccess<{ unlocked: true }>,
+      { periodYear: number; periodMonth: number }
+    >({
+      query: ({ periodYear, periodMonth }) => ({
+        url: `/api/v1/finance/period-locks/${periodYear}/${periodMonth}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['FinancePeriodLocks'],
+    }),
+
+    getFinanceOpeningBalances: builder.query<ApiSuccess<OpeningBalanceSet[]>, void>({
+      query: () => '/api/v1/finance/opening-balances',
+      providesTags: ['FinanceOpeningBalances'],
+    }),
+    getFinanceOpeningBalance: builder.query<ApiSuccess<OpeningBalanceSet>, string>({
+      query: (id) => `/api/v1/finance/opening-balances/${id}`,
+      providesTags: ['FinanceOpeningBalances'],
+    }),
+    createFinanceOpeningBalance: builder.mutation<
+      ApiSuccess<OpeningBalanceSet>,
+      {
+        asOfDate: string;
+        memo?: string;
+        lines: Array<{ accountId: string; debit: number; credit: number }>;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/opening-balances', method: 'POST', body }),
+      invalidatesTags: ['FinanceOpeningBalances'],
+    }),
+    updateFinanceOpeningBalance: builder.mutation<
+      ApiSuccess<OpeningBalanceSet>,
+      {
+        id: string;
+        body: {
+          asOfDate?: string;
+          memo?: string;
+          lines?: Array<{ accountId: string; debit: number; credit: number }>;
+        };
+      }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/opening-balances/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['FinanceOpeningBalances'],
+    }),
+    postFinanceOpeningBalance: builder.mutation<ApiSuccess<OpeningBalanceSet>, string>({
+      query: (id) => ({ url: `/api/v1/finance/opening-balances/${id}/post`, method: 'POST' }),
+      invalidatesTags: ['FinanceOpeningBalances', 'FinanceJournals', 'FinanceLedger', 'FinanceTrialBalance'],
+    }),
+
+    getFinanceBankAccounts: builder.query<ApiSuccess<BankAccount[]>, void>({
+      query: () => '/api/v1/finance/bank-accounts',
+      providesTags: ['FinanceBankAccounts'],
+    }),
+    getFinanceBankAccount: builder.query<ApiSuccess<BankAccount>, string>({
+      query: (id) => `/api/v1/finance/bank-accounts/${id}`,
+      providesTags: ['FinanceBankAccounts'],
+    }),
+    createFinanceBankAccount: builder.mutation<
+      ApiSuccess<BankAccount>,
+      {
+        glAccountId: string;
+        displayName: string;
+        accountKind: 'bank' | 'cash';
+        bankName?: string;
+        accountNumberMasked?: string;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/bank-accounts', method: 'POST', body }),
+      invalidatesTags: ['FinanceBankAccounts'],
+    }),
+    updateFinanceBankAccount: builder.mutation<
+      ApiSuccess<BankAccount>,
+      {
+        id: string;
+        body: {
+          displayName?: string;
+          accountKind?: 'bank' | 'cash';
+          bankName?: string;
+          accountNumberMasked?: string;
+          notes?: string;
+          isActive?: boolean;
+        };
+      }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/bank-accounts/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['FinanceBankAccounts'],
+    }),
+
+    getFinanceBankTransactions: builder.query<
+      ApiSuccess<BankTransaction[]>,
+      {
+        bankAccountId?: string;
+        status?: 'unmatched' | 'matched' | 'categorized' | 'excluded';
+        fromDate?: string;
+        toDate?: string;
+      } | void
+    >({
+      query: (arg) => ({
+        url: '/api/v1/finance/bank-transactions',
+        params:
+          arg && typeof arg === 'object'
+            ? {
+                ...(arg.bankAccountId ? { bankAccountId: arg.bankAccountId } : {}),
+                ...(arg.status ? { status: arg.status } : {}),
+                ...(arg.fromDate ? { fromDate: arg.fromDate } : {}),
+                ...(arg.toDate ? { toDate: arg.toDate } : {}),
+              }
+            : undefined,
+      }),
+      providesTags: ['FinanceBankTransactions'],
+    }),
+    getFinanceBankTransaction: builder.query<ApiSuccess<BankTransaction>, string>({
+      query: (id) => `/api/v1/finance/bank-transactions/${id}`,
+      providesTags: ['FinanceBankTransactions'],
+    }),
+    createFinanceBankTransaction: builder.mutation<
+      ApiSuccess<BankTransaction>,
+      {
+        bankAccountId: string;
+        transactionDate: string;
+        description?: string;
+        reference?: string;
+        transactionType: 'credit' | 'debit';
+        amount: number;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/bank-transactions', method: 'POST', body }),
+      invalidatesTags: ['FinanceBankTransactions', 'FinanceBankReconciliations'],
+    }),
+    matchFinanceBankTransaction: builder.mutation<
+      ApiSuccess<BankTransaction>,
+      {
+        id: string;
+        body: {
+          matchType:
+            | 'customer_payment'
+            | 'vendor_payment'
+            | 'expense'
+            | 'expense_reimbursement'
+            | 'transfer';
+          matchId?: string;
+          transferBankAccountId?: string;
+        };
+      }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/finance/bank-transactions/${id}/match`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['FinanceBankTransactions', 'FinanceBankReconciliations'],
+    }),
+    unmatchFinanceBankTransaction: builder.mutation<ApiSuccess<BankTransaction>, string>({
+      query: (id) => ({ url: `/api/v1/finance/bank-transactions/${id}/unmatch`, method: 'POST' }),
+      invalidatesTags: ['FinanceBankTransactions', 'FinanceBankReconciliations'],
+    }),
+    categorizeFinanceBankTransaction: builder.mutation<
+      ApiSuccess<BankTransaction>,
+      { id: string; body: { categoryAccountId: string } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/finance/bank-transactions/${id}/categorize`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['FinanceBankTransactions', 'FinanceBankReconciliations', 'FinanceJournals', 'FinanceLedger'],
+    }),
+    excludeFinanceBankTransaction: builder.mutation<ApiSuccess<BankTransaction>, string>({
+      query: (id) => ({ url: `/api/v1/finance/bank-transactions/${id}/exclude`, method: 'POST' }),
+      invalidatesTags: ['FinanceBankTransactions', 'FinanceBankReconciliations'],
+    }),
+    unexcludeFinanceBankTransaction: builder.mutation<ApiSuccess<BankTransaction>, string>({
+      query: (id) => ({ url: `/api/v1/finance/bank-transactions/${id}/unexclude`, method: 'POST' }),
+      invalidatesTags: ['FinanceBankTransactions', 'FinanceBankReconciliations'],
+    }),
+    getFinanceBankMatchCandidates: builder.query<
+      ApiSuccess<BankMatchCandidate[]>,
+      { id: string; bankAccountId?: string }
+    >({
+      query: ({ id, bankAccountId }) => ({
+        url: `/api/v1/finance/bank-transactions/${id}/match-candidates`,
+        params: bankAccountId ? { bankAccountId } : undefined,
+      }),
+    }),
+    importFinanceBankStatement: builder.mutation<
+      ApiSuccess<{ batch: BankImportBatch; createdCount: number }>,
+      { bankAccountId: string; filename?: string; csvText: string }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/bank-imports', method: 'POST', body }),
+      invalidatesTags: ['FinanceBankTransactions', 'FinanceBankReconciliations'],
+    }),
+    getFinanceBankReconciliationReport: builder.query<
+      ApiSuccess<BankReconciliationReport>,
+      { bankAccountId: string; asOfDate: string; statementEndingBalance: number }
+    >({
+      query: ({ bankAccountId, asOfDate, statementEndingBalance }) => ({
+        url: '/api/v1/finance/bank-reconciliation',
+        params: { bankAccountId, asOfDate, statementEndingBalance },
+      }),
+      providesTags: ['FinanceBankReconciliations'],
+    }),
+    getFinanceBankReconciliations: builder.query<ApiSuccess<BankReconciliation[]>, void>({
+      query: () => '/api/v1/finance/bank-reconciliations',
+      providesTags: ['FinanceBankReconciliations'],
+    }),
+    saveFinanceBankReconciliation: builder.mutation<
+      ApiSuccess<BankReconciliation>,
+      {
+        bankAccountId: string;
+        statementDate: string;
+        statementEndingBalance: number;
+        notes?: string;
+        complete?: boolean;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/bank-reconciliations', method: 'POST', body }),
+      invalidatesTags: ['FinanceBankReconciliations'],
+    }),
+
     getDepartments: builder.query<ApiSuccess<NamedEntity[]>, void>({
       query: () => '/api/v1/departments',
       providesTags: ['Departments'],
@@ -1603,6 +2832,151 @@ export const {
   useCreateCompanyMutation,
   useUpdateCompanyMutation,
   useCreateCompanyLogoMutation,
+  useGetFinanceSetupQuery,
+  useGetFinanceOrganizationQuery,
+  useUpdateFinanceOrganizationMutation,
+  useGetFinanceAccountsQuery,
+  useCreateFinanceAccountMutation,
+  useUpdateFinanceAccountMutation,
+  useGetFinanceTaxRatesQuery,
+  useGetFinanceTaxGroupsQuery,
+  useGetFinanceTdsRatesQuery,
+  useGetFinanceCustomersQuery,
+  useCreateFinanceCustomerMutation,
+  useUpdateFinanceCustomerMutation,
+  useGetFinanceVendorsQuery,
+  useCreateFinanceVendorMutation,
+  useUpdateFinanceVendorMutation,
+  useGetFinanceItemsQuery,
+  useCreateFinanceItemMutation,
+  useUpdateFinanceItemMutation,
+  useGetFinanceNumberSeriesQuery,
+  useUpdateFinanceNumberSeriesMutation,
+  useGetFinanceIndentsQuery,
+  useGetFinanceIndentQuery,
+  useCreateFinanceIndentMutation,
+  useUpdateFinanceIndentMutation,
+  useSubmitFinanceIndentMutation,
+  useDecideFinanceIndentMutation,
+  useGetFinanceRfqsQuery,
+  useGetFinanceRfqQuery,
+  useCreateFinanceRfqFromIndentMutation,
+  useCloseFinanceRfqMutation,
+  useGetFinanceRfqQuotesQuery,
+  useCreateFinanceVendorQuoteMutation,
+  useSelectFinanceVendorQuoteMutation,
+  useGetFinancePurchaseOrdersQuery,
+  useGetFinancePurchaseOrderQuery,
+  useGetFinancePurchaseOrderPrintQuery,
+  useLazyGetFinancePurchaseOrderPrintQuery,
+  useCreateFinancePurchaseOrderMutation,
+  useCreateFinancePurchaseOrderFromQuoteMutation,
+  useApproveFinancePurchaseOrderMutation,
+  useIssueFinancePurchaseOrderMutation,
+  useGetFinanceReceiptsQuery,
+  useGetFinanceReceiptQuery,
+  useCreateFinanceReceiptMutation,
+  usePostFinanceReceiptMutation,
+  useGetFinanceBillsQuery,
+  useGetFinanceBillQuery,
+  useCreateFinanceBillMutation,
+  usePostFinanceBillMutation,
+  useGetFinancePaymentsQuery,
+  useGetFinancePaymentQuery,
+  useCreateFinancePaymentMutation,
+  usePostFinancePaymentMutation,
+  useGetFinanceVendorCreditsQuery,
+  useGetFinanceVendorCreditQuery,
+  useCreateFinanceVendorCreditMutation,
+  usePostFinanceVendorCreditMutation,
+  useGetFinanceSalesQuotesQuery,
+  useGetFinanceSalesQuoteQuery,
+  useGetFinanceSalesQuotePrintQuery,
+  useLazyGetFinanceSalesQuotePrintQuery,
+  useCreateFinanceSalesQuoteMutation,
+  useUpdateFinanceSalesQuoteMutation,
+  useSendFinanceSalesQuoteMutation,
+  useDecideFinanceSalesQuoteMutation,
+  useExpireFinanceSalesQuoteMutation,
+  useConvertFinanceSalesQuoteToOrderMutation,
+  useConvertFinanceSalesQuoteToInvoiceMutation,
+  useGetFinanceSalesOrdersQuery,
+  useGetFinanceSalesOrderQuery,
+  useCreateFinanceSalesOrderMutation,
+  useCreateFinanceSalesOrderFromQuoteMutation,
+  useConfirmFinanceSalesOrderMutation,
+  useGetFinanceDeliveryNotesQuery,
+  useGetFinanceDeliveryNoteQuery,
+  useGetFinanceDeliveryNotePrintQuery,
+  useLazyGetFinanceDeliveryNotePrintQuery,
+  useCreateFinanceDeliveryNoteFromSalesOrderMutation,
+  usePostFinanceDeliveryNoteMutation,
+  useGetFinanceInvoicesQuery,
+  useGetFinanceInvoiceQuery,
+  useGetFinanceInvoicePrintQuery,
+  useLazyGetFinanceInvoicePrintQuery,
+  useCreateFinanceInvoiceFromSalesOrderMutation,
+  useCreateFinanceInvoiceFromQuoteMutation,
+  useSendFinanceInvoiceMutation,
+  usePostFinanceInvoiceMutation,
+  useGetFinanceCustomerPaymentsQuery,
+  useGetFinanceCustomerPaymentQuery,
+  useCreateFinanceCustomerPaymentMutation,
+  usePostFinanceCustomerPaymentMutation,
+  useGetFinanceCreditNotesQuery,
+  useGetFinanceCreditNoteQuery,
+  useCreateFinanceCreditNoteMutation,
+  usePostFinanceCreditNoteMutation,
+  useGetFinanceExpenseCategoriesQuery,
+  useGetFinanceExpensesQuery,
+  useGetFinanceExpenseQuery,
+  useCreateFinanceExpenseMutation,
+  useUpdateFinanceExpenseMutation,
+  usePostFinanceExpenseMutation,
+  useGetFinanceExpenseClaimsQuery,
+  useGetFinanceExpenseClaimQuery,
+  useCreateFinanceExpenseClaimMutation,
+  useUpdateFinanceExpenseClaimMutation,
+  useSubmitFinanceExpenseClaimMutation,
+  useDecideFinanceExpenseClaimMutation,
+  useCancelFinanceExpenseClaimMutation,
+  useGetFinanceExpenseReimbursementsQuery,
+  useGetFinanceExpenseReimbursementQuery,
+  useCreateFinanceExpenseReimbursementMutation,
+  usePostFinanceExpenseReimbursementMutation,
+  useGetFinanceJournalsQuery,
+  useGetFinanceJournalQuery,
+  useCreateFinanceJournalMutation,
+  useUpdateFinanceJournalMutation,
+  usePostFinanceJournalMutation,
+  useReverseFinanceJournalMutation,
+  useGetFinanceLedgerQuery,
+  useGetFinanceTrialBalanceQuery,
+  useGetFinancePeriodLocksQuery,
+  useLockFinancePeriodMutation,
+  useUnlockFinancePeriodMutation,
+  useGetFinanceOpeningBalancesQuery,
+  useGetFinanceOpeningBalanceQuery,
+  useCreateFinanceOpeningBalanceMutation,
+  useUpdateFinanceOpeningBalanceMutation,
+  usePostFinanceOpeningBalanceMutation,
+  useGetFinanceBankAccountsQuery,
+  useGetFinanceBankAccountQuery,
+  useCreateFinanceBankAccountMutation,
+  useUpdateFinanceBankAccountMutation,
+  useGetFinanceBankTransactionsQuery,
+  useGetFinanceBankTransactionQuery,
+  useCreateFinanceBankTransactionMutation,
+  useMatchFinanceBankTransactionMutation,
+  useUnmatchFinanceBankTransactionMutation,
+  useCategorizeFinanceBankTransactionMutation,
+  useExcludeFinanceBankTransactionMutation,
+  useUnexcludeFinanceBankTransactionMutation,
+  useGetFinanceBankMatchCandidatesQuery,
+  useImportFinanceBankStatementMutation,
+  useGetFinanceBankReconciliationReportQuery,
+  useGetFinanceBankReconciliationsQuery,
+  useSaveFinanceBankReconciliationMutation,
   useGetDepartmentsQuery,
   useCreateDepartmentMutation,
   useGetDesignationsQuery,

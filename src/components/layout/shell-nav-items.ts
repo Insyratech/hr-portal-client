@@ -1,11 +1,19 @@
 import {
   CSO_BOTTOM_NAV,
   CSO_WORK_NAV,
+  FINANCE_ACCOUNTANT_NAV,
+  FINANCE_BANKING_NAV,
   FINANCE_BOTTOM_NAV,
+  FINANCE_ITEMS_NAV,
   FINANCE_OVERVIEW_NAV,
+  FINANCE_EXPENSES_NAV,
+  FINANCE_PURCHASES_NAV,
+  FINANCE_SALES_NAV,
+  FINANCE_SETTINGS_NAV,
   GM_ATTENDANCE_NAV,
   GM_BOTTOM_NAV,
   GM_LEAVE_NAV,
+  GM_ORG_NAV,
   GM_OVERVIEW_NAV,
   GM_WORK_NAV,
   HR_BOTTOM_NAV,
@@ -82,6 +90,7 @@ function managerialSection(variant: Exclude<ShellVariant, 'employee' | 'super-ad
       title: 'Managerial responsibility',
       groups: [
         { label: 'Overview', items: GM_OVERVIEW_NAV },
+        { label: 'People', items: GM_ORG_NAV },
         { label: 'Attendance', items: GM_ATTENDANCE_NAV },
         { label: 'Leave', items: GM_LEAVE_NAV },
         { label: 'Work', items: GM_WORK_NAV },
@@ -96,7 +105,16 @@ function managerialSection(variant: Exclude<ShellVariant, 'employee' | 'super-ad
   }
   return {
     title: 'Managerial responsibility',
-    groups: [{ label: 'Overview', items: FINANCE_OVERVIEW_NAV }],
+    groups: [
+      { label: 'Overview', items: FINANCE_OVERVIEW_NAV },
+      { label: 'Sales', items: FINANCE_SALES_NAV },
+      { label: 'Purchases', items: FINANCE_PURCHASES_NAV },
+      { label: 'Expenses', items: FINANCE_EXPENSES_NAV },
+      { label: 'Banking', items: FINANCE_BANKING_NAV },
+      { label: 'Items', items: FINANCE_ITEMS_NAV },
+      { label: 'Accountant', items: FINANCE_ACCOUNTANT_NAV },
+      { label: 'Settings', items: FINANCE_SETTINGS_NAV },
+    ],
   };
 }
 

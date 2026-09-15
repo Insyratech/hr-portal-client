@@ -156,6 +156,10 @@ export const HR_NAV: readonly NavItem[] = [
 
 export const GM_OVERVIEW_NAV: readonly NavItem[] = [{ href: '/gm', label: 'Overview', icon: 'overview' }];
 
+export const GM_ORG_NAV: readonly NavItem[] = [
+  { href: '/gm/employees', label: 'Employees', icon: 'users' },
+];
+
 export const GM_ATTENDANCE_NAV: readonly NavItem[] = [
   { href: '/gm/attendance', label: 'Attendance', icon: 'clock' },
   { href: '/gm/payroll', label: 'Payroll', icon: 'grid' },
@@ -174,7 +178,13 @@ export const GM_WORK_NAV: readonly NavItem[] = [
   { href: '/gm/jc', label: 'Team JC', icon: 'file' },
 ];
 
-export const GM_NAV: readonly NavItem[] = [...GM_OVERVIEW_NAV, ...GM_ATTENDANCE_NAV, ...GM_LEAVE_NAV, ...GM_WORK_NAV];
+export const GM_NAV: readonly NavItem[] = [
+  ...GM_OVERVIEW_NAV,
+  ...GM_ORG_NAV,
+  ...GM_ATTENDANCE_NAV,
+  ...GM_LEAVE_NAV,
+  ...GM_WORK_NAV,
+];
 
 export const CSO_WORK_NAV: readonly NavItem[] = [
   { href: '/cso/work', label: 'Team week', icon: 'calendar' },
@@ -193,7 +203,69 @@ export const FINANCE_OVERVIEW_NAV: readonly NavItem[] = [
   { href: '/finance', label: 'Overview', icon: 'overview' },
 ];
 
-export const FINANCE_NAV: readonly NavItem[] = [...FINANCE_OVERVIEW_NAV];
+export const FINANCE_SALES_NAV: readonly NavItem[] = [
+  { href: '/finance/customers', label: 'Customers', icon: 'users' },
+  { href: '/finance/quotes', label: 'Quotes', icon: 'file' },
+  { href: '/finance/sales-orders', label: 'Sales orders', icon: 'file' },
+  { href: '/finance/delivery-notes', label: 'Delivery notes', icon: 'check' },
+  { href: '/finance/invoices', label: 'Invoices', icon: 'file' },
+  { href: '/finance/payments-received', label: 'Payments received', icon: 'grid' },
+  { href: '/finance/credit-notes', label: 'Credit notes', icon: 'badge' },
+];
+
+export const FINANCE_PURCHASES_NAV: readonly NavItem[] = [
+  { href: '/finance/indents', label: 'Indents', icon: 'file' },
+  { href: '/finance/rfqs', label: 'RFQs', icon: 'search' },
+  { href: '/finance/purchase-orders', label: 'Purchase orders', icon: 'file' },
+  { href: '/finance/receipts', label: 'Receipts', icon: 'check' },
+  { href: '/finance/bills', label: 'Bills', icon: 'file' },
+  { href: '/finance/payments', label: 'Payments', icon: 'grid' },
+  { href: '/finance/vendor-credits', label: 'Vendor credits', icon: 'badge' },
+  { href: '/finance/vendors', label: 'Vendors', icon: 'building' },
+];
+
+export const FINANCE_EXPENSES_NAV: readonly NavItem[] = [
+  { href: '/finance/expenses', label: 'Expenses', icon: 'grid' },
+  { href: '/finance/expense-claims', label: 'Expense claims', icon: 'file' },
+  { href: '/finance/reimbursements', label: 'Reimbursements', icon: 'badge' },
+];
+
+export const FINANCE_BANKING_NAV: readonly NavItem[] = [
+  { href: '/finance/banking', label: 'Accounts', icon: 'building' },
+  { href: '/finance/banking/transactions', label: 'Transactions', icon: 'grid' },
+  { href: '/finance/banking/import', label: 'Import', icon: 'file' },
+  { href: '/finance/banking/reconciliation', label: 'Reconciliation', icon: 'check' },
+];
+
+export const FINANCE_ITEMS_NAV: readonly NavItem[] = [
+  { href: '/finance/items', label: 'Items', icon: 'grid' },
+];
+
+export const FINANCE_ACCOUNTANT_NAV: readonly NavItem[] = [
+  { href: '/finance/accounts', label: 'Accounts', icon: 'file' },
+  { href: '/finance/journals', label: 'Journals', icon: 'file' },
+  { href: '/finance/ledger', label: 'General ledger', icon: 'grid' },
+  { href: '/finance/trial-balance', label: 'Trial balance', icon: 'badge' },
+  { href: '/finance/opening-balances', label: 'Opening balances', icon: 'file' },
+  { href: '/finance/period-locks', label: 'Period lock', icon: 'settings' },
+  { href: '/finance/tax', label: 'Tax', icon: 'badge' },
+  { href: '/finance/series', label: 'Number series', icon: 'audit' },
+];
+
+export const FINANCE_SETTINGS_NAV: readonly NavItem[] = [
+  { href: '/finance/settings', label: 'Settings', icon: 'settings' },
+];
+
+export const FINANCE_NAV: readonly NavItem[] = [
+  ...FINANCE_OVERVIEW_NAV,
+  ...FINANCE_SALES_NAV,
+  ...FINANCE_PURCHASES_NAV,
+  ...FINANCE_EXPENSES_NAV,
+  ...FINANCE_BANKING_NAV,
+  ...FINANCE_ITEMS_NAV,
+  ...FINANCE_ACCOUNTANT_NAV,
+  ...FINANCE_SETTINGS_NAV,
+];
 
 /** Primary managerial shortcuts for phone and tablet bottom nav (full menu stays in the hamburger). */
 export const HR_BOTTOM_NAV: readonly NavItem[] = [
@@ -206,9 +278,9 @@ export const HR_BOTTOM_NAV: readonly NavItem[] = [
 
 export const GM_BOTTOM_NAV: readonly NavItem[] = [
   { href: '/gm', label: 'Overview', icon: 'overview' },
+  { href: '/gm/employees', label: 'Employees', icon: 'users' },
   { href: '/gm/attendance', label: 'Attendance', icon: 'clock' },
   { href: '/gm/payroll', label: 'Payroll', icon: 'grid' },
-  { href: '/gm/reports', label: 'Reports', icon: 'grid' },
   { href: '/gm/leave-status', label: 'Leave', icon: 'leave' },
 ];
 
@@ -228,9 +300,12 @@ export const SUPER_ADMIN_BOTTOM_NAV: readonly NavItem[] = [
   { href: '/super-admin/audit', label: 'Audit', icon: 'audit' },
 ];
 
-/** Finance desk is not live yet — only the managerial overview route exists today. */
 export const FINANCE_BOTTOM_NAV: readonly NavItem[] = [
   { href: '/finance', label: 'Overview', icon: 'overview' },
+  { href: '/finance/indents', label: 'Indents', icon: 'file' },
+  { href: '/finance/purchase-orders', label: 'POs', icon: 'file' },
+  { href: '/finance/bills', label: 'Bills', icon: 'file' },
+  { href: '/finance/settings', label: 'Settings', icon: 'settings' },
 ];
 
 export function isNavActive(pathname: string, href: string): boolean {
@@ -253,6 +328,9 @@ export function isNavActive(pathname: string, href: string): boolean {
     href === '/gm/work' ||
     href === '/cso/work'
   ) {
+    return pathname === href;
+  }
+  if (href === '/finance/banking') {
     return pathname === href;
   }
   return pathname === href || pathname.startsWith(`${href}/`);
