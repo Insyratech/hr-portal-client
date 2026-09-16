@@ -118,7 +118,7 @@ export function ApplyLeaveForm({
       ? assignmentOnDate(history, startDate)
       : scheduleData?.data.shift.current ?? null;
     if (!row) return null;
-    return { name: row.shiftName, startTime: row.startTime, flexible: row.flexible };
+    return { name: row.shiftName, startTime: row.startTime, endTime: row.endTime, minimumDurationMinutes: row.minimumDurationMinutes, flexible: row.flexible };
   }, [scheduleData?.data.shift, startDate]);
   const noticeHint = rules
     ? leaveNoticeHint({
@@ -424,7 +424,7 @@ export function ApplyLeaveForm({
       ) : null}
       {message ? <StatusMessage tone={message.tone}>{message.text}</StatusMessage> : null}
       <div className="flex gap-3">
-        <Button type="submit" className="flex-1" disabled={isLoading || !selectedType || noticeTooLate}>
+        <Button type="submit" className="flex-1" disabled={isLoading || !selectedType}>
           {isLoading ? 'Saving' : editing ? 'Save changes' : 'Apply leave'}
         </Button>
         {editing ? (

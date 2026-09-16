@@ -29,7 +29,7 @@ export function LeaveRuleFields({
             defaultValue={defaults.noticeValue}
             required
           />
-          <FieldHint>Minimum time before the leave start date. Enforced by the system (calendar start of the day, not shift clock-in).</FieldHint>
+          <FieldHint>How early they must apply, measured from their shift start that day. 1 hour means they can apply until 1 hour before the shift begins.</FieldHint>
         </div>
         <div>
           <Label htmlFor={id('noticeUnit')}>Notice unit</Label>

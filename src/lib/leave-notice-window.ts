@@ -12,6 +12,8 @@ const UNASSIGNED_LEAVE_NOTICE_CLOCK = '09:00';
 export type LeaveNoticeShift = {
   name: string;
   startTime: string | null;
+  endTime?: string | null;
+  minimumDurationMinutes?: number;
   flexible: boolean;
 };
 
@@ -38,12 +40,46 @@ function formatClock12Hour(clockHhmm: string): string {
   return `${display}:${minutes} ${suffix}`;
 }
 
+function clockToMinutes(hhmm: string): number {
+  return Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
+}
+
+function addHoursHhmm(hhmm: string, hours: number): string {
+  const total = (clockToMinutes(hhmm) + hours * 60) % (24 * 60);
+  const hour = Math.floor(total / 60);
+  const minute = total % 60;
+  return `${pad2(hour)}:${pad2(minute)}`;
+}
+
+function resolvedFixedShiftStart(shift: LeaveNoticeShift): string | null {
+  if (!shift.startTime) return null;
+  const start = normalizeClockHhmm(shift.startTime);
+  if (!start) return null;
+  const end = shift.endTime ? normalizeClockHhmm(shift.endTime) : null;
+  const required = shift.minimumDurationMinutes ?? 0;
+  if (end && required > 0) {
+    const startMin = clockToMinutes(start);
+    const endMin = clockToMinutes(end);
+    if (startMin < endMin) {
+      const afternoon = addHoursHhmm(start, 12);
+      const afternoonMin = clockToMinutes(afternoon);
+      if (afternoonMin < endMin) {
+        const asStored = endMin - startMin;
+        const asAfternoon = endMin - afternoonMin;
+        if (Math.abs(asAfternoon - required) < Math.abs(asStored - required)) {
+          return afternoon;
+        }
+      }
+    }
+  }
+  if (start === '00:00') return null;
+  return start;
+}
+
 function noticeClockForShift(shift: LeaveNoticeShift | null | undefined): string {
   if (!shift) return UNASSIGNED_LEAVE_NOTICE_CLOCK;
   if (shift.flexible) return FLEXIBLE_LEAVE_NOTICE_CLOCK;
-  const stored = shift.startTime ? normalizeClockHhmm(shift.startTime) : null;
-  if (!stored || stored === '00:00') return UNASSIGNED_LEAVE_NOTICE_CLOCK;
-  return stored;
+  return resolvedFixedShiftStart(shift) ?? UNASSIGNED_LEAVE_NOTICE_CLOCK;
 }
 
 function instantFromIstClock(isoDate: string, clockHhmm: string): Date {
@@ -115,6 +151,13 @@ function formatNoticeDeadlineLabel(deadline: Date): string {
   return `${formatClock12Hour(hourMinuteInIst(deadline))} on ${formatIstDate(deadline)}`;
 }
 
+function shiftStartPhrase(shift: LeaveNoticeShift | null | undefined, clock: string): string {
+  const clockLabel = formatClock12Hour(clock);
+  if (shift?.flexible) return `${shift.name} (${clockLabel} typical start)`;
+  if (shift) return `${shift.name} (${clockLabel})`;
+  return `shift (${clockLabel})`;
+}
+
 export function assignmentOnDate<T extends { effectiveFrom: string; effectiveTo: string | null }>(
   history: T[],
   isoDate: string,
@@ -134,17 +177,16 @@ export function leaveNoticeHint(input: {
   if (input.noticePeriod.value <= 0) return null;
   const duration = formatNoticeDuration(input.noticePeriod.value, input.noticePeriod.unit);
   const clock = noticeClockForShift(input.shift);
-  const clockLabel = formatClock12Hour(clock);
-  const shiftName = input.shift?.name ?? 'your shift';
+  const shiftName = shiftStartPhrase(input.shift, clock);
   if (!input.startDate) {
-    return `${duration} notice required before ${shiftName} starts (${clockLabel}).`;
+    return `You can apply until ${duration} before ${shiftName} starts.`;
   }
   const deadline = leaveNoticeDeadline({
     startDate: input.startDate,
     noticeHours: noticeHoursValue(input.noticePeriod),
     shift: input.shift,
   });
-  return `${duration} notice before ${shiftName} (${clockLabel}). Apply by ${formatNoticeDeadlineLabel(deadline)}.`;
+  return `You can apply until ${duration} before ${shiftName} starts. Latest: ${formatNoticeDeadlineLabel(deadline)}.`;
 }
 
 export function leaveNoticeTooLateMessage(input: {
@@ -159,10 +201,5 @@ export function leaveNoticeTooLateMessage(input: {
     noticeHours: noticeHoursValue(input.noticePeriod),
     shift: input.shift,
   });
-  const shiftPart = input.shift?.flexible
-    ? `${input.shift.name} (${formatClock12Hour(clock)} typical start)`
-    : input.shift
-      ? `${input.shift.name} (${formatClock12Hour(clock)})`
-      : `shift start (${formatClock12Hour(clock)})`;
-  return `This leave requires ${duration} notice before your ${shiftPart}. Apply by ${formatNoticeDeadlineLabel(deadline)}.`;
+  return `This leave must be applied at least ${duration} before your ${shiftStartPhrase(input.shift, clock)} starts. You can apply until ${formatNoticeDeadlineLabel(deadline)}.`;
 }
