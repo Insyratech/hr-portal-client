@@ -208,6 +208,7 @@ export const FINANCE_REPORTS_NAV: readonly NavItem[] = [
 ];
 
 export const FINANCE_SALES_NAV: readonly NavItem[] = [
+  { href: '/finance/sales/overview', label: 'Overview', icon: 'overview' },
   { href: '/finance/customers', label: 'Customers', icon: 'users' },
   { href: '/finance/quotes', label: 'Quotes', icon: 'file' },
   { href: '/finance/sales-orders', label: 'Sales orders', icon: 'file' },
@@ -218,6 +219,7 @@ export const FINANCE_SALES_NAV: readonly NavItem[] = [
 ];
 
 export const FINANCE_PURCHASES_NAV: readonly NavItem[] = [
+  { href: '/finance/purchases/overview', label: 'Overview', icon: 'overview' },
   { href: '/finance/indents', label: 'Indents', icon: 'file' },
   { href: '/finance/rfqs', label: 'RFQs', icon: 'search' },
   { href: '/finance/purchase-orders', label: 'Purchase orders', icon: 'file' },

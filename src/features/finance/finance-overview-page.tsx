@@ -2,6 +2,15 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { DataTable } from '@/components/dashboard/data-table';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { PageHeader } from '@/components/layout/page-header';
@@ -10,29 +19,21 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useTheme } from '@/components/theme-provider';
+import { FinanceChartCard, FinanceEmptyChart } from '@/features/finance/finance-chart-card';
+import { FinanceKpiCard, kpiTrend } from '@/features/finance/finance-kpi-card';
 import { defaultMonthRange } from '@/features/finance/finance-gst-utils';
 import { formatInr } from '@/features/finance/finance-procurement-utils';
+import { CHART, chartTooltipStyle } from '@/features/reports/chart-theme';
 import { useAppSelector } from '@/store/hooks';
 import { useGetFinanceDashboardQuery, useGetFinanceSetupQuery } from '@/store/api/api';
 import { PERMISSIONS } from '@/types/permissions';
 import { cn } from '@/lib/utils';
 
-function StatBlock({
-  label,
-  primary,
-  secondary,
-}: {
-  label: string;
-  primary: string;
-  secondary?: string;
-}) {
-  return (
-    <div className="min-w-0">
-      <Meta>{label}</Meta>
-      <p className="mt-1 text-xl font-medium tabular-nums tracking-tight">{primary}</p>
-      {secondary ? <p className="mt-0.5 text-xs text-muted">{secondary}</p> : null}
-    </div>
-  );
+function priorCompareLabel(current: number, prior: number): string {
+  const delta = current - prior;
+  const sign = delta > 0 ? '+' : '';
+  return `${sign}${formatInr(delta)} vs prior period (${formatInr(prior)})`;
 }
 
 export function FinanceOverviewPage() {
@@ -41,6 +42,20 @@ export function FinanceOverviewPage() {
     permissions.includes(PERMISSIONS.FINANCE_REPORTS_VIEW) ||
     permissions.includes(PERMISSIONS.FINANCE_ACCOUNTANT_VIEW) ||
     permissions.includes(PERMISSIONS.FINANCE_ACCOUNTANT_MANAGE);
+  const canViewSales =
+    permissions.includes(PERMISSIONS.FINANCE_SALES_VIEW) ||
+    permissions.includes(PERMISSIONS.FINANCE_SALES_MANAGE) ||
+    canViewReports;
+  const canViewPurchase =
+    permissions.includes(PERMISSIONS.FINANCE_PURCHASE_VIEW) ||
+    permissions.includes(PERMISSIONS.FINANCE_PURCHASE_MANAGE) ||
+    canViewReports;
+
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const tooltip = chartTooltipStyle(isDark);
+  const axisStroke = isDark ? '#737373' : '#a3a3a3';
+  const gridStroke = isDark ? '#262626' : '#e5e5e5';
 
   const defaults = useMemo(() => defaultMonthRange(), []);
   const [fromDate, setFromDate] = useState(defaults.fromDate);
@@ -66,6 +81,8 @@ export function FinanceOverviewPage() {
       </>
     );
   }
+
+  const cashAccent = (dash?.cashFlow.net ?? 0) >= 0 ? 'emerald' : 'rose';
 
   return (
     <>
@@ -112,43 +129,114 @@ export function FinanceOverviewPage() {
 
       {isError ? <p className="mb-4 text-sm">Unable to load dashboard.</p> : null}
 
-      <div className="mb-8 grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
-        <StatBlock
-          label="Receivables"
-          primary={dash ? formatInr(dash.receivables.total) : isLoading ? '—' : formatInr(0)}
+      <div className="mb-4 flex flex-wrap gap-3 text-sm">
+        {canViewSales ? (
+          <Link href="/finance/sales/overview" className="underline-offset-2 hover:underline">
+            Sales overview
+          </Link>
+        ) : null}
+        {canViewPurchase ? (
+          <Link href="/finance/purchases/overview" className="underline-offset-2 hover:underline">
+            Purchase overview
+          </Link>
+        ) : null}
+      </div>
+
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <FinanceKpiCard
+          title="Receivables"
+          accent="sky"
+          value={dash ? formatInr(dash.receivables.total) : isLoading ? '—' : formatInr(0)}
           secondary={
             dash
               ? `Current ${formatInr(dash.receivables.current)} · Overdue ${formatInr(dash.receivables.overdue)}`
               : undefined
           }
+          trend={dash ? kpiTrend(dash.receivables.total, dash.priorPeriod.receivablesTotal) : null}
+          priorLabel={
+            dash ? priorCompareLabel(dash.receivables.total, dash.priorPeriod.receivablesTotal) : undefined
+          }
         />
-        <StatBlock
-          label="Payables"
-          primary={dash ? formatInr(dash.payables.total) : isLoading ? '—' : formatInr(0)}
+        <FinanceKpiCard
+          title="Payables"
+          accent="amber"
+          value={dash ? formatInr(dash.payables.total) : isLoading ? '—' : formatInr(0)}
           secondary={
             dash
               ? `Current ${formatInr(dash.payables.current)} · Overdue ${formatInr(dash.payables.overdue)}`
               : undefined
           }
+          trend={dash ? kpiTrend(dash.payables.total, dash.priorPeriod.payablesTotal) : null}
+          invertTrend
+          priorLabel={
+            dash ? priorCompareLabel(dash.payables.total, dash.priorPeriod.payablesTotal) : undefined
+          }
         />
-        <StatBlock
-          label="Cash flow"
-          primary={dash ? formatInr(dash.cashFlow.net) : isLoading ? '—' : formatInr(0)}
+        <FinanceKpiCard
+          title="Cash flow"
+          accent={cashAccent}
+          value={dash ? formatInr(dash.cashFlow.net) : isLoading ? '—' : formatInr(0)}
           secondary={
             dash
               ? `In ${formatInr(dash.cashFlow.inflow)} · Out ${formatInr(dash.cashFlow.outflow)}`
               : undefined
           }
+          trend={dash ? kpiTrend(dash.cashFlow.net, dash.priorPeriod.cashFlowNet) : null}
+          priorLabel={dash ? priorCompareLabel(dash.cashFlow.net, dash.priorPeriod.cashFlowNet) : undefined}
         />
-        <StatBlock
-          label="Income vs expense"
-          primary={dash ? formatInr(dash.incomeVsExpense.net) : isLoading ? '—' : formatInr(0)}
+        <FinanceKpiCard
+          title="Income vs expense"
+          accent="violet"
+          value={dash ? formatInr(dash.incomeVsExpense.net) : isLoading ? '—' : formatInr(0)}
           secondary={
             dash
               ? `Income ${formatInr(dash.incomeVsExpense.income)} · Expense ${formatInr(dash.incomeVsExpense.expense)}`
               : undefined
           }
+          trend={dash ? kpiTrend(dash.incomeVsExpense.net, dash.priorPeriod.incomeVsExpenseNet) : null}
+          priorLabel={
+            dash
+              ? priorCompareLabel(dash.incomeVsExpense.net, dash.priorPeriod.incomeVsExpenseNet)
+              : undefined
+          }
         />
+      </div>
+
+      <div className="mb-8">
+        <FinanceChartCard
+          title="Sales trend"
+          description="Posted invoice totals by month in the selected range."
+        >
+          {(dash?.salesTrend.length ?? 0) === 0 && !isLoading ? (
+            <FinanceEmptyChart message="No posted invoices in this range." />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={dash?.salesTrend ?? []} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid stroke={gridStroke} strokeDasharray="3 3" />
+                <XAxis dataKey="label" stroke={axisStroke} tick={{ fill: axisStroke, fontSize: 12 }} />
+                <YAxis
+                  stroke={axisStroke}
+                  tick={{ fill: axisStroke, fontSize: 12 }}
+                  tickFormatter={(v: number) => formatInr(v)}
+                  width={72}
+                />
+                <Tooltip
+                  {...tooltip}
+                  formatter={(value: number | string) => formatInr(Number(value))}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="amount"
+                  name="Invoiced"
+                  stroke={CHART.sky}
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: CHART.sky }}
+                  activeDot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </FinanceChartCard>
       </div>
 
       <div className="mb-8 flex flex-wrap items-center gap-3 text-sm">

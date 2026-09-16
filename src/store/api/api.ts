@@ -71,6 +71,8 @@ import type {
   BalanceSheetReport,
   CashFlowReport,
   FinanceDashboard,
+  SalesOverview,
+  PurchaseOverview,
   ReportCatalogItem,
   NamedAmountRow,
   AgingReport,
@@ -1831,6 +1833,20 @@ export const api = createApi({
       query: (params) => ({ url: '/api/v1/finance/dashboard', params }),
       providesTags: ['FinanceReports'],
     }),
+    getFinanceSalesOverview: builder.query<
+      ApiSuccess<SalesOverview>,
+      { fromDate: string; toDate: string }
+    >({
+      query: (params) => ({ url: '/api/v1/finance/dashboard/sales', params }),
+      providesTags: ['FinanceReports'],
+    }),
+    getFinancePurchaseOverview: builder.query<
+      ApiSuccess<PurchaseOverview>,
+      { fromDate: string; toDate: string }
+    >({
+      query: (params) => ({ url: '/api/v1/finance/dashboard/purchases', params }),
+      providesTags: ['FinanceReports'],
+    }),
     getFinanceReportCatalog: builder.query<ApiSuccess<ReportCatalogItem[]>, void>({
       query: () => '/api/v1/finance/reports/catalog',
       providesTags: ['FinanceReports'],
@@ -3347,6 +3363,8 @@ export const {
   useGetFinancePaymentCheckoutsQuery,
   useCreateFinancePaymentCheckoutMutation,
   useGetFinanceDashboardQuery,
+  useGetFinanceSalesOverviewQuery,
+  useGetFinancePurchaseOverviewQuery,
   useGetFinanceReportCatalogQuery,
   useGetFinanceProfitLossQuery,
   useGetFinanceBalanceSheetQuery,
