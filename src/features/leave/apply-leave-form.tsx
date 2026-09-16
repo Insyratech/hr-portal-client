@@ -15,6 +15,14 @@ import {
   leaveTooFarInAdvanceMessage,
 } from '@/lib/leave-booking-window';
 import {
+  assignmentOnDate,
+  leaveNoticeHint,
+  leaveNoticeMet,
+  leaveNoticeTooLateMessage,
+  noticeHoursValue,
+  type LeaveNoticeShift,
+} from '@/lib/leave-notice-window';
+import {
   useApplyLeaveMutation,
   useGetLeaveBalancesQuery,
   useGetLeaveColleaguesQuery,
@@ -22,6 +30,7 @@ import {
   useGetLeaveProjectsQuery,
   useGetLeaveTypesQuery,
   useGetMeQuery,
+  useGetMyScheduleQuery,
   useUpdateLeaveMutation,
 } from '@/store/api/api';
 import type { LeaveApplication } from '@/types/api';
@@ -50,6 +59,7 @@ export function ApplyLeaveForm({
   const { data: policies } = useGetLeavePoliciesQuery();
   const { data: leaveProjects } = useGetLeaveProjectsQuery();
   const { data: me } = useGetMeQuery();
+  const { data: scheduleData } = useGetMyScheduleQuery();
   const meEmployeeId = me?.data.employeeId;
   const [applyLeave, { isLoading: applying }] = useApplyLeaveMutation();
   const [updateLeave, { isLoading: saving }] = useUpdateLeaveMutation();
@@ -102,10 +112,45 @@ export function ApplyLeaveForm({
     [policies?.data, selectedType?.id],
   );
   const rules = selectedPolicy?.activeVersion?.rules;
+  const noticeShift: LeaveNoticeShift | null = useMemo(() => {
+    const history = scheduleData?.data.shift.history ?? [];
+    const row = startDate
+      ? assignmentOnDate(history, startDate)
+      : scheduleData?.data.shift.current ?? null;
+    if (!row) return null;
+    return { name: row.shiftName, startTime: row.startTime, flexible: row.flexible };
+  }, [scheduleData?.data.shift, startDate]);
+  const noticeHint = rules
+    ? leaveNoticeHint({
+        noticePeriod: rules.noticePeriod,
+        startDate: startDate || undefined,
+        shift: noticeShift,
+      })
+    : null;
+  const startUnchangedForEdit = Boolean(editing && startDate && startDate === dateValue(editing.startDate));
+  const noticeTooLate = Boolean(
+    rules &&
+      rules.noticePeriod.value > 0 &&
+      startDate &&
+      !startUnchangedForEdit &&
+      !leaveNoticeMet({
+        startDate,
+        noticeHours: noticeHoursValue(rules.noticePeriod),
+        shift: noticeShift,
+      }),
+  );
+  const noticeTooLateText =
+    noticeTooLate && rules && startDate
+      ? leaveNoticeTooLateMessage({
+          noticePeriod: rules.noticePeriod,
+          startDate,
+          shift: noticeShift,
+        })
+      : null;
   const ruleLine = rules
     ? [
         rules.noticePeriod.value > 0
-          ? `${rules.noticePeriod.value}${rules.noticePeriod.unit === 'hours' ? 'h' : 'd'} notice required`
+          ? `${rules.noticePeriod.value}${rules.noticePeriod.unit === 'hours' ? 'h' : 'd'} notice before shift start`
           : null,
         (selectedType?.requiresHandover || rules.requiresHandover) && 'Handover required',
         (selectedType?.requiresApproval || rules.requiresApproval) && 'Approval required',
@@ -165,6 +210,25 @@ export function ApplyLeaveForm({
       setMessage({ tone: 'warning', text });
       return;
     }
+    if (
+      !startUnchanged &&
+      rules &&
+      rules.noticePeriod.value > 0 &&
+      !leaveNoticeMet({
+        startDate: start,
+        noticeHours: noticeHoursValue(rules.noticePeriod),
+        shift: noticeShift,
+      })
+    ) {
+      const text = leaveNoticeTooLateMessage({
+        noticePeriod: rules.noticePeriod,
+        startDate: start,
+        shift: noticeShift,
+      });
+      toast.warning(text);
+      setMessage({ tone: 'warning', text });
+      return;
+    }
     if (duration === 'full' && end < start) {
       toast.warning('End date cannot be before start date.');
       return;
@@ -213,6 +277,8 @@ export function ApplyLeaveForm({
     >
       <p className="text-xs uppercase tracking-[0.2em] text-meta">{editing ? 'Edit leave' : ruleLine}</p>
       <p className="text-sm text-muted">{bookingHint}</p>
+      {noticeHint ? <p className="text-sm text-muted">{noticeHint}</p> : null}
+      {noticeTooLateText ? <StatusMessage tone="danger">{noticeTooLateText}</StatusMessage> : null}
       {activeTypes.length === 0 ? (
         <StatusMessage tone="warning">No leave types are allocated to you. Ask HR to add an entitlement first.</StatusMessage>
       ) : null}
@@ -358,7 +424,7 @@ export function ApplyLeaveForm({
       ) : null}
       {message ? <StatusMessage tone={message.tone}>{message.text}</StatusMessage> : null}
       <div className="flex gap-3">
-        <Button type="submit" className="flex-1" disabled={isLoading || !selectedType}>
+        <Button type="submit" className="flex-1" disabled={isLoading || !selectedType || noticeTooLate}>
           {isLoading ? 'Saving' : editing ? 'Save changes' : 'Apply leave'}
         </Button>
         {editing ? (

@@ -11,10 +11,12 @@ import {
   CSO_WORK_NAV,
   FINANCE_ACCOUNTANT_NAV,
   FINANCE_BANKING_NAV,
+  FINANCE_GST_NAV,
   FINANCE_EXPENSES_NAV,
   FINANCE_ITEMS_NAV,
   FINANCE_OVERVIEW_NAV,
   FINANCE_PURCHASES_NAV,
+  FINANCE_REPORTS_NAV,
   FINANCE_SALES_NAV,
   FINANCE_SETTINGS_NAV,
   GM_ATTENDANCE_NAV,
@@ -166,8 +168,10 @@ function ManagerialNavGroups({
       <NavGroup label="Purchases" items={FINANCE_PURCHASES_NAV} collapsed={collapsed} />
       <NavGroup label="Expenses" items={FINANCE_EXPENSES_NAV} collapsed={collapsed} />
       <NavGroup label="Banking" items={FINANCE_BANKING_NAV} collapsed={collapsed} />
+      <NavGroup label="GST & Tax" items={FINANCE_GST_NAV} collapsed={collapsed} />
       <NavGroup label="Items" items={FINANCE_ITEMS_NAV} collapsed={collapsed} />
       <NavGroup label="Accountant" items={FINANCE_ACCOUNTANT_NAV} collapsed={collapsed} />
+      <NavGroup label="Reports" items={FINANCE_REPORTS_NAV} collapsed={collapsed} />
       <NavGroup label="Settings" items={FINANCE_SETTINGS_NAV} collapsed={collapsed} />
     </>
   );

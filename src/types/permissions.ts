@@ -57,6 +57,11 @@ export const PERMISSIONS = {
   FINANCE_ACCOUNTANT_MANAGE: 'finance.accountant.manage',
   FINANCE_BANKING_VIEW: 'finance.banking.view',
   FINANCE_BANKING_MANAGE: 'finance.banking.manage',
+  FINANCE_GST_VIEW: 'finance.gst.view',
+  FINANCE_GST_MANAGE: 'finance.gst.manage',
+  FINANCE_INTEGRATIONS_VIEW: 'finance.integrations.view',
+  FINANCE_INTEGRATIONS_MANAGE: 'finance.integrations.manage',
+  FINANCE_REPORTS_VIEW: 'finance.reports.view',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

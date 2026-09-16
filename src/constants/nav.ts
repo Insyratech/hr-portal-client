@@ -203,6 +203,10 @@ export const FINANCE_OVERVIEW_NAV: readonly NavItem[] = [
   { href: '/finance', label: 'Overview', icon: 'overview' },
 ];
 
+export const FINANCE_REPORTS_NAV: readonly NavItem[] = [
+  { href: '/finance/reports', label: 'Reports', icon: 'audit' },
+];
+
 export const FINANCE_SALES_NAV: readonly NavItem[] = [
   { href: '/finance/customers', label: 'Customers', icon: 'users' },
   { href: '/finance/quotes', label: 'Quotes', icon: 'file' },
@@ -237,6 +241,15 @@ export const FINANCE_BANKING_NAV: readonly NavItem[] = [
   { href: '/finance/banking/reconciliation', label: 'Reconciliation', icon: 'check' },
 ];
 
+export const FINANCE_GST_NAV: readonly NavItem[] = [
+  { href: '/finance/gst/outward', label: 'Outward', icon: 'file' },
+  { href: '/finance/gst/inward', label: 'Inward / ITC', icon: 'grid' },
+  { href: '/finance/gst/hsn', label: 'HSN', icon: 'badge' },
+  { href: '/finance/gst/workbooks', label: 'Workbooks', icon: 'file' },
+  { href: '/finance/gst/tds', label: 'TDS', icon: 'check' },
+  { href: '/finance/integrations', label: 'Integrations', icon: 'settings' },
+];
+
 export const FINANCE_ITEMS_NAV: readonly NavItem[] = [
   { href: '/finance/items', label: 'Items', icon: 'grid' },
 ];
@@ -262,8 +275,10 @@ export const FINANCE_NAV: readonly NavItem[] = [
   ...FINANCE_PURCHASES_NAV,
   ...FINANCE_EXPENSES_NAV,
   ...FINANCE_BANKING_NAV,
+  ...FINANCE_GST_NAV,
   ...FINANCE_ITEMS_NAV,
   ...FINANCE_ACCOUNTANT_NAV,
+  ...FINANCE_REPORTS_NAV,
   ...FINANCE_SETTINGS_NAV,
 ];
 

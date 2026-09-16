@@ -36,6 +36,12 @@ import type {
   FinanceTaxRate,
   FinanceTdsRate,
   FinanceVendor,
+  GstHsnSummaryRow,
+  GstInwardRow,
+  GstItcRow,
+  GstOutwardRow,
+  GstPeriodSummary,
+  GstWorkbookExport,
   PurchaseIndent,
   PurchaseOrder,
   PurchaseOrderPrint,
@@ -49,14 +55,32 @@ import type {
   CustomerPayment,
   CustomerCreditNote,
   DirectExpense,
+  EinvoiceRecord,
   ExpenseCategory,
   ExpenseClaim,
   ExpenseReimbursement,
+  EwayBillRecord,
   GeneralLedger,
+  GstnSyncJob,
+  IntegrationSettings,
   JournalEntry,
   OpeningBalanceSet,
+  PaymentCheckoutIntent,
   PeriodLock,
+  ProfitAndLossReport,
+  BalanceSheetReport,
+  CashFlowReport,
+  FinanceDashboard,
+  ReportCatalogItem,
+  NamedAmountRow,
+  AgingReport,
+  InvoiceDetailRow,
+  PoStatusRow,
+  BankingReconSummaryRow,
+  ActivityRow,
+  TaxSummaryReport,
   TrialBalance,
+  TdsDeductionRow,
   VendorBill,
   VendorCredit,
   VendorPayment,
@@ -208,6 +232,9 @@ export const api = createApi({
     'FinanceBankAccounts',
     'FinanceBankTransactions',
     'FinanceBankReconciliations',
+    'FinanceGst',
+    'FinanceIntegrations',
+    'FinanceReports',
   ],
   endpoints: (builder) => ({
     getHealth: builder.query<ApiSuccess<HealthData>, void>({
@@ -1579,6 +1606,325 @@ export const api = createApi({
     >({
       query: (body) => ({ url: '/api/v1/finance/bank-reconciliations', method: 'POST', body }),
       invalidatesTags: ['FinanceBankReconciliations'],
+    }),
+
+    getFinanceGstSummary: builder.query<
+      ApiSuccess<GstPeriodSummary>,
+      { fromDate: string; toDate: string }
+    >({
+      query: ({ fromDate, toDate }) => ({
+        url: '/api/v1/finance/gst/summary',
+        params: { fromDate, toDate },
+      }),
+      providesTags: ['FinanceGst'],
+    }),
+    getFinanceGstOutward: builder.query<
+      ApiSuccess<GstOutwardRow[]>,
+      { fromDate: string; toDate: string }
+    >({
+      query: ({ fromDate, toDate }) => ({
+        url: '/api/v1/finance/gst/outward',
+        params: { fromDate, toDate },
+      }),
+      providesTags: ['FinanceGst'],
+    }),
+    getFinanceGstInward: builder.query<
+      ApiSuccess<GstInwardRow[]>,
+      { fromDate: string; toDate: string }
+    >({
+      query: ({ fromDate, toDate }) => ({
+        url: '/api/v1/finance/gst/inward',
+        params: { fromDate, toDate },
+      }),
+      providesTags: ['FinanceGst'],
+    }),
+    getFinanceGstItc: builder.query<ApiSuccess<GstItcRow[]>, { fromDate: string; toDate: string }>({
+      query: ({ fromDate, toDate }) => ({
+        url: '/api/v1/finance/gst/itc',
+        params: { fromDate, toDate },
+      }),
+      providesTags: ['FinanceGst'],
+    }),
+    getFinanceGstHsn: builder.query<
+      ApiSuccess<GstHsnSummaryRow[]>,
+      { fromDate: string; toDate: string }
+    >({
+      query: ({ fromDate, toDate }) => ({
+        url: '/api/v1/finance/gst/hsn',
+        params: { fromDate, toDate },
+      }),
+      providesTags: ['FinanceGst'],
+    }),
+    getFinanceGstTds: builder.query<
+      ApiSuccess<TdsDeductionRow[]>,
+      { fromDate: string; toDate: string }
+    >({
+      query: ({ fromDate, toDate }) => ({
+        url: '/api/v1/finance/gst/tds',
+        params: { fromDate, toDate },
+      }),
+      providesTags: ['FinanceGst'],
+    }),
+    exportFinanceGstr1: builder.query<
+      ApiSuccess<GstWorkbookExport>,
+      { periodYear: number; periodMonth: number }
+    >({
+      query: ({ periodYear, periodMonth }) => ({
+        url: '/api/v1/finance/gst/export/gstr1',
+        params: { periodYear, periodMonth },
+      }),
+    }),
+    exportFinanceGstr2b: builder.query<
+      ApiSuccess<GstWorkbookExport>,
+      { periodYear: number; periodMonth: number }
+    >({
+      query: ({ periodYear, periodMonth }) => ({
+        url: '/api/v1/finance/gst/export/gstr2b',
+        params: { periodYear, periodMonth },
+      }),
+    }),
+    applyFinanceBillTds: builder.mutation<
+      ApiSuccess<TdsDeductionRow>,
+      { id: string; body: { tdsSection: string; tdsPercent: number } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/finance/gst/bills/${id}/tds`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['FinanceGst', 'FinanceBills'],
+    }),
+    setFinanceBillItc: builder.mutation<
+      ApiSuccess<GstItcRow>,
+      {
+        id: string;
+        body: { itcEligibility: 'eligible' | 'ineligible' | 'claimed' | 'reversed' };
+      }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/finance/gst/bills/${id}/itc`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['FinanceGst', 'FinanceBills'],
+    }),
+
+    getFinanceIntegrationSettings: builder.query<ApiSuccess<IntegrationSettings>, void>({
+      query: () => '/api/v1/finance/integrations/settings',
+      providesTags: ['FinanceIntegrations'],
+    }),
+    updateFinanceIntegrationSettings: builder.mutation<
+      ApiSuccess<IntegrationSettings>,
+      {
+        gspMode?: 'sandbox' | 'live';
+        paymentGatewayEnabled?: boolean;
+        paymentGatewayProvider?: 'none' | 'razorpay' | 'stripe';
+        bankFeedEnabled?: boolean;
+        bankFeedProvider?: 'none' | 'account_aggregator' | 'manual_api';
+        notes?: string;
+      }
+    >({
+      query: (body) => ({
+        url: '/api/v1/finance/integrations/settings',
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['FinanceIntegrations'],
+    }),
+    getFinanceEinvoices: builder.query<ApiSuccess<EinvoiceRecord[]>, void>({
+      query: () => '/api/v1/finance/integrations/einvoices',
+      providesTags: ['FinanceIntegrations'],
+    }),
+    getFinanceEinvoiceByInvoice: builder.query<ApiSuccess<EinvoiceRecord | null>, string>({
+      query: (invoiceId) => `/api/v1/finance/integrations/einvoices/by-invoice/${invoiceId}`,
+      providesTags: ['FinanceIntegrations'],
+    }),
+    generateFinanceEinvoice: builder.mutation<ApiSuccess<EinvoiceRecord>, string>({
+      query: (invoiceId) => ({
+        url: `/api/v1/finance/integrations/einvoices/${invoiceId}/generate`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['FinanceIntegrations'],
+    }),
+    cancelFinanceEinvoice: builder.mutation<
+      ApiSuccess<EinvoiceRecord>,
+      { id: string; reason?: string }
+    >({
+      query: ({ id, reason }) => ({
+        url: `/api/v1/finance/integrations/einvoices/${id}/cancel`,
+        method: 'POST',
+        body: { reason },
+      }),
+      invalidatesTags: ['FinanceIntegrations'],
+    }),
+    getFinanceEwayBills: builder.query<ApiSuccess<EwayBillRecord[]>, void>({
+      query: () => '/api/v1/finance/integrations/eway-bills',
+      providesTags: ['FinanceIntegrations'],
+    }),
+    generateFinanceEwayBill: builder.mutation<
+      ApiSuccess<EwayBillRecord>,
+      {
+        sourceType: 'invoice' | 'delivery_note';
+        sourceId: string;
+        transporterId?: string;
+        transporterName?: string;
+        vehicleNumber?: string;
+        transportMode?: 'road' | 'rail' | 'air' | 'ship';
+        distanceKm?: number;
+        fromPlace?: string;
+        toPlace?: string;
+      }
+    >({
+      query: (body) => ({
+        url: '/api/v1/finance/integrations/eway-bills',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['FinanceIntegrations'],
+    }),
+    getFinanceGstnJobs: builder.query<ApiSuccess<GstnSyncJob[]>, void>({
+      query: () => '/api/v1/finance/integrations/gstn-jobs',
+      providesTags: ['FinanceIntegrations'],
+    }),
+    pushFinanceGstr1: builder.mutation<
+      ApiSuccess<GstnSyncJob>,
+      { periodYear: number; periodMonth: number }
+    >({
+      query: (body) => ({
+        url: '/api/v1/finance/integrations/gstn/gstr1-push',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['FinanceIntegrations'],
+    }),
+    pullFinanceGstr2b: builder.mutation<
+      ApiSuccess<GstnSyncJob>,
+      { periodYear: number; periodMonth: number }
+    >({
+      query: (body) => ({
+        url: '/api/v1/finance/integrations/gstn/gstr2b-pull',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['FinanceIntegrations'],
+    }),
+    getFinancePaymentCheckouts: builder.query<ApiSuccess<PaymentCheckoutIntent[]>, void>({
+      query: () => '/api/v1/finance/integrations/payment-checkouts',
+      providesTags: ['FinanceIntegrations'],
+    }),
+    createFinancePaymentCheckout: builder.mutation<
+      ApiSuccess<PaymentCheckoutIntent>,
+      { invoiceId: string }
+    >({
+      query: (body) => ({
+        url: '/api/v1/finance/integrations/payment-checkouts',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['FinanceIntegrations'],
+    }),
+
+    getFinanceDashboard: builder.query<
+      ApiSuccess<FinanceDashboard>,
+      { fromDate: string; toDate: string }
+    >({
+      query: (params) => ({ url: '/api/v1/finance/dashboard', params }),
+      providesTags: ['FinanceReports'],
+    }),
+    getFinanceReportCatalog: builder.query<ApiSuccess<ReportCatalogItem[]>, void>({
+      query: () => '/api/v1/finance/reports/catalog',
+      providesTags: ['FinanceReports'],
+    }),
+    getFinanceProfitLoss: builder.query<
+      ApiSuccess<ProfitAndLossReport>,
+      { fromDate: string; toDate: string }
+    >({
+      query: (params) => ({ url: '/api/v1/finance/reports/profit-loss', params }),
+      providesTags: ['FinanceReports'],
+    }),
+    getFinanceBalanceSheet: builder.query<ApiSuccess<BalanceSheetReport>, { asOfDate: string }>({
+      query: (params) => ({ url: '/api/v1/finance/reports/balance-sheet', params }),
+      providesTags: ['FinanceReports'],
+    }),
+    getFinanceCashFlowReport: builder.query<
+      ApiSuccess<CashFlowReport>,
+      { fromDate: string; toDate: string }
+    >({
+      query: (params) => ({ url: '/api/v1/finance/reports/cash-flow', params }),
+      providesTags: ['FinanceReports'],
+    }),
+    getFinanceSalesByCustomer: builder.query<
+      ApiSuccess<NamedAmountRow[]>,
+      { fromDate: string; toDate: string }
+    >({
+      query: (params) => ({ url: '/api/v1/finance/reports/sales-by-customer', params }),
+      providesTags: ['FinanceReports'],
+    }),
+    getFinanceSalesByItem: builder.query<
+      ApiSuccess<NamedAmountRow[]>,
+      { fromDate: string; toDate: string }
+    >({
+      query: (params) => ({ url: '/api/v1/finance/reports/sales-by-item', params }),
+      providesTags: ['FinanceReports'],
+    }),
+    getFinanceInvoiceDetailsReport: builder.query<
+      ApiSuccess<InvoiceDetailRow[]>,
+      { fromDate: string; toDate: string }
+    >({
+      query: (params) => ({ url: '/api/v1/finance/reports/invoice-details', params }),
+      providesTags: ['FinanceReports'],
+    }),
+    getFinanceArAging: builder.query<ApiSuccess<AgingReport>, { asOfDate: string }>({
+      query: (params) => ({ url: '/api/v1/finance/reports/ar-aging', params }),
+      providesTags: ['FinanceReports'],
+    }),
+    getFinanceCustomerBalances: builder.query<ApiSuccess<NamedAmountRow[]>, { asOfDate: string }>({
+      query: (params) => ({ url: '/api/v1/finance/reports/customer-balances', params }),
+      providesTags: ['FinanceReports'],
+    }),
+    getFinanceApAging: builder.query<ApiSuccess<AgingReport>, { asOfDate: string }>({
+      query: (params) => ({ url: '/api/v1/finance/reports/ap-aging', params }),
+      providesTags: ['FinanceReports'],
+    }),
+    getFinanceVendorBalances: builder.query<ApiSuccess<NamedAmountRow[]>, { asOfDate: string }>({
+      query: (params) => ({ url: '/api/v1/finance/reports/vendor-balances', params }),
+      providesTags: ['FinanceReports'],
+    }),
+    getFinancePoStatus: builder.query<ApiSuccess<PoStatusRow[]>, void>({
+      query: () => '/api/v1/finance/reports/po-status',
+      providesTags: ['FinanceReports'],
+    }),
+    getFinancePurchasesByVendor: builder.query<
+      ApiSuccess<NamedAmountRow[]>,
+      { fromDate: string; toDate: string }
+    >({
+      query: (params) => ({ url: '/api/v1/finance/reports/purchases-by-vendor', params }),
+      providesTags: ['FinanceReports'],
+    }),
+    getFinancePurchasesByItem: builder.query<
+      ApiSuccess<NamedAmountRow[]>,
+      { fromDate: string; toDate: string }
+    >({
+      query: (params) => ({ url: '/api/v1/finance/reports/purchases-by-item', params }),
+      providesTags: ['FinanceReports'],
+    }),
+    getFinanceTaxSummary: builder.query<
+      ApiSuccess<TaxSummaryReport>,
+      { fromDate: string; toDate: string }
+    >({
+      query: (params) => ({ url: '/api/v1/finance/reports/tax-summary', params }),
+      providesTags: ['FinanceReports'],
+    }),
+    getFinanceBankingReconSummary: builder.query<ApiSuccess<BankingReconSummaryRow[]>, void>({
+      query: () => '/api/v1/finance/reports/banking-reconciliation',
+      providesTags: ['FinanceReports'],
+    }),
+    getFinanceActivityReport: builder.query<
+      ApiSuccess<ActivityRow[]>,
+      { fromDate: string; toDate: string }
+    >({
+      query: (params) => ({ url: '/api/v1/finance/reports/activity', params }),
+      providesTags: ['FinanceReports'],
     }),
 
     getDepartments: builder.query<ApiSuccess<NamedEntity[]>, void>({
@@ -2977,6 +3323,47 @@ export const {
   useGetFinanceBankReconciliationReportQuery,
   useGetFinanceBankReconciliationsQuery,
   useSaveFinanceBankReconciliationMutation,
+  useGetFinanceGstSummaryQuery,
+  useGetFinanceGstOutwardQuery,
+  useGetFinanceGstInwardQuery,
+  useGetFinanceGstItcQuery,
+  useGetFinanceGstHsnQuery,
+  useGetFinanceGstTdsQuery,
+  useLazyExportFinanceGstr1Query,
+  useLazyExportFinanceGstr2bQuery,
+  useApplyFinanceBillTdsMutation,
+  useSetFinanceBillItcMutation,
+  useGetFinanceIntegrationSettingsQuery,
+  useUpdateFinanceIntegrationSettingsMutation,
+  useGetFinanceEinvoicesQuery,
+  useGetFinanceEinvoiceByInvoiceQuery,
+  useGenerateFinanceEinvoiceMutation,
+  useCancelFinanceEinvoiceMutation,
+  useGetFinanceEwayBillsQuery,
+  useGenerateFinanceEwayBillMutation,
+  useGetFinanceGstnJobsQuery,
+  usePushFinanceGstr1Mutation,
+  usePullFinanceGstr2bMutation,
+  useGetFinancePaymentCheckoutsQuery,
+  useCreateFinancePaymentCheckoutMutation,
+  useGetFinanceDashboardQuery,
+  useGetFinanceReportCatalogQuery,
+  useGetFinanceProfitLossQuery,
+  useGetFinanceBalanceSheetQuery,
+  useGetFinanceCashFlowReportQuery,
+  useGetFinanceSalesByCustomerQuery,
+  useGetFinanceSalesByItemQuery,
+  useGetFinanceInvoiceDetailsReportQuery,
+  useGetFinanceArAgingQuery,
+  useGetFinanceCustomerBalancesQuery,
+  useGetFinanceApAgingQuery,
+  useGetFinanceVendorBalancesQuery,
+  useGetFinancePoStatusQuery,
+  useGetFinancePurchasesByVendorQuery,
+  useGetFinancePurchasesByItemQuery,
+  useGetFinanceTaxSummaryQuery,
+  useGetFinanceBankingReconSummaryQuery,
+  useGetFinanceActivityReportQuery,
   useGetDepartmentsQuery,
   useCreateDepartmentMutation,
   useGetDesignationsQuery,

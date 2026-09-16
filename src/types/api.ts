@@ -1851,6 +1851,7 @@ export type VendorBillLine = {
   taxPercent: number;
   amount: number;
   taxAmount: number;
+  hsnSac?: string;
 };
 
 export type VendorBill = {
@@ -1872,6 +1873,12 @@ export type VendorBill = {
   grandTotal: number;
   amountPaid: number;
   amountDue: number;
+  placeOfSupplyState?: string | null;
+  isIntraState?: boolean | null;
+  tdsSection?: string;
+  tdsPercent?: number;
+  tdsAmount?: number;
+  itcEligibility?: 'eligible' | 'ineligible' | 'claimed' | 'reversed';
   lines: VendorBillLine[];
   createdAt: string;
 };
@@ -2186,6 +2193,11 @@ export type SalesDocumentPrint = {
       amount?: number;
       taxAmount?: number;
     }>;
+    einvoice?: {
+      irn: string;
+      ackNumber: string | null;
+      signedQr: string | null;
+    } | null;
   };
 };
 
@@ -2465,5 +2477,364 @@ export type BankReconciliation = {
   notes: string;
   completedAt: string | null;
   createdAt: string;
+};
+
+export type GstValidationIssue = {
+  code: 'missing_party_state' | 'missing_org_state' | 'missing_gstin' | 'missing_hsn';
+  message: string;
+};
+
+export type GstOutwardRow = {
+  documentType: 'invoice' | 'credit_note';
+  documentId: string;
+  documentNumber: string;
+  documentDate: string;
+  customerId: string;
+  customerName: string | null;
+  customerGstin: string | null;
+  placeOfSupplyState: string | null;
+  isIntraState: boolean;
+  supplyType: 'B2B' | 'B2C';
+  taxableValue: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  taxTotal: number;
+  grandTotal: number;
+  signedTaxableValue: number;
+  signedTaxTotal: number;
+  issues: GstValidationIssue[];
+};
+
+export type GstInwardRow = {
+  documentType: 'vendor_bill';
+  documentId: string;
+  documentNumber: string;
+  documentDate: string;
+  vendorId: string;
+  vendorName: string | null;
+  vendorGstin: string | null;
+  placeOfSupplyState: string | null;
+  isIntraState: boolean;
+  taxableValue: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  taxTotal: number;
+  grandTotal: number;
+  tdsSection: string;
+  tdsPercent: number;
+  tdsAmount: number;
+  itcEligibility: 'eligible' | 'ineligible' | 'claimed' | 'reversed';
+  itcAmount: number;
+  issues: GstValidationIssue[];
+};
+
+export type GstItcRow = {
+  billId: string;
+  documentNumber: string;
+  billDate: string;
+  vendorName: string | null;
+  vendorGstin: string | null;
+  taxableValue: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  itcEligibility: 'eligible' | 'ineligible' | 'claimed' | 'reversed';
+  itcAmount: number;
+};
+
+export type GstHsnSummaryRow = {
+  hsnSac: string;
+  direction: 'outward' | 'inward';
+  taxableValue: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  taxTotal: number;
+  lineCount: number;
+};
+
+export type GstPeriodSummary = {
+  fromDate: string;
+  toDate: string;
+  outwardTaxable: number;
+  outwardTax: number;
+  inwardTaxable: number;
+  inwardTax: number;
+  itcEligible: number;
+  itcClaimed: number;
+  netGstLiability: number;
+  tdsDeducted: number;
+};
+
+export type GstWorkbookExport = {
+  filename: string;
+  contentType: string;
+  csv: string;
+  rowCount: number;
+};
+
+export type TdsDeductionRow = {
+  billId: string;
+  documentNumber: string;
+  billDate: string;
+  vendorName: string | null;
+  tdsSection: string;
+  tdsPercent: number;
+  taxableValue: number;
+  tdsAmount: number;
+  status: string;
+};
+
+export type EinvoiceRecord = {
+  id: string;
+  invoiceId: string;
+  invoiceNumber: string | null;
+  providerMode: 'sandbox' | 'live';
+  status: 'pending' | 'generated' | 'cancelled' | 'failed';
+  irn: string | null;
+  ackNumber: string | null;
+  ackDate: string | null;
+  signedQr: string | null;
+  irpStatus: string;
+  errorCode: string;
+  errorMessage: string;
+  generatedAt: string | null;
+  createdAt: string;
+};
+
+export type EwayBillRecord = {
+  id: string;
+  sourceType: 'invoice' | 'delivery_note';
+  sourceId: string;
+  sourceNumber: string | null;
+  providerMode: 'sandbox' | 'live';
+  status: 'pending' | 'generated' | 'cancelled' | 'failed';
+  ewbNumber: string | null;
+  transporterId: string;
+  transporterName: string;
+  vehicleNumber: string;
+  transportMode: 'road' | 'rail' | 'air' | 'ship';
+  distanceKm: number;
+  fromPlace: string;
+  toPlace: string;
+  validUntil: string | null;
+  errorMessage: string;
+  generatedAt: string | null;
+  createdAt: string;
+};
+
+export type GstnSyncJob = {
+  id: string;
+  jobType: 'gstr1_push' | 'gstr2b_pull';
+  periodYear: number;
+  periodMonth: number;
+  providerMode: 'sandbox' | 'live';
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  rowCount: number;
+  referenceId: string;
+  errorMessage: string;
+  createdAt: string;
+  finishedAt: string | null;
+};
+
+export type IntegrationSettings = {
+  id: string;
+  gspMode: 'sandbox' | 'live';
+  paymentGatewayEnabled: boolean;
+  paymentGatewayProvider: 'none' | 'razorpay' | 'stripe';
+  bankFeedEnabled: boolean;
+  bankFeedProvider: 'none' | 'account_aggregator' | 'manual_api';
+  notes: string;
+  env: {
+    gspMode: 'sandbox' | 'live';
+    gspCredentialsConfigured: boolean;
+    paymentGatewayConfigured: boolean;
+    bankFeedConfigured: boolean;
+  };
+  updatedAt: string;
+};
+
+export type PaymentCheckoutIntent = {
+  id: string;
+  invoiceId: string;
+  invoiceNumber: string | null;
+  customerId: string;
+  amount: number;
+  currencyCode: string;
+  provider: string;
+  status: 'created' | 'pending' | 'paid' | 'failed' | 'cancelled';
+  providerReference: string;
+  checkoutUrl: string;
+  errorMessage: string;
+  createdAt: string;
+};
+
+export type ReportDrillRef = {
+  entityType: string;
+  entityId: string;
+  label: string;
+  href: string;
+};
+
+export type MoneyRow = {
+  key: string;
+  label: string;
+  amount: number;
+  drill?: ReportDrillRef | null;
+};
+
+export type FinanceDashboard = {
+  fromDate: string;
+  toDate: string;
+  asOfDate: string;
+  receivables: { current: number; overdue: number; total: number };
+  payables: { current: number; overdue: number; total: number };
+  cashFlow: { inflow: number; outflow: number; net: number };
+  incomeVsExpense: { income: number; expense: number; net: number };
+  attention: Array<{
+    id: string;
+    kind: string;
+    label: string;
+    count: number;
+    href: string;
+  }>;
+  recentTransactions: Array<{
+    id: string;
+    date: string;
+    label: string;
+    amount: number;
+    sourceType: string;
+    href: string;
+  }>;
+  trialBalanceBalanced: boolean;
+  trialBalanceTotalDebit: number;
+  trialBalanceTotalCredit: number;
+};
+
+export type ReportCatalogItem = {
+  pack: string;
+  packLabel: string;
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+};
+
+export type ProfitAndLossReport = {
+  fromDate: string;
+  toDate: string;
+  income: MoneyRow[];
+  expenses: MoneyRow[];
+  totalIncome: number;
+  totalExpenses: number;
+  netProfit: number;
+};
+
+export type BalanceSheetReport = {
+  asOfDate: string;
+  assets: MoneyRow[];
+  liabilities: MoneyRow[];
+  equity: MoneyRow[];
+  totalAssets: number;
+  totalLiabilities: number;
+  totalEquity: number;
+  isBalanced: boolean;
+};
+
+export type CashFlowReport = {
+  fromDate: string;
+  toDate: string;
+  operating: MoneyRow[];
+  investing: MoneyRow[];
+  financing: MoneyRow[];
+  netChange: number;
+  openingCash: number;
+  closingCash: number;
+};
+
+export type NamedAmountRow = {
+  id: string;
+  name: string;
+  amount: number;
+  count?: number;
+  href?: string;
+};
+
+export type AgingBucket = {
+  current: number;
+  days1to30: number;
+  days31to60: number;
+  days61plus: number;
+  total: number;
+};
+
+export type AgingPartyRow = {
+  partyId: string;
+  partyName: string;
+  buckets: AgingBucket;
+  href: string;
+};
+
+export type AgingReport = {
+  asOfDate: string;
+  totals: AgingBucket;
+  rows: AgingPartyRow[];
+};
+
+export type InvoiceDetailRow = {
+  id: string;
+  documentNumber: string;
+  invoiceDate: string;
+  customerName: string | null;
+  status: string;
+  grandTotal: number;
+  amountPaid: number;
+  amountDue: number;
+  href: string;
+};
+
+export type PoStatusRow = {
+  id: string;
+  documentNumber: string;
+  orderDate: string;
+  vendorName: string | null;
+  status: string;
+  grandTotal: number;
+  href: string;
+};
+
+export type BankingReconSummaryRow = {
+  bankAccountId: string;
+  bankAccountName: string;
+  unmatchedCount: number;
+  matchedCount: number;
+  categorizedCount: number;
+  href: string;
+};
+
+export type ActivityRow = {
+  id: string;
+  createdAt: string;
+  actorId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  href: string | null;
+};
+
+export type TaxSummaryReport = {
+  fromDate: string;
+  toDate: string;
+  outwardTaxable: number;
+  outwardTax: number;
+  inwardTaxable: number;
+  inwardTax: number;
+  itcEligible: number;
+  itcClaimed: number;
+  netGstLiability: number;
+  tdsDeducted: number;
+  links: Array<{ label: string; href: string }>;
 };
 

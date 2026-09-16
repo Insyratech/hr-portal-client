@@ -24,6 +24,7 @@ import { useAppSelector } from '@/store/hooks';
 import {
   useCreateFinanceInvoiceFromQuoteMutation,
   useCreateFinanceInvoiceFromSalesOrderMutation,
+  useGenerateFinanceEinvoiceMutation,
   useGetFinanceDeliveryNotesQuery,
   useGetFinanceInvoicesQuery,
   useGetFinanceSalesOrdersQuery,
@@ -41,6 +42,9 @@ export function FinanceInvoicesPage() {
     permissions.includes(PERMISSIONS.FINANCE_SALES_VIEW) ||
     permissions.includes(PERMISSIONS.FINANCE_SALES_MANAGE);
   const canManage = permissions.includes(PERMISSIONS.FINANCE_SALES_MANAGE);
+  const canManageIntegrations =
+    permissions.includes(PERMISSIONS.FINANCE_INTEGRATIONS_MANAGE) ||
+    permissions.includes(PERMISSIONS.FINANCE_GST_MANAGE);
 
   const { data, isLoading, isError } = useGetFinanceInvoicesQuery(undefined, { skip: !canView });
   const { data: ordersData } = useGetFinanceSalesOrdersQuery(undefined, { skip: !canManage });
@@ -51,6 +55,7 @@ export function FinanceInvoicesPage() {
   const [sendInvoice, { isLoading: sending }] = useSendFinanceInvoiceMutation();
   const [postInvoice, { isLoading: posting }] = usePostFinanceInvoiceMutation();
   const [fetchPrint, { isFetching: printing }] = useLazyGetFinanceInvoicePrintQuery();
+  const [generateEinvoice, { isLoading: generatingIrn }] = useGenerateFinanceEinvoiceMutation();
 
   const [error, setError] = useState<string | null>(null);
   const [fromSoOpen, setFromSoOpen] = useState(false);
@@ -147,6 +152,15 @@ export function FinanceInvoicesPage() {
     }
   }
 
+  async function onGenerateIrn(id: string) {
+    setError(null);
+    try {
+      await generateEinvoice(id).unwrap();
+    } catch (cause) {
+      setError(apiErrorMessage(cause, 'Unable to generate IRN.'));
+    }
+  }
+
   if (!canView) {
     return (
       <>
@@ -158,7 +172,9 @@ export function FinanceInvoicesPage() {
 
   return (
     <>
-      <DelayedLoadingOverlay active={creatingSo || creatingQuote || sending || posting || printing} />
+      <DelayedLoadingOverlay
+        active={creatingSo || creatingQuote || sending || posting || printing || generatingIrn}
+      />
       <PageHeader
         kicker="Sales"
         title="Invoices"
@@ -394,6 +410,16 @@ export function FinanceInvoicesPage() {
                 {canManage && (detail.status === 'draft' || detail.status === 'sent') ? (
                   <Button type="button" onClick={() => void onPost(detail.id)}>
                     Post
+                  </Button>
+                ) : null}
+                {canManageIntegrations && detail.journalId ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    loading={generatingIrn}
+                    onClick={() => void onGenerateIrn(detail.id)}
+                  >
+                    Generate IRN
                   </Button>
                 ) : null}
               </div>

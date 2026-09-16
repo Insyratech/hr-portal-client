@@ -24,6 +24,15 @@ export function printSalesDocument(payload: SalesDocumentPrint) {
   const totals = hasMoney
     ? `<p style="margin-top:16px"><strong>Subtotal:</strong> ${document.subtotal}<br/><strong>Tax:</strong> ${document.taxTotal}<br/><strong>Grand total:</strong> ${document.grandTotal}</p>`
     : '';
+  const einvoice = document.einvoice;
+  const qrData = encodeURIComponent(einvoice?.signedQr || einvoice?.irn || '');
+  const einvoiceHtml = einvoice
+    ? `<div style="margin-top:24px;padding-top:16px;border-top:1px solid #ccc">
+        <p><strong>e-Invoice</strong></p>
+        <p>IRN: ${einvoice.irn}${einvoice.ackNumber ? `<br/>Ack: ${einvoice.ackNumber}` : ''}</p>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${qrData}" alt="e-Invoice QR" width="160" height="160" />
+      </div>`
+    : '';
   const html = `<!DOCTYPE html><html><head><title>${document.documentNumber}</title>
     <style>body{font-family:system-ui,sans-serif;padding:24px;color:#111}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #ccc;padding:8px;text-align:left}h1{margin:0 0 8px}</style>
     </head><body>
@@ -34,6 +43,7 @@ export function printSalesDocument(payload: SalesDocumentPrint) {
     <table><thead>${head}</thead><tbody>${linesHtml}</tbody></table>
     ${totals}
     ${document.notes ? `<p>Notes: ${document.notes}</p>` : ''}
+    ${einvoiceHtml}
     </body></html>`;
   const win = window.open('', '_blank');
   if (!win) return;
