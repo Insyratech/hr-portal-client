@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
 
 /**
- * Major sidebar / mobile nav block title (Managerial responsibility, Employee Features, …).
+ * Major sidebar / mobile nav block title (HR Responsibility, Employee Features, …).
  * Theme foreground (white/black) — larger and bolder than gold Meta subgroup labels.
  */
 export function NavSectionTitle({ children, className }: { children: ReactNode; className?: string }) {

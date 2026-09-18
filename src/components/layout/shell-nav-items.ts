@@ -74,10 +74,21 @@ function myProjectSection(items: readonly NavItem[]): NavMenuSection {
   };
 }
 
+/** Role-specific label for the managerial sidebar / mobile nav block. */
+export function managerialSectionTitle(
+  variant: Exclude<ShellVariant, 'employee' | 'super-admin'>,
+): string {
+  if (variant === 'hr') return 'HR Responsibility';
+  if (variant === 'gm' || variant === 'admin') return 'GM Responsibility';
+  if (variant === 'cso') return 'CSO Responsibility';
+  return 'Finance Responsibility';
+}
+
 function managerialSection(variant: Exclude<ShellVariant, 'employee' | 'super-admin'>): NavMenuSection {
+  const title = managerialSectionTitle(variant);
   if (variant === 'hr') {
     return {
-      title: 'Managerial responsibility',
+      title,
       groups: [
         { label: 'Overview', items: HR_OVERVIEW_NAV },
         { label: 'Organization', items: HR_ORG_NAV },
@@ -89,7 +100,7 @@ function managerialSection(variant: Exclude<ShellVariant, 'employee' | 'super-ad
   }
   if (variant === 'gm' || variant === 'admin') {
     return {
-      title: 'Managerial responsibility',
+      title,
       groups: [
         { label: 'Overview', items: GM_OVERVIEW_NAV },
         { label: 'People', items: GM_ORG_NAV },
@@ -101,12 +112,12 @@ function managerialSection(variant: Exclude<ShellVariant, 'employee' | 'super-ad
   }
   if (variant === 'cso') {
     return {
-      title: 'Managerial responsibility',
+      title,
       groups: [{ label: 'Work', items: CSO_WORK_NAV }],
     };
   }
   return {
-    title: 'Managerial responsibility',
+    title,
     groups: [
       { label: 'Overview', items: FINANCE_OVERVIEW_NAV },
       { label: 'Sales', items: FINANCE_SALES_NAV },

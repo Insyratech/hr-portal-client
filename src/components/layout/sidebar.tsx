@@ -6,6 +6,7 @@ import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Meta } from '@/components/layout/meta';
 import { NavSectionTitle } from '@/components/layout/nav-section-title';
 import {
+  managerialSectionTitle,
   shellMobileNavSections,
   type NavMenuSection,
 } from '@/components/layout/shell-nav-items';
@@ -144,7 +145,7 @@ function NavGroup({
   );
 }
 
-/** Major sidebar block: Managerial responsibility / My project / Employee Features. */
+/** Major sidebar block: role responsibility / My project / Employee Features. */
 function NavSection({
   title,
   collapsed,
@@ -263,7 +264,11 @@ export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'
   const projectItems = useMyProjectNavItems();
   const portalSections =
     variant === 'super-admin' ? [] : shellMobileNavSections(variant, projectItems);
-  const managerialSection = portalSections.find((section) => section.title === 'Managerial responsibility');
+  const responsibilityTitle =
+    variant === 'super-admin' ? '' : managerialSectionTitle(variant);
+  const managerialSection = responsibilityTitle
+    ? portalSections.find((section) => section.title === responsibilityTitle)
+    : undefined;
   const myProjectSection = portalSections.find((section) => section.title === 'My project');
   const employeeSection = portalSections.find((section) => section.title === 'Employee Features');
 
@@ -304,7 +309,7 @@ export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'
           <>
             {managerialSection ? (
               <NavSection
-                title="Managerial responsibility"
+                title={responsibilityTitle}
                 collapsed={collapsed}
                 showDivider={false}
                 containsActive={sectionContainsActive(pathname, managerialSection)}
