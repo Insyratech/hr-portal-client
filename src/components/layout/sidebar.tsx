@@ -2,9 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Meta } from '@/components/layout/meta';
 import { NavSectionTitle } from '@/components/layout/nav-section-title';
+import {
+  shellMobileNavSections,
+  type NavMenuSection,
+} from '@/components/layout/shell-nav-items';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import {
@@ -49,14 +53,26 @@ import { useMyProjectNavItems } from '@/features/work/my-projects';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toggleSidebar } from '@/store/slices/ui-slice';
 
+function itemIsActive(pathname: string, href: string): boolean {
+  return MY_PROJECT_NAV.some((projectItem) => projectItem.href === href)
+    ? isMyProjectNavActive(pathname, href)
+    : isNavActive(pathname, href);
+}
+
+function navItemsContainActive(pathname: string, items: readonly NavItem[]): boolean {
+  return items.some((item) => itemIsActive(pathname, item.href));
+}
+
+function sectionContainsActive(pathname: string, section: NavMenuSection): boolean {
+  return section.groups.some((group) => navItemsContainActive(pathname, group.items));
+}
+
 function NavLinks({ items, collapsed }: { items: readonly NavItem[]; collapsed: boolean }) {
   const pathname = usePathname();
   return (
     <ul className="space-y-1">
       {items.map((item) => {
-        const active = MY_PROJECT_NAV.some((projectItem) => projectItem.href === item.href)
-          ? isMyProjectNavActive(pathname, item.href)
-          : isNavActive(pathname, item.href);
+        const active = itemIsActive(pathname, item.href);
         return (
           <li key={item.href}>
             <Link
@@ -87,33 +103,96 @@ function NavGroup({
   items: readonly NavItem[];
   collapsed: boolean;
 }) {
+  const pathname = usePathname();
+  const panelId = useId();
+  const containsActive = navItemsContainActive(pathname, items);
+  const [open, setOpen] = useState(containsActive);
+
+  useEffect(() => {
+    if (containsActive) setOpen(true);
+  }, [containsActive, pathname]);
+
   if (items.length === 0) return null;
+
+  if (collapsed) {
+    return (
+      <div className="space-y-2">
+        <NavLinks items={items} collapsed={collapsed} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
-      {collapsed ? null : <Meta className="px-3">{label}</Meta>}
-      <NavLinks items={items} collapsed={collapsed} />
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-2 rounded px-3 py-1.5 text-left transition-colors hover:bg-surface"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Meta>{label}</Meta>
+        <Icon
+          name="chevron-down"
+          className={cn('h-3.5 w-3.5 shrink-0 opacity-60 transition-transform', open && 'rotate-180')}
+        />
+      </button>
+      <div id={panelId} hidden={!open} className={cn(!open && 'hidden')}>
+        <NavLinks items={items} collapsed={collapsed} />
+      </div>
     </div>
   );
 }
 
-/** Major sidebar block: Managerial responsibility vs Employee Features. */
+/** Major sidebar block: Managerial responsibility / My project / Employee Features. */
 function NavSection({
   title,
   collapsed,
+  showDivider,
+  containsActive,
   children,
 }: {
   title: string;
   collapsed: boolean;
+  showDivider: boolean;
+  containsActive: boolean;
   children: ReactNode;
 }) {
-  return (
-    <section className="space-y-5">
-      {collapsed ? (
+  const pathname = usePathname();
+  const panelId = useId();
+  const [open, setOpen] = useState(containsActive);
+
+  useEffect(() => {
+    if (containsActive) setOpen(true);
+  }, [containsActive, pathname]);
+
+  if (collapsed) {
+    return (
+      <section className={cn('space-y-5', showDivider && 'border-t border-border pt-6')}>
         <div className="mx-auto h-px w-6 bg-border" aria-hidden />
-      ) : (
-        <NavSectionTitle>{title}</NavSectionTitle>
-      )}
-      <div className="space-y-5">{children}</div>
+        <div className="space-y-5">{children}</div>
+      </section>
+    );
+  }
+
+  return (
+    <section className={cn('space-y-3', showDivider && 'border-t border-border pt-6')}>
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-2 rounded px-3 py-1.5 text-left transition-colors hover:bg-surface"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <NavSectionTitle className="px-0">{title}</NavSectionTitle>
+        <Icon
+          name="chevron-down"
+          className={cn('h-3.5 w-3.5 shrink-0 opacity-70 transition-transform', open && 'rotate-180')}
+        />
+      </button>
+      <div id={panelId} hidden={!open} className={cn('space-y-5', !open && 'hidden')}>
+        {children}
+      </div>
     </section>
   );
 }
@@ -180,7 +259,13 @@ function ManagerialNavGroups({
 export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'> }) {
   const collapsed = useAppSelector((state) => state.ui.sidebarCollapsed);
   const dispatch = useAppDispatch();
+  const pathname = usePathname();
   const projectItems = useMyProjectNavItems();
+  const portalSections =
+    variant === 'super-admin' ? [] : shellMobileNavSections(variant, projectItems);
+  const managerialSection = portalSections.find((section) => section.title === 'Managerial responsibility');
+  const myProjectSection = portalSections.find((section) => section.title === 'My project');
+  const employeeSection = portalSections.find((section) => section.title === 'Employee Features');
 
   return (
     <aside
@@ -207,7 +292,7 @@ export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'
           <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} />
         </Button>
       </div>
-      <nav className="flex-1 space-y-10 overflow-y-auto px-2 py-6">
+      <nav className="flex-1 space-y-2 overflow-y-auto px-2 py-6">
         {variant === 'super-admin' ? (
           <>
             <NavGroup label="Overview" items={SUPER_ADMIN_OVERVIEW_NAV} collapsed={collapsed} />
@@ -217,17 +302,36 @@ export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'
           </>
         ) : (
           <>
-            <NavSection title="Managerial responsibility" collapsed={collapsed}>
-              <ManagerialNavGroups variant={variant} collapsed={collapsed} />
-            </NavSection>
-            {projectItems.length > 0 ? (
-              <NavSection title="My project" collapsed={collapsed}>
+            {managerialSection ? (
+              <NavSection
+                title="Managerial responsibility"
+                collapsed={collapsed}
+                showDivider={false}
+                containsActive={sectionContainsActive(pathname, managerialSection)}
+              >
+                <ManagerialNavGroups variant={variant} collapsed={collapsed} />
+              </NavSection>
+            ) : null}
+            {myProjectSection && projectItems.length > 0 ? (
+              <NavSection
+                title="My project"
+                collapsed={collapsed}
+                showDivider
+                containsActive={sectionContainsActive(pathname, myProjectSection)}
+              >
                 <NavLinks items={projectItems} collapsed={collapsed} />
               </NavSection>
             ) : null}
-            <NavSection title="Employee Features" collapsed={collapsed}>
-              <EmployeeNavGroups collapsed={collapsed} />
-            </NavSection>
+            {employeeSection ? (
+              <NavSection
+                title="Employee Features"
+                collapsed={collapsed}
+                showDivider
+                containsActive={sectionContainsActive(pathname, employeeSection)}
+              >
+                <EmployeeNavGroups collapsed={collapsed} />
+              </NavSection>
+            ) : null}
           </>
         )}
       </nav>

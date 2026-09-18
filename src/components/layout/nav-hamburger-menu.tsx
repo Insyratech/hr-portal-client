@@ -44,6 +44,114 @@ function NavItemLink({
   );
 }
 
+function CollapsibleSection({
+  section,
+  itemActive,
+  onNavigate,
+}: {
+  section: NavMenuSection;
+  itemActive: (href: string) => boolean;
+  onNavigate: () => void;
+}) {
+  const pathname = usePathname();
+  const panelId = useId();
+  const containsActive = section.groups.some((group) => group.items.some((item) => itemActive(item.href)));
+  const [open, setOpen] = useState(containsActive);
+
+  useEffect(() => {
+    if (containsActive) setOpen(true);
+  }, [containsActive, pathname]);
+
+  return (
+    <section aria-label={section.title}>
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition-colors hover:bg-surface"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <NavSectionTitle className="px-0 pb-0">{section.title}</NavSectionTitle>
+        <Icon
+          name="chevron-down"
+          className={cn('h-3.5 w-3.5 shrink-0 opacity-70 transition-transform', open && 'rotate-180')}
+        />
+      </button>
+      <div id={panelId} hidden={!open} className={cn(!open && 'hidden')}>
+        {section.groups.map((group) => {
+          if (group.items.length === 0) return null;
+          if (!group.label) {
+            return (
+              <ul key={`${section.title}-items`} className="space-y-0.5 pb-1">
+                {group.items.map((item) => (
+                  <li key={item.href}>
+                    <NavItemLink item={item} active={itemActive(item.href)} onNavigate={onNavigate} />
+                  </li>
+                ))}
+              </ul>
+            );
+          }
+          return (
+            <CollapsibleGroup
+              key={group.label}
+              label={group.label}
+              items={group.items}
+              itemActive={itemActive}
+              onNavigate={onNavigate}
+            />
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function CollapsibleGroup({
+  label,
+  items,
+  itemActive,
+  onNavigate,
+}: {
+  label: string;
+  items: readonly NavItem[];
+  itemActive: (href: string) => boolean;
+  onNavigate: () => void;
+}) {
+  const pathname = usePathname();
+  const panelId = useId();
+  const containsActive = items.some((item) => itemActive(item.href));
+  const [open, setOpen] = useState(containsActive);
+
+  useEffect(() => {
+    if (containsActive) setOpen(true);
+  }, [containsActive, pathname]);
+
+  return (
+    <div className="space-y-0.5">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors hover:bg-surface"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Meta>{label}</Meta>
+        <Icon
+          name="chevron-down"
+          className={cn('h-3.5 w-3.5 shrink-0 opacity-60 transition-transform', open && 'rotate-180')}
+        />
+      </button>
+      <ul id={panelId} hidden={!open} className={cn(!open && 'hidden')}>
+        {items.map((item) => (
+          <li key={item.href}>
+            <NavItemLink item={item} active={itemActive(item.href)} onNavigate={onNavigate} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function NavHamburgerMenu({
   ariaLabel,
   panelTitle,
@@ -79,7 +187,9 @@ export function NavHamburgerMenu({
     };
   }, []);
 
-  const hasContent = sections ? sections.some((section) => section.groups.some((group) => group.items.length > 0)) : (items?.length ?? 0) > 0;
+  const hasContent = sections
+    ? sections.some((section) => section.groups.some((group) => group.items.length > 0))
+    : (items?.length ?? 0) > 0;
   if (!hasContent) return null;
 
   function closeMenu() {
@@ -125,28 +235,12 @@ export function NavHamburgerMenu({
         <div className="max-h-[min(28rem,65vh)] overflow-y-auto py-2">
           {sections
             ? sections.map((section, sectionIndex) => (
-                <section
+                <div
                   key={section.title}
-                  className={cn(sectionIndex > 0 && 'mt-2 border-t border-border pt-2')}
-                  aria-label={section.title}
+                  className={cn(sectionIndex > 0 && 'mt-1 border-t border-border pt-1')}
                 >
-                  <NavSectionTitle className="pb-1">{section.title}</NavSectionTitle>
-                  {section.groups.map((group) => {
-                    if (group.items.length === 0) return null;
-                    return (
-                      <div key={group.label ?? section.title} className="space-y-0.5">
-                        {group.label ? <Meta className="px-3 pt-2">{group.label}</Meta> : null}
-                        <ul>
-                          {group.items.map((item) => (
-                            <li key={item.href}>
-                              <NavItemLink item={item} active={itemActive(item.href)} onNavigate={closeMenu} />
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    );
-                  })}
-                </section>
+                  <CollapsibleSection section={section} itemActive={itemActive} onNavigate={closeMenu} />
+                </div>
               ))
             : (
               <ul className="space-y-0.5">

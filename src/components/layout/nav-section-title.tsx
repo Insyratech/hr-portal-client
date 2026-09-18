@@ -7,13 +7,13 @@ import type { ReactNode } from 'react';
  */
 export function NavSectionTitle({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <p
+    <span
       className={cn(
-        'px-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-foreground',
+        'block px-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-foreground',
         className,
       )}
     >
       {children}
-    </p>
+    </span>
   );
 }
