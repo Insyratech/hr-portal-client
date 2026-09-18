@@ -7,7 +7,8 @@ export type LeaveRuleFormDefaults = {
   maximumConsecutiveDays: string;
   annualAllocation: string;
   carryForward: string;
-  requiresApproval: boolean;
+  requiresPlApproval: boolean;
+  requiresHrApproval: boolean;
   requiresHandover: boolean;
   requiresAttachment: boolean;
   allowHalfDay: boolean;
@@ -24,10 +25,36 @@ export function latestPolicyRules(policy: { activeVersion?: { rules: PolicyRules
   return newest?.rules;
 }
 
+function resolveApprovalDefaults(
+  rules: PolicyRules | undefined,
+  flags?: {
+    requiresApproval?: boolean;
+    requiresPlApproval?: boolean;
+    requiresHrApproval?: boolean;
+  },
+): { requiresPlApproval: boolean; requiresHrApproval: boolean } {
+  const legacy =
+    flags?.requiresApproval ??
+    rules?.requiresApproval ??
+    true;
+  return {
+    requiresPlApproval:
+      flags?.requiresPlApproval ??
+      rules?.requiresPlApproval ??
+      legacy,
+    requiresHrApproval:
+      flags?.requiresHrApproval ??
+      rules?.requiresHrApproval ??
+      legacy,
+  };
+}
+
 export function leaveRuleDefaults(
   rules: PolicyRules | undefined,
   flags?: {
     requiresApproval?: boolean;
+    requiresPlApproval?: boolean;
+    requiresHrApproval?: boolean;
     requiresHandover?: boolean;
     requiresAttachment?: boolean;
     allowHalfDay?: boolean;
@@ -36,6 +63,7 @@ export function leaveRuleDefaults(
     paid?: boolean;
   },
 ): LeaveRuleFormDefaults {
+  const approval = resolveApprovalDefaults(rules, flags);
   return {
     noticeValue: rules ? String(rules.noticePeriod.value) : '',
     noticeUnit: rules?.noticePeriod.unit ?? 'hours',
@@ -43,7 +71,8 @@ export function leaveRuleDefaults(
     maximumConsecutiveDays: rules?.maximumConsecutiveDays != null ? String(rules.maximumConsecutiveDays) : '',
     annualAllocation: rules ? String(rules.annualAllocation) : '',
     carryForward: rules ? String(rules.carryForward) : '',
-    requiresApproval: flags?.requiresApproval ?? rules?.requiresApproval ?? true,
+    requiresPlApproval: approval.requiresPlApproval,
+    requiresHrApproval: approval.requiresHrApproval,
     requiresHandover: flags?.requiresHandover ?? rules?.requiresHandover ?? false,
     requiresAttachment: flags?.requiresAttachment ?? rules?.requiresAttachment ?? false,
     allowHalfDay: flags?.allowHalfDay ?? rules?.allowHalfDay ?? true,
@@ -55,12 +84,16 @@ export function leaveRuleDefaults(
 }
 
 export function rulesFromForm(form: FormData): Record<string, unknown> {
+  const requiresPlApproval = form.get('requiresPlApproval') === 'on';
+  const requiresHrApproval = form.get('requiresHrApproval') === 'on';
   return {
     notice_period: {
       value: Number(form.get('noticeValue') ?? 0),
       unit: String(form.get('noticeUnit') ?? 'hours'),
     },
-    requires_approval: form.get('requiresApproval') === 'on',
+    requires_approval: requiresPlApproval || requiresHrApproval,
+    requires_pl_approval: requiresPlApproval,
+    requires_hr_approval: requiresHrApproval,
     requires_handover: form.get('requiresHandover') === 'on',
     requires_attachment: form.get('requiresAttachment') === 'on',
     allow_half_day: form.get('allowHalfDay') === 'on',

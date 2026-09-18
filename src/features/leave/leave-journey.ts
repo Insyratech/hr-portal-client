@@ -13,8 +13,11 @@ function finish(
   reviewState: JourneyState,
   decisionLabel: string,
   decisionState: JourneyState,
+  withHrReview: boolean,
 ): JourneyStep[] {
-  steps.push({ key: 'review', label: 'Under review', state: reviewState });
+  if (withHrReview) {
+    steps.push({ key: 'review', label: 'HR review', state: reviewState });
+  }
   steps.push({ key: 'decision', label: decisionLabel, state: decisionState });
   return steps;
 }
@@ -25,6 +28,7 @@ export function leaveJourneySteps(row: LeaveApplication): JourneyStep[] {
   const approved = row.status === 'APPROVED';
   const needsHandover = Boolean(row.handoverEmployeeId);
   const needsLead = Boolean(row.hasProjectLeadStep);
+  const needsHr = Boolean(row.hasHrManagerStep);
   const steps: JourneyStep[] = [];
 
   if (needsHandover) {
@@ -66,16 +70,16 @@ export function leaveJourneySteps(row: LeaveApplication): JourneyStep[] {
   const waitingPrior = waitingHandover || waitingLead;
 
   if (approved) {
-    return finish(steps, 'done', 'Approved', 'done');
+    return finish(steps, 'done', 'Approved', 'done', needsHr);
   }
   if (rejected) {
-    return finish(steps, waitingPrior ? 'todo' : 'failed', 'Rejected', 'failed');
+    return finish(steps, waitingPrior ? 'todo' : 'failed', 'Rejected', 'failed', needsHr);
   }
   if (cancelled) {
-    return finish(steps, 'todo', 'Cancelled', 'failed');
+    return finish(steps, 'todo', 'Cancelled', 'failed', needsHr);
   }
   if (row.reviewerComment) {
-    return finish(steps, 'current', 'Approved', 'todo');
+    return finish(steps, 'current', 'Approved', 'todo', needsHr);
   }
-  return finish(steps, waitingPrior ? 'todo' : 'current', 'Approved', 'todo');
+  return finish(steps, waitingPrior ? 'todo' : 'current', 'Approved', 'todo', needsHr);
 }

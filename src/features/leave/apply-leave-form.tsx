@@ -153,7 +153,8 @@ export function ApplyLeaveForm({
           ? `${rules.noticePeriod.value}${rules.noticePeriod.unit === 'hours' ? 'h' : 'd'} notice before shift start`
           : null,
         (selectedType?.requiresHandover || rules.requiresHandover) && 'Handover required',
-        (selectedType?.requiresApproval || rules.requiresApproval) && 'Approval required',
+        (selectedType?.requiresPlApproval || rules.requiresPlApproval) && 'PL approval',
+        (selectedType?.requiresHrApproval || rules.requiresHrApproval) && 'HR approval',
       ]
         .filter(Boolean)
         .join(' · ')
@@ -161,10 +162,11 @@ export function ApplyLeaveForm({
 
   const needsHandover = Boolean(selectedType?.requiresHandover || rules?.requiresHandover);
   const needsAttachment = Boolean(selectedType?.requiresAttachment || rules?.requiresAttachment);
-  const needsApproval = Boolean(selectedType?.requiresApproval || rules?.requiresApproval);
+  const needsPlApproval = Boolean(selectedType?.requiresPlApproval || rules?.requiresPlApproval);
+  const needsHrApproval = Boolean(selectedType?.requiresHrApproval || rules?.requiresHrApproval);
   const projectOptions = leaveProjects?.data ?? [];
   const projectsLoaded = leaveProjects !== undefined;
-  const needsProject = needsApproval && projectsLoaded && projectOptions.length > 0;
+  const needsProject = needsPlApproval && projectsLoaded && projectOptions.length > 0;
 
   useEffect(() => {
     if (!projectsLoaded) return;
@@ -368,15 +370,18 @@ export function ApplyLeaveForm({
             ))}
           </select>
           <p className="mt-2 text-sm text-muted">
-            Your project lead reviews this leave before HR. Pick the project the leave relates to.
+            {needsHrApproval
+              ? 'Your project lead reviews this leave before HR. Pick the project the leave relates to.'
+              : 'Your project lead reviews and approves this leave. Pick the project the leave relates to.'}
           </p>
           {projectId &&
           projectOptions.find((item) => item.id === projectId)?.leadEmployeeId &&
           meEmployeeId &&
           projectOptions.find((item) => item.id === projectId)?.leadEmployeeId === meEmployeeId ? (
             <p className="mt-2 text-sm text-muted">
-              You lead this project — the project-lead step is skipped automatically. Handover (if required) and HR
-              still apply.
+              {needsHrApproval
+                ? 'You lead this project — the project-lead step is skipped automatically. Handover (if required) and HR still apply.'
+                : 'You lead this project — the project-lead step is skipped automatically. Handover (if required) still applies.'}
             </p>
           ) : null}
         </div>

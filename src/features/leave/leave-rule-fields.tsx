@@ -98,10 +98,20 @@ export function LeaveRuleFields({
       <div className="grid gap-2 text-sm">
         <label className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
           <span className="flex items-center gap-2">
-            <input type="checkbox" name="requiresApproval" defaultChecked={defaults.requiresApproval} /> Approval required
+            <input type="checkbox" name="requiresPlApproval" defaultChecked={defaults.requiresPlApproval} /> Approval from
+            PL
           </span>
           <span className="text-xs font-normal text-muted">
-            Off = auto-approved; HR still gets an awareness mail. On = HR must approve before it counts.
+            Project lead must approve. If HR approval is also on, PL comes first.
+          </span>
+        </label>
+        <label className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+          <span className="flex items-center gap-2">
+            <input type="checkbox" name="requiresHrApproval" defaultChecked={defaults.requiresHrApproval} /> Approval from
+            HR
+          </span>
+          <span className="text-xs font-normal text-muted">
+            Off = no HR decision step (awareness mail only when auto-approved). On = HR must approve before it counts.
           </span>
         </label>
         <label className="flex items-center gap-2">

@@ -1986,6 +1986,8 @@ export const api = createApi({
         code: string;
         description?: string;
         requiresApproval?: boolean;
+        requiresPlApproval?: boolean;
+        requiresHrApproval?: boolean;
         requiresHandover?: boolean;
         requiresAttachment?: boolean;
         allowHalfDay?: boolean;
@@ -2254,6 +2256,8 @@ export const api = createApi({
           description?: string;
           active?: boolean;
           requiresApproval?: boolean;
+          requiresPlApproval?: boolean;
+          requiresHrApproval?: boolean;
           requiresHandover?: boolean;
           requiresAttachment?: boolean;
           allowHalfDay?: boolean;

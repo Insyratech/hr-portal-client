@@ -820,7 +820,10 @@ export type LeaveType = {
   code: string;
   description: string;
   active: boolean;
+  /** True when either PL or HR approval is required. */
   requiresApproval: boolean;
+  requiresPlApproval: boolean;
+  requiresHrApproval: boolean;
   requiresHandover: boolean;
   requiresAttachment: boolean;
   allowHalfDay: boolean;
@@ -831,6 +834,8 @@ export type LeaveType = {
 export type PolicyRules = {
   noticePeriod: { value: number; unit: 'hours' | 'days' };
   requiresApproval: boolean;
+  requiresPlApproval: boolean;
+  requiresHrApproval: boolean;
   requiresHandover: boolean;
   requiresAttachment: boolean;
   allowHalfDay: boolean;
@@ -910,6 +915,7 @@ export type LeaveApplication = {
   projectLeadEmployeeId: string | null;
   projectLeadAccepted: boolean;
   hasProjectLeadStep: boolean;
+  hasHrManagerStep: boolean;
   reviewerComment: string | null;
   attachmentUrl: string | null;
   status: string;

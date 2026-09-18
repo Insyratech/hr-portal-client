@@ -47,6 +47,7 @@ export function LeaveReviewPage({ listHref }: { listHref: string }) {
   const waitingHandover = Boolean(row?.handoverEmployeeId && !row.handoverAccepted);
   const waitingLead = Boolean(row?.hasProjectLeadStep && !row.projectLeadAccepted);
   const waitingPrior = waitingHandover || waitingLead;
+  const needsHrDecision = Boolean(row?.hasHrManagerStep);
 
   async function onApprove(): Promise<void> {
     try {
@@ -130,18 +131,28 @@ export function LeaveReviewPage({ listHref }: { listHref: string }) {
               : 'Not linked'}
           </p>
           <LeaveJourney steps={leaveJourneySteps(row)} />
-          {pending && waitingHandover && canDecide ? (
+          {pending && waitingHandover && canDecide && needsHrDecision ? (
             <p className="text-sm text-muted">Waiting for handover acceptance before you can approve.</p>
           ) : null}
-          {pending && !waitingHandover && waitingLead && canDecide ? (
+          {pending && !waitingHandover && waitingLead && canDecide && needsHrDecision ? (
             <p className="text-sm text-muted">Waiting for project-lead approval before you can approve.</p>
           ) : null}
-          {pending && !canDecide ? (
+          {pending && !needsHrDecision ? (
+            <p className="text-sm text-muted">
+              This leave type does not require HR approval
+              {waitingLead
+                ? ' — waiting for the project lead.'
+                : waitingHandover
+                  ? ' — waiting for handover.'
+                  : '.'}
+            </p>
+          ) : null}
+          {pending && needsHrDecision && !canDecide ? (
             <p className="text-sm text-muted">
               HR Manager reviews leave. You can read this request, but you cannot approve or decline it.
             </p>
           ) : null}
-          {pending && canDecide ? (
+          {pending && canDecide && needsHrDecision ? (
             <div>
               <Label htmlFor="review-comment">Comment</Label>
               <textarea
@@ -154,7 +165,7 @@ export function LeaveReviewPage({ listHref }: { listHref: string }) {
               />
             </div>
           ) : null}
-          {pending && canDecide ? (
+          {pending && canDecide && needsHrDecision ? (
             <div className="flex flex-wrap gap-3">
               <Button type="button" disabled={busy || waitingPrior} onClick={() => void onApprove()}>
                 {approving ? 'Approving' : 'Approve'}
