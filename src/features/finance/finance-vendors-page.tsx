@@ -96,10 +96,10 @@ export function FinanceVendorsPage() {
           setCreateOpen(open);
         }}
       >
-        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
           <DialogTitle>Vendor registration</DialogTitle>
           <DialogDescription>
-            Complete vendor details, attach compliance documents, and download a printable PDF.
+            Complete each stage, then save and download a printable PDF.
           </DialogDescription>
           <FinanceVendorRegistrationForm
             onCancel={() => setCreateOpen(false)}
@@ -113,9 +113,9 @@ export function FinanceVendorsPage() {
           if (!open) setEditing(null);
         }}
       >
-        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
           <DialogTitle>Edit vendor registration</DialogTitle>
-          <DialogDescription>Update registration details, documents, and office approval.</DialogDescription>
+          <DialogDescription>Update registration details stage by stage, then save.</DialogDescription>
           {editing ? (
             <FinanceVendorRegistrationForm
               key={editing.id}
