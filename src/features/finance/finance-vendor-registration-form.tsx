@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Meta } from '@/components/layout/meta';
 import { StatusMessage } from '@/components/ui/status-message';
+import { ACCENT, FORM_SECTION_TONE } from '@/lib/ui-accents';
 import {
   INDIAN_STATES,
   SELECT_CLASS,
@@ -414,12 +416,21 @@ export function FinanceVendorRegistrationForm({
                     onClick={() => goToStep(index)}
                     className={cn(
                       'relative z-[1] flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors',
-                      active && 'border-[var(--meta)] bg-[var(--meta)] text-background',
-                      !active && done && 'border-[var(--meta)] text-[var(--meta)]',
+                      active && 'text-background',
+                      !active && done && 'border-[var(--accent-purple)] text-[var(--accent-purple)]',
                       !active && !done && 'border-border text-muted',
                       !reachable && 'cursor-not-allowed opacity-50',
-                      reachable && !active && 'hover:border-[var(--meta)]',
+                      reachable && !active && 'hover:border-[var(--accent-purple)]',
                     )}
+                    style={
+                      active
+                        ? {
+                            borderColor: ACCENT[FORM_SECTION_TONE],
+                            backgroundColor: ACCENT[FORM_SECTION_TONE],
+                            color: '#0a0a0a',
+                          }
+                        : undefined
+                    }
                     aria-current={active ? 'step' : undefined}
                   >
                     <Icon name={item.icon} className="h-3.5 w-3.5" />
@@ -453,7 +464,9 @@ export function FinanceVendorRegistrationForm({
           <p className="text-xs uppercase tracking-[0.18em] text-muted">
             Step {step + 1}/{STEPS.length}
           </p>
-          <h3 className="mt-2 text-lg font-medium text-foreground">{current.heading}</h3>
+          <h3 className="mt-2 text-lg font-medium" style={{ color: ACCENT[FORM_SECTION_TONE] }}>
+            {current.heading}
+          </h3>
           <p className="mt-1 text-sm text-muted">{current.description}</p>
 
           {/* Keep all fields mounted so values persist across steps */}
@@ -906,7 +919,7 @@ export function FinanceVendorRegistrationForm({
 
           <div className={cn('mt-6 space-y-4', step !== 3 && 'hidden')} aria-hidden={step !== 3}>
             <div className="space-y-3">
-              <p className="text-xs uppercase tracking-[0.18em] text-meta">Commercial information</p>
+              <Meta tone="purple">Commercial information</Meta>
               {principals.map((row, index) => (
                 <div key={index} className="grid gap-3 sm:grid-cols-2">
                   <div>
@@ -947,7 +960,7 @@ export function FinanceVendorRegistrationForm({
             </div>
 
             <div className="space-y-3 border-t border-border pt-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-meta">Documents to enclose</p>
+              <Meta tone="purple">Documents to enclose</Meta>
               {DOCUMENT_TYPES.map((item) => {
                 const uploaded = defaults?.documents?.find((doc) => doc.documentType === item.type);
                 return (
@@ -1001,7 +1014,7 @@ export function FinanceVendorRegistrationForm({
 
           <div className={cn('mt-6 space-y-4', step !== 4 && 'hidden')} aria-hidden={step !== 4}>
             <div className="space-y-3">
-              <p className="text-xs uppercase tracking-[0.18em] text-meta">Declaration & signature</p>
+              <Meta tone="purple">Declaration & signature</Meta>
               <p className="text-sm text-muted">
                 I / We hereby declare that the information furnished above is true to the best of my / our
                 knowledge and belief and I / We undertake to inform you of any changes therein immediately.
@@ -1048,7 +1061,7 @@ export function FinanceVendorRegistrationForm({
             </div>
 
             <div className="space-y-3 border-t border-border pt-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-meta">For office use only</p>
+              <Meta tone="purple">For office use only</Meta>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="officeInspectedBy">Inspection carried out by</Label>

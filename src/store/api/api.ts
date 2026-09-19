@@ -574,6 +574,13 @@ export const api = createApi({
       query: ({ id, body }) => ({ url: `/api/v1/finance/vendors/${id}`, method: 'PATCH', body }),
       invalidatesTags: ['FinanceVendors'],
     }),
+    deleteFinanceVendor: builder.mutation<
+      ApiSuccess<{ id: string; mode: 'deleted' | 'deactivated' }>,
+      string
+    >({
+      query: (id) => ({ url: `/api/v1/finance/vendors/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['FinanceVendors', 'FinanceSetup', 'FinanceVendorRegistration'],
+    }),
     getFinanceOrgGstProfiles: builder.query<ApiSuccess<FinanceOrgGstProfile[]>, void>({
       query: () => '/api/v1/finance/org/gst-profiles',
       providesTags: ['FinanceOrgGstProfiles'],
@@ -3330,6 +3337,7 @@ export const {
   useGetFinanceVendorsQuery,
   useCreateFinanceVendorMutation,
   useUpdateFinanceVendorMutation,
+  useDeleteFinanceVendorMutation,
   useGetFinanceOrgGstProfilesQuery,
   useCreateFinanceOrgGstProfileMutation,
   useUpdateFinanceOrgGstProfileMutation,

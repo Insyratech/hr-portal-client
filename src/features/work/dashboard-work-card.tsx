@@ -31,7 +31,7 @@ export function DashboardWorkCard() {
 
   return (
     <section className="border border-border bg-background p-5 shadow-card">
-      <Meta>Work & Priorities</Meta>
+      <Meta tone="orange">Work & Priorities</Meta>
       <p className="mt-2 text-sm font-medium">{title}</p>
       <p className="mt-2 text-sm text-muted">{detail}</p>
       <div className="mt-4 flex flex-wrap gap-3">

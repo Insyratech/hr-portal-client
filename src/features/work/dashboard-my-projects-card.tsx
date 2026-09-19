@@ -28,7 +28,9 @@ export function DashboardMyProjectsCard() {
           </Link>
         ) : null}
       </div>
-      <Meta className="mt-3">My project</Meta>
+      <Meta className="mt-3" tone="orange">
+        My project
+      </Meta>
       <p className="mt-2 text-sm text-muted">
         {isProjectLead
           ? 'Projects you are part of. Open a desk you lead for members, status updates, and this week’s work.'

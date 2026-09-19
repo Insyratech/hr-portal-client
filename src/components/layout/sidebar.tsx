@@ -99,10 +99,12 @@ function NavGroup({
   label,
   items,
   collapsed,
+  metaTone = 'gold',
 }: {
   label: string;
   items: readonly NavItem[];
   collapsed: boolean;
+  metaTone?: 'gold' | 'purple' | 'orange' | 'cyan';
 }) {
   const pathname = usePathname();
   const panelId = useId();
@@ -132,7 +134,7 @@ function NavGroup({
         aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}
       >
-        <Meta>{label}</Meta>
+        <Meta tone={metaTone}>{label}</Meta>
         <Icon
           name="chevron-down"
           className={cn('h-3.5 w-3.5 shrink-0 opacity-60 transition-transform', open && 'rotate-180')}
@@ -151,12 +153,14 @@ function NavSection({
   collapsed,
   showDivider,
   containsActive,
+  tone = 'gold',
   children,
 }: {
   title: string;
   collapsed: boolean;
   showDivider: boolean;
   containsActive: boolean;
+  tone?: 'gold' | 'purple' | 'orange' | 'cyan';
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -185,7 +189,9 @@ function NavSection({
         aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}
       >
-        <NavSectionTitle className="px-0">{title}</NavSectionTitle>
+        <NavSectionTitle className="px-0" tone={tone}>
+          {title}
+        </NavSectionTitle>
         <Icon
           name="chevron-down"
           className={cn('h-3.5 w-3.5 shrink-0 opacity-70 transition-transform', open && 'rotate-180')}
@@ -202,9 +208,9 @@ function EmployeeNavGroups({ collapsed }: { collapsed: boolean }) {
   return (
     <>
       <NavLinks items={[MY_WORK_DASHBOARD, MY_WORK_LINK]} collapsed={collapsed} />
-      <NavGroup label="Time off" items={MY_WORK_TIME_NAV} collapsed={collapsed} />
-      <NavGroup label="Pay & docs" items={MY_WORK_DOCS_NAV} collapsed={collapsed} />
-      <NavGroup label="Account" items={MY_WORK_ACCOUNT_NAV} collapsed={collapsed} />
+      <NavGroup label="Time off" items={MY_WORK_TIME_NAV} collapsed={collapsed} metaTone="orange" />
+      <NavGroup label="Pay & docs" items={MY_WORK_DOCS_NAV} collapsed={collapsed} metaTone="orange" />
+      <NavGroup label="Account" items={MY_WORK_ACCOUNT_NAV} collapsed={collapsed} metaTone="orange" />
     </>
   );
 }
@@ -312,6 +318,7 @@ export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'
                 title={responsibilityTitle}
                 collapsed={collapsed}
                 showDivider={false}
+                tone="gold"
                 containsActive={sectionContainsActive(pathname, managerialSection)}
               >
                 <ManagerialNavGroups variant={variant} collapsed={collapsed} />
@@ -322,6 +329,7 @@ export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'
                 title="My project"
                 collapsed={collapsed}
                 showDivider
+                tone="purple"
                 containsActive={sectionContainsActive(pathname, myProjectSection)}
               >
                 <NavLinks items={projectItems} collapsed={collapsed} />
@@ -332,6 +340,7 @@ export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'
                 title="Employee Features"
                 collapsed={collapsed}
                 showDivider
+                tone="orange"
                 containsActive={sectionContainsActive(pathname, employeeSection)}
               >
                 <EmployeeNavGroups collapsed={collapsed} />

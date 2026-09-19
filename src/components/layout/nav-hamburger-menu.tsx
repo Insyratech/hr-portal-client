@@ -9,6 +9,7 @@ import { Icon } from '@/components/ui/icon';
 import type { NavMenuSection } from '@/components/layout/shell-nav-items';
 import type { NavItem } from '@/constants/nav';
 import { cn } from '@/lib/utils';
+import type { AccentTone } from '@/lib/ui-accents';
 
 type NavHamburgerMenuProps = {
   ariaLabel: string;
@@ -18,6 +19,12 @@ type NavHamburgerMenuProps = {
   | { items: readonly NavItem[]; sections?: never }
   | { sections: readonly NavMenuSection[]; items?: never }
 );
+
+function sectionTone(title: string): AccentTone {
+  if (title === 'My project') return 'purple';
+  if (title === 'Employee Features') return 'orange';
+  return 'gold';
+}
 
 function NavItemLink({
   item,
@@ -55,6 +62,7 @@ function CollapsibleSection({
 }) {
   const pathname = usePathname();
   const panelId = useId();
+  const tone = sectionTone(section.title);
   const containsActive = section.groups.some((group) => group.items.some((item) => itemActive(item.href)));
   const [open, setOpen] = useState(containsActive);
 
@@ -71,7 +79,9 @@ function CollapsibleSection({
         aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}
       >
-        <NavSectionTitle className="px-0 pb-0">{section.title}</NavSectionTitle>
+        <NavSectionTitle className="px-0 pb-0" tone={tone}>
+          {section.title}
+        </NavSectionTitle>
         <Icon
           name="chevron-down"
           className={cn('h-3.5 w-3.5 shrink-0 opacity-70 transition-transform', open && 'rotate-180')}
@@ -98,6 +108,7 @@ function CollapsibleSection({
               items={group.items}
               itemActive={itemActive}
               onNavigate={onNavigate}
+              metaTone={tone}
             />
           );
         })}
@@ -111,11 +122,13 @@ function CollapsibleGroup({
   items,
   itemActive,
   onNavigate,
+  metaTone = 'gold',
 }: {
   label: string;
   items: readonly NavItem[];
   itemActive: (href: string) => boolean;
   onNavigate: () => void;
+  metaTone?: AccentTone;
 }) {
   const pathname = usePathname();
   const panelId = useId();
@@ -135,7 +148,7 @@ function CollapsibleGroup({
         aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}
       >
-        <Meta>{label}</Meta>
+        <Meta tone={metaTone}>{label}</Meta>
         <Icon
           name="chevron-down"
           className={cn('h-3.5 w-3.5 shrink-0 opacity-60 transition-transform', open && 'rotate-180')}

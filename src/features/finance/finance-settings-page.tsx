@@ -1,11 +1,13 @@
 'use client';
 
-import type { FormEvent, LabelHTMLAttributes, ReactNode } from 'react';
+import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
+import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import {
@@ -18,6 +20,7 @@ import {
 import { uploadFinanceOrgLogo } from '@/features/finance/finance-vendor-uploads';
 import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
+import { ACCENT, FORM_SECTION_TONE } from '@/lib/ui-accents';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
@@ -33,11 +36,6 @@ import {
   useUpdateFinanceOrgGstProfileMutation,
   useUpdateFinanceOrganizationMutation,
 } from '@/store/api/api';
-
-/** Soft violet — not portal gold — for field labels on this page only. */
-const FIELD_LABEL = '#c4b5fd';
-/** Purple for section / form headings on this page only. */
-const FORM_HEADING = '#a78bfa';
 
 const STEPS: {
   id: string;
@@ -81,30 +79,16 @@ const STEPS: {
   },
 ];
 
-function FieldLabel({ className, style, ...props }: LabelHTMLAttributes<HTMLLabelElement>) {
+function FormHeading({ children }: { children: React.ReactNode }) {
   return (
-    <label
-      className={cn('mb-2 block text-xs uppercase tracking-[0.16em]', className)}
-      style={{ color: FIELD_LABEL, ...style }}
-      {...props}
-    />
-  );
-}
-
-function FormHeading({ children }: { children: ReactNode }) {
-  return (
-    <h3 className="text-lg font-medium" style={{ color: FORM_HEADING }}>
+    <h3 className="text-lg font-medium" style={{ color: ACCENT[FORM_SECTION_TONE] }}>
       {children}
     </h3>
   );
 }
 
-function SubHeading({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-xs font-medium uppercase tracking-[0.16em]" style={{ color: FORM_HEADING }}>
-      {children}
-    </p>
-  );
+function SubHeading({ children }: { children: React.ReactNode }) {
+  return <Meta tone="purple">{children}</Meta>;
 }
 
 export function FinanceSettingsPage() {
@@ -304,7 +288,7 @@ export function FinanceSettingsPage() {
                     )}
                     style={
                       active
-                        ? { borderColor: FORM_HEADING, backgroundColor: FORM_HEADING, color: '#0a0a0a' }
+                        ? { borderColor: ACCENT[FORM_SECTION_TONE], backgroundColor: ACCENT[FORM_SECTION_TONE], color: '#0a0a0a' }
                         : undefined
                     }
                     aria-current={active ? 'step' : undefined}
@@ -354,16 +338,16 @@ export function FinanceSettingsPage() {
                     <SubHeading>Identity</SubHeading>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
-                        <FieldLabel htmlFor="legalName">Legal name</FieldLabel>
+                        <Label htmlFor="legalName">Legal name</Label>
                         <Input id="legalName" name="legalName" defaultValue={org.legalName} required />
                       </div>
                       <div>
-                        <FieldLabel htmlFor="tradeName">Trade name</FieldLabel>
+                        <Label htmlFor="tradeName">Trade name</Label>
                         <Input id="tradeName" name="tradeName" defaultValue={org.tradeName} />
                       </div>
                     </div>
                     <div>
-                      <FieldLabel htmlFor="gstin">Default GSTIN</FieldLabel>
+                      <Label htmlFor="gstin">Default GSTIN</Label>
                       <Input
                         id="gstin"
                         name="gstin"
@@ -385,7 +369,7 @@ export function FinanceSettingsPage() {
                   <div className="rounded-lg border border-border p-5 space-y-4">
                     <SubHeading>Location & fiscal year</SubHeading>
                     <div>
-                      <FieldLabel htmlFor="stateCode">State</FieldLabel>
+                      <Label htmlFor="stateCode">State</Label>
                       <select
                         id="stateCode"
                         name="stateCode"
@@ -402,7 +386,7 @@ export function FinanceSettingsPage() {
                       </select>
                     </div>
                     <div>
-                      <FieldLabel htmlFor="addressLine1">Address</FieldLabel>
+                      <Label htmlFor="addressLine1">Address</Label>
                       <Input
                         id="addressLine1"
                         name="addressLine1"
@@ -412,16 +396,16 @@ export function FinanceSettingsPage() {
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
-                        <FieldLabel htmlFor="city">City</FieldLabel>
+                        <Label htmlFor="city">City</Label>
                         <Input id="city" name="city" defaultValue={org.city} required />
                       </div>
                       <div>
-                        <FieldLabel htmlFor="postalCode">Postal code</FieldLabel>
+                        <Label htmlFor="postalCode">Postal code</Label>
                         <Input id="postalCode" name="postalCode" defaultValue={org.postalCode} />
                       </div>
                     </div>
                     <div>
-                      <FieldLabel htmlFor="fiscalYearStartMonth">Fiscal year start month</FieldLabel>
+                      <Label htmlFor="fiscalYearStartMonth">Fiscal year start month</Label>
                       <select
                         id="fiscalYearStartMonth"
                         name="fiscalYearStartMonth"
@@ -534,19 +518,19 @@ export function FinanceSettingsPage() {
                   <p className="text-xs text-muted">1 · Identity</p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <FieldLabel htmlFor="gstLabel">Label</FieldLabel>
+                      <Label htmlFor="gstLabel">Label</Label>
                       <Input id="gstLabel" name="label" placeholder="GST 1 / Peenya" />
                     </div>
                     <div>
-                      <FieldLabel htmlFor="gstGstin">GSTIN</FieldLabel>
+                      <Label htmlFor="gstGstin">GSTIN</Label>
                       <Input id="gstGstin" name="gstin" required />
                     </div>
                     <div>
-                      <FieldLabel htmlFor="gstLegal">Legal name</FieldLabel>
+                      <Label htmlFor="gstLegal">Legal name</Label>
                       <Input id="gstLegal" name="legalName" />
                     </div>
                     <div>
-                      <FieldLabel htmlFor="gstTrade">Trade name</FieldLabel>
+                      <Label htmlFor="gstTrade">Trade name</Label>
                       <Input id="gstTrade" name="tradeName" />
                     </div>
                   </div>
@@ -556,11 +540,11 @@ export function FinanceSettingsPage() {
                   <p className="text-xs text-muted">2 · CIN & PAN</p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <FieldLabel htmlFor="gstCin">CIN</FieldLabel>
+                      <Label htmlFor="gstCin">CIN</Label>
                       <Input id="gstCin" name="cin" />
                     </div>
                     <div>
-                      <FieldLabel htmlFor="gstPan">PAN</FieldLabel>
+                      <Label htmlFor="gstPan">PAN</Label>
                       <Input id="gstPan" name="pan" />
                     </div>
                   </div>
@@ -569,20 +553,20 @@ export function FinanceSettingsPage() {
                 <div className="space-y-4 rounded-md bg-foreground/[0.03] p-4">
                   <p className="text-xs text-muted">3 · Address & logo</p>
                   <div>
-                    <FieldLabel htmlFor="gstAddr1">Address line 1</FieldLabel>
+                    <Label htmlFor="gstAddr1">Address line 1</Label>
                     <Input id="gstAddr1" name="addressLine1" />
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <FieldLabel htmlFor="gstAddr2">Address line 2</FieldLabel>
+                      <Label htmlFor="gstAddr2">Address line 2</Label>
                       <Input id="gstAddr2" name="addressLine2" />
                     </div>
                     <div>
-                      <FieldLabel htmlFor="gstCity">City</FieldLabel>
+                      <Label htmlFor="gstCity">City</Label>
                       <Input id="gstCity" name="city" />
                     </div>
                     <div>
-                      <FieldLabel htmlFor="gstState">State</FieldLabel>
+                      <Label htmlFor="gstState">State</Label>
                       <select id="gstState" name="stateCode" className={SELECT_CLASS} defaultValue="">
                         <option value="">Select state</option>
                         {INDIAN_STATES.map((state) => (
@@ -593,11 +577,11 @@ export function FinanceSettingsPage() {
                       </select>
                     </div>
                     <div>
-                      <FieldLabel htmlFor="gstPostal">Postal code</FieldLabel>
+                      <Label htmlFor="gstPostal">Postal code</Label>
                       <Input id="gstPostal" name="postalCode" />
                     </div>
                     <div className="sm:col-span-2">
-                      <FieldLabel htmlFor="gstLogo">Logo</FieldLabel>
+                      <Label htmlFor="gstLogo">Logo</Label>
                       <Input
                         id="gstLogo"
                         name="logo"
@@ -670,11 +654,11 @@ export function FinanceSettingsPage() {
                 <SubHeading>Add address</SubHeading>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <FieldLabel htmlFor="addrLabel">Label</FieldLabel>
+                    <Label htmlFor="addrLabel">Label</Label>
                     <Input id="addrLabel" name="label" placeholder="Registered office" />
                   </div>
                   <div>
-                    <FieldLabel htmlFor="addrType">Type</FieldLabel>
+                    <Label htmlFor="addrType">Type</Label>
                     <select
                       id="addrType"
                       name="addressType"
@@ -690,19 +674,19 @@ export function FinanceSettingsPage() {
                     </select>
                   </div>
                   <div className="sm:col-span-2">
-                    <FieldLabel htmlFor="addrLine1">Line 1</FieldLabel>
+                    <Label htmlFor="addrLine1">Line 1</Label>
                     <Input id="addrLine1" name="line1" required />
                   </div>
                   <div>
-                    <FieldLabel htmlFor="addrLine2">Line 2</FieldLabel>
+                    <Label htmlFor="addrLine2">Line 2</Label>
                     <Input id="addrLine2" name="line2" />
                   </div>
                   <div>
-                    <FieldLabel htmlFor="addrCity">City</FieldLabel>
+                    <Label htmlFor="addrCity">City</Label>
                     <Input id="addrCity" name="city" />
                   </div>
                   <div>
-                    <FieldLabel htmlFor="addrState">State</FieldLabel>
+                    <Label htmlFor="addrState">State</Label>
                     <select id="addrState" name="stateCode" className={SELECT_CLASS} defaultValue="">
                       <option value="">Select state</option>
                       {INDIAN_STATES.map((state) => (
@@ -713,7 +697,7 @@ export function FinanceSettingsPage() {
                     </select>
                   </div>
                   <div>
-                    <FieldLabel htmlFor="addrPostal">Postal code</FieldLabel>
+                    <Label htmlFor="addrPostal">Postal code</Label>
                     <Input id="addrPostal" name="postalCode" />
                   </div>
                 </div>
@@ -758,7 +742,7 @@ export function FinanceSettingsPage() {
                 <SubHeading>Add officer</SubHeading>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <FieldLabel htmlFor="officerRole">Role</FieldLabel>
+                    <Label htmlFor="officerRole">Role</Label>
                     <select id="officerRole" name="role" className={SELECT_CLASS} defaultValue="director">
                       <option value="ceo">CEO</option>
                       <option value="director">Director</option>
@@ -766,23 +750,23 @@ export function FinanceSettingsPage() {
                     </select>
                   </div>
                   <div>
-                    <FieldLabel htmlFor="officerName">Full name</FieldLabel>
+                    <Label htmlFor="officerName">Full name</Label>
                     <Input id="officerName" name="fullName" required />
                   </div>
                   <div>
-                    <FieldLabel htmlFor="officerDesignation">Designation</FieldLabel>
+                    <Label htmlFor="officerDesignation">Designation</Label>
                     <Input id="officerDesignation" name="designation" />
                   </div>
                   <div>
-                    <FieldLabel htmlFor="officerDin">DIN</FieldLabel>
+                    <Label htmlFor="officerDin">DIN</Label>
                     <Input id="officerDin" name="din" />
                   </div>
                   <div>
-                    <FieldLabel htmlFor="officerEmail">Email</FieldLabel>
+                    <Label htmlFor="officerEmail">Email</Label>
                     <Input id="officerEmail" name="email" type="email" />
                   </div>
                   <div>
-                    <FieldLabel htmlFor="officerPhone">Phone</FieldLabel>
+                    <Label htmlFor="officerPhone">Phone</Label>
                     <Input id="officerPhone" name="phone" />
                   </div>
                 </div>

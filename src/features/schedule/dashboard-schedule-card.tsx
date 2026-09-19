@@ -25,7 +25,9 @@ export function DashboardScheduleCard() {
   return (
     <section className="border border-border bg-background p-5 shadow-card">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <Meta className="mb-0">My schedule</Meta>
+        <Meta className="mb-0" tone="orange">
+          My schedule
+        </Meta>
         <Link href="/schedule" className="text-sm text-muted hover:text-foreground">
           Open schedule
         </Link>

@@ -11,12 +11,17 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { EditIconButton } from '@/components/ui/edit-icon-button';
+import { IconButton } from '@/components/ui/icon-button';
 import { StatusMessage } from '@/components/ui/status-message';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import { FinanceVendorRegistrationForm } from '@/features/finance/finance-vendor-registration-form';
+import { apiErrorMessage } from '@/lib/api-error';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
-import { useGetFinanceVendorsQuery } from '@/store/api/api';
+import {
+  useDeleteFinanceVendorMutation,
+  useGetFinanceVendorsQuery,
+} from '@/store/api/api';
 import type { FinanceVendor } from '@/types/api';
 
 export function FinanceVendorsPage() {
@@ -24,8 +29,29 @@ export function FinanceVendorsPage() {
     state.permissions.permissions.includes(PERMISSIONS.FINANCE_PARTIES_MANAGE),
   );
   const { data, isLoading, isError } = useGetFinanceVendorsQuery(undefined, { skip: !canManage });
+  const [deleteVendor, { isLoading: deleting }] = useDeleteFinanceVendorMutation();
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<FinanceVendor | null>(null);
+  const [deletingVendor, setDeletingVendor] = useState<FinanceVendor | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+
+  async function confirmDelete() {
+    if (!deletingVendor) return;
+    setError(null);
+    setInfo(null);
+    try {
+      const result = await deleteVendor(deletingVendor.id).unwrap();
+      setDeletingVendor(null);
+      setInfo(
+        result.data.mode === 'deactivated'
+          ? `${deletingVendor.displayName} is linked to purchases, so it was deactivated instead of removed.`
+          : `${deletingVendor.displayName} was deleted.`,
+      );
+    } catch (cause) {
+      setError(apiErrorMessage(cause, 'Unable to delete vendor.'));
+    }
+  }
 
   if (!canManage) {
     return (
@@ -38,7 +64,7 @@ export function FinanceVendorsPage() {
 
   return (
     <>
-      <DelayedLoadingOverlay active={isLoading && !data} />
+      <DelayedLoadingOverlay active={(isLoading && !data) || deleting} />
       <PageHeader
         kicker="Purchases"
         title="Vendors"
@@ -63,6 +89,16 @@ export function FinanceVendorsPage() {
           <StatusMessage tone="danger">Unable to load vendors.</StatusMessage>
         </div>
       ) : null}
+      {error ? (
+        <div className="mb-4">
+          <StatusMessage tone="danger">{error}</StatusMessage>
+        </div>
+      ) : null}
+      {info ? (
+        <div className="mb-4">
+          <StatusMessage tone="success">{info}</StatusMessage>
+        </div>
+      ) : null}
       <DataTable
         columns={[
           { id: 'displayName', header: 'Name', cell: (row) => row.displayName },
@@ -71,16 +107,26 @@ export function FinanceVendorsPage() {
           { id: 'state', header: 'State', cell: (row) => row.stateName || row.stateCode || '—' },
           { id: 'status', header: 'Status', cell: (row) => row.status },
           {
-            id: 'edit',
-            header: 'Edit',
+            id: 'actions',
+            header: 'Actions',
             cell: (row) => (
-              <EditIconButton
-                label={`Edit ${row.displayName}`}
-                onClick={() => {
-                  setCreateOpen(false);
-                  setEditing(row);
-                }}
-              />
+              <div className="flex items-center gap-2">
+                <EditIconButton
+                  label={`Edit ${row.displayName}`}
+                  onClick={() => {
+                    setCreateOpen(false);
+                    setEditing(row);
+                  }}
+                />
+                <IconButton
+                  icon="trash"
+                  label={`Delete ${row.displayName}`}
+                  onClick={() => {
+                    setError(null);
+                    setDeletingVendor(row);
+                  }}
+                />
+              </div>
             ),
           },
         ]}
@@ -101,9 +147,7 @@ export function FinanceVendorsPage() {
           <DialogDescription>
             Complete each stage, then save and download a printable PDF.
           </DialogDescription>
-          <FinanceVendorRegistrationForm
-            onCancel={() => setCreateOpen(false)}
-          />
+          <FinanceVendorRegistrationForm onCancel={() => setCreateOpen(false)} />
         </DialogContent>
       </Dialog>
 
@@ -123,6 +167,30 @@ export function FinanceVendorsPage() {
               onCancel={() => setEditing(null)}
             />
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(deletingVendor)}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeletingVendor(null);
+        }}
+      >
+        <DialogContent>
+          <DialogTitle>Delete vendor?</DialogTitle>
+          <DialogDescription>
+            {deletingVendor
+              ? `Remove “${deletingVendor.displayName}” from the vendor list? If this vendor is used on purchase orders or bills, it will be deactivated instead of permanently deleted.`
+              : 'Confirm vendor deletion.'}
+          </DialogDescription>
+          <div className="mt-8 flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => setDeletingVendor(null)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button type="button" loading={deleting} onClick={() => void confirmDelete()}>
+              {deleting ? 'Deleting…' : 'OK, delete'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

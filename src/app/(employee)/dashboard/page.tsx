@@ -85,7 +85,7 @@ export default function EmployeeDashboardPage() {
 
   return (
     <>
-      <PageHeader kicker="Dashboard" title={title} />
+      <PageHeader kicker="Dashboard" title={title} kickerTone="orange" />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-x-8 lg:gap-y-8">
         <DashboardWorkCard />
         <DashboardMyProjectsCard />
