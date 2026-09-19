@@ -17,7 +17,7 @@ export function NavSectionTitle({
   return (
     <span
       className={cn(
-        'block px-3 text-sm font-bold uppercase tracking-[0.12em] text-foreground',
+        'block px-3 text-[0.8rem] font-bold uppercase tracking-[0.12em] text-foreground',
         className,
       )}
     >
