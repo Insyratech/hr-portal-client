@@ -36,6 +36,13 @@ import type {
   FinanceTaxRate,
   FinanceTdsRate,
   FinanceVendor,
+  FinanceOrgGstProfile,
+  FinanceOrgAddress,
+  FinanceOrgOfficer,
+  FinanceVendorRegistration,
+  FinanceVendorPrintPayload,
+  FinanceSignedUpload,
+  FinanceVendorDocumentType,
   GstHsnSummaryRow,
   GstInwardRow,
   GstItcRow,
@@ -206,6 +213,10 @@ export const api = createApi({
     'FinanceTax',
     'FinanceCustomers',
     'FinanceVendors',
+    'FinanceOrgGstProfiles',
+    'FinanceOrgAddresses',
+    'FinanceOrgOfficers',
+    'FinanceVendorRegistration',
     'FinanceItems',
     'FinanceSeries',
     'FinanceIndents',
@@ -562,6 +573,112 @@ export const api = createApi({
     >({
       query: ({ id, body }) => ({ url: `/api/v1/finance/vendors/${id}`, method: 'PATCH', body }),
       invalidatesTags: ['FinanceVendors'],
+    }),
+    getFinanceOrgGstProfiles: builder.query<ApiSuccess<FinanceOrgGstProfile[]>, void>({
+      query: () => '/api/v1/finance/org/gst-profiles',
+      providesTags: ['FinanceOrgGstProfiles'],
+    }),
+    createFinanceOrgGstProfile: builder.mutation<
+      ApiSuccess<FinanceOrgGstProfile>,
+      Partial<FinanceOrgGstProfile> & { gstin: string }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/org/gst-profiles', method: 'POST', body }),
+      invalidatesTags: ['FinanceOrgGstProfiles'],
+    }),
+    updateFinanceOrgGstProfile: builder.mutation<
+      ApiSuccess<FinanceOrgGstProfile>,
+      { id: string; body: Partial<FinanceOrgGstProfile> }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/org/gst-profiles/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['FinanceOrgGstProfiles'],
+    }),
+    createFinanceOrgGstProfileLogo: builder.mutation<
+      ApiSuccess<FinanceSignedUpload>,
+      { id: string; fileName: string; contentType: string; sizeBytes: number }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/api/v1/finance/org/gst-profiles/${id}/logo-upload`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['FinanceOrgGstProfiles'],
+    }),
+    getFinanceOrgAddresses: builder.query<ApiSuccess<FinanceOrgAddress[]>, void>({
+      query: () => '/api/v1/finance/org/addresses',
+      providesTags: ['FinanceOrgAddresses'],
+    }),
+    createFinanceOrgAddress: builder.mutation<
+      ApiSuccess<FinanceOrgAddress>,
+      Partial<FinanceOrgAddress> & { line1: string }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/org/addresses', method: 'POST', body }),
+      invalidatesTags: ['FinanceOrgAddresses'],
+    }),
+    updateFinanceOrgAddress: builder.mutation<
+      ApiSuccess<FinanceOrgAddress>,
+      { id: string; body: Partial<FinanceOrgAddress> }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/org/addresses/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['FinanceOrgAddresses'],
+    }),
+    getFinanceOrgOfficers: builder.query<ApiSuccess<FinanceOrgOfficer[]>, void>({
+      query: () => '/api/v1/finance/org/officers',
+      providesTags: ['FinanceOrgOfficers'],
+    }),
+    createFinanceOrgOfficer: builder.mutation<
+      ApiSuccess<FinanceOrgOfficer>,
+      Partial<FinanceOrgOfficer> & { fullName: string }
+    >({
+      query: (body) => ({ url: '/api/v1/finance/org/officers', method: 'POST', body }),
+      invalidatesTags: ['FinanceOrgOfficers'],
+    }),
+    updateFinanceOrgOfficer: builder.mutation<
+      ApiSuccess<FinanceOrgOfficer>,
+      { id: string; body: Partial<FinanceOrgOfficer> }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/org/officers/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['FinanceOrgOfficers'],
+    }),
+    getFinanceVendorRegistration: builder.query<ApiSuccess<FinanceVendorRegistration>, string>({
+      query: (id) => `/api/v1/finance/vendors/${id}/registration`,
+      providesTags: (_r, _e, id) => [{ type: 'FinanceVendorRegistration', id }],
+    }),
+    createFinanceVendorRegistration: builder.mutation<
+      ApiSuccess<FinanceVendorRegistration>,
+      Record<string, unknown>
+    >({
+      query: (body) => ({ url: '/api/v1/finance/vendors/registration', method: 'POST', body }),
+      invalidatesTags: ['FinanceVendors', 'FinanceSetup', 'FinanceVendorRegistration'],
+    }),
+    updateFinanceVendorRegistration: builder.mutation<
+      ApiSuccess<FinanceVendorRegistration>,
+      { id: string; body: Record<string, unknown> }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/vendors/${id}/registration`, method: 'PATCH', body }),
+      invalidatesTags: (_r, _e, arg) => [
+        'FinanceVendors',
+        { type: 'FinanceVendorRegistration', id: arg.id },
+      ],
+    }),
+    createFinanceVendorDocumentUpload: builder.mutation<
+      ApiSuccess<FinanceSignedUpload & { documentType: FinanceVendorDocumentType }>,
+      {
+        id: string;
+        documentType: FinanceVendorDocumentType;
+        fileName: string;
+        contentType: string;
+        sizeBytes: number;
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/api/v1/finance/vendors/${id}/documents/upload`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_r, _e, arg) => [{ type: 'FinanceVendorRegistration', id: arg.id }],
+    }),
+    getFinanceVendorPrint: builder.query<ApiSuccess<FinanceVendorPrintPayload>, string>({
+      query: (id) => `/api/v1/finance/vendors/${id}/print`,
     }),
     getFinanceItems: builder.query<ApiSuccess<FinanceItem[]>, void>({
       query: () => '/api/v1/finance/items',
@@ -3213,6 +3330,21 @@ export const {
   useGetFinanceVendorsQuery,
   useCreateFinanceVendorMutation,
   useUpdateFinanceVendorMutation,
+  useGetFinanceOrgGstProfilesQuery,
+  useCreateFinanceOrgGstProfileMutation,
+  useUpdateFinanceOrgGstProfileMutation,
+  useCreateFinanceOrgGstProfileLogoMutation,
+  useGetFinanceOrgAddressesQuery,
+  useCreateFinanceOrgAddressMutation,
+  useUpdateFinanceOrgAddressMutation,
+  useGetFinanceOrgOfficersQuery,
+  useCreateFinanceOrgOfficerMutation,
+  useUpdateFinanceOrgOfficerMutation,
+  useGetFinanceVendorRegistrationQuery,
+  useCreateFinanceVendorRegistrationMutation,
+  useUpdateFinanceVendorRegistrationMutation,
+  useCreateFinanceVendorDocumentUploadMutation,
+  useLazyGetFinanceVendorPrintQuery,
   useGetFinanceItemsQuery,
   useCreateFinanceItemMutation,
   useUpdateFinanceItemMutation,

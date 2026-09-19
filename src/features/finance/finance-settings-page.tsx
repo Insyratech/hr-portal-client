@@ -15,20 +15,49 @@ import {
   optionalFormString,
   stateFromCode,
 } from '@/features/finance/finance-constants';
+import { uploadFinanceOrgLogo } from '@/features/finance/finance-vendor-uploads';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
-import { useGetFinanceOrganizationQuery, useUpdateFinanceOrganizationMutation } from '@/store/api/api';
+import {
+  useCreateFinanceOrgAddressMutation,
+  useCreateFinanceOrgGstProfileLogoMutation,
+  useCreateFinanceOrgGstProfileMutation,
+  useCreateFinanceOrgOfficerMutation,
+  useGetFinanceOrgAddressesQuery,
+  useGetFinanceOrgGstProfilesQuery,
+  useGetFinanceOrgOfficersQuery,
+  useGetFinanceOrganizationQuery,
+  useUpdateFinanceOrgAddressMutation,
+  useUpdateFinanceOrgGstProfileMutation,
+  useUpdateFinanceOrganizationMutation,
+} from '@/store/api/api';
 
 export function FinanceSettingsPage() {
   const canManage = useAppSelector((state) =>
     state.permissions.permissions.includes(PERMISSIONS.FINANCE_ORG_MANAGE),
   );
   const { data, isLoading, isError } = useGetFinanceOrganizationQuery(undefined, { skip: !canManage });
+  const { data: gstData, isLoading: gstLoading } = useGetFinanceOrgGstProfilesQuery(undefined, {
+    skip: !canManage,
+  });
+  const { data: addressData } = useGetFinanceOrgAddressesQuery(undefined, { skip: !canManage });
+  const { data: officerData } = useGetFinanceOrgOfficersQuery(undefined, { skip: !canManage });
+
   const [updateOrg, { isLoading: saving }] = useUpdateFinanceOrganizationMutation();
+  const [createGst, { isLoading: creatingGst }] = useCreateFinanceOrgGstProfileMutation();
+  const [updateGst, { isLoading: updatingGst }] = useUpdateFinanceOrgGstProfileMutation();
+  const [createLogo] = useCreateFinanceOrgGstProfileLogoMutation();
+  const [createAddress, { isLoading: creatingAddress }] = useCreateFinanceOrgAddressMutation();
+  const [updateAddress] = useUpdateFinanceOrgAddressMutation();
+  const [createOfficer, { isLoading: creatingOfficer }] = useCreateFinanceOrgOfficerMutation();
+
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const org = data?.data;
+  const profiles = gstData?.data ?? [];
+  const addresses = addressData?.data ?? [];
+  const officers = officerData?.data ?? [];
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,6 +85,85 @@ export function FinanceSettingsPage() {
     }
   }
 
+  async function onCreateGst(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    const form = new FormData(event.currentTarget);
+    const { stateCode, stateName } = stateFromCode(String(form.get('stateCode') ?? ''));
+    try {
+      const created = await createGst({
+        label: String(form.get('label') ?? '').trim(),
+        gstin: String(form.get('gstin') ?? '').trim(),
+        legalName: String(form.get('legalName') ?? '').trim(),
+        tradeName: String(form.get('tradeName') ?? '').trim(),
+        cin: optionalFormString(form.get('cin')),
+        pan: optionalFormString(form.get('pan')),
+        addressLine1: String(form.get('addressLine1') ?? '').trim(),
+        addressLine2: String(form.get('addressLine2') ?? '').trim(),
+        city: String(form.get('city') ?? '').trim(),
+        postalCode: String(form.get('postalCode') ?? '').trim(),
+        stateCode,
+        stateName,
+        isDefault: form.get('isDefault') === 'on',
+      }).unwrap();
+      const logo = form.get('logo');
+      if (logo instanceof File && logo.size > 0) {
+        await uploadFinanceOrgLogo(createLogo, created.data.id, logo);
+      }
+      event.currentTarget.reset();
+    } catch (cause) {
+      setError(apiErrorMessage(cause, 'Unable to add GST profile.'));
+    }
+  }
+
+  async function onCreateAddress(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    const form = new FormData(event.currentTarget);
+    const { stateCode, stateName } = stateFromCode(String(form.get('stateCode') ?? ''));
+    try {
+      await createAddress({
+        label: String(form.get('label') ?? '').trim() || 'Address',
+        addressType: String(form.get('addressType') ?? 'other') as
+          | 'registered'
+          | 'operating'
+          | 'billing'
+          | 'shipping'
+          | 'factory'
+          | 'other',
+        line1: String(form.get('line1') ?? '').trim(),
+        line2: String(form.get('line2') ?? '').trim(),
+        city: String(form.get('city') ?? '').trim(),
+        postalCode: String(form.get('postalCode') ?? '').trim(),
+        stateCode,
+        stateName,
+        isDefault: form.get('isDefault') === 'on',
+      }).unwrap();
+      event.currentTarget.reset();
+    } catch (cause) {
+      setError(apiErrorMessage(cause, 'Unable to add address.'));
+    }
+  }
+
+  async function onCreateOfficer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    const form = new FormData(event.currentTarget);
+    try {
+      await createOfficer({
+        role: String(form.get('role') ?? 'other') as 'ceo' | 'director' | 'other',
+        fullName: String(form.get('fullName') ?? '').trim(),
+        designation: String(form.get('designation') ?? '').trim(),
+        email: optionalFormString(form.get('email')),
+        phone: optionalFormString(form.get('phone')),
+        din: optionalFormString(form.get('din')),
+      }).unwrap();
+      event.currentTarget.reset();
+    } catch (cause) {
+      setError(apiErrorMessage(cause, 'Unable to add officer.'));
+    }
+  }
+
   if (!canManage) {
     return (
       <>
@@ -67,12 +175,15 @@ export function FinanceSettingsPage() {
     );
   }
 
+  const busy = saving || creatingGst || updatingGst || creatingAddress || creatingOfficer;
+
   return (
     <>
-      <DelayedLoadingOverlay active={saving} />
+      <DelayedLoadingOverlay active={busy} />
       <PageHeader kicker="Finance" title="Organisation settings" />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Legal name, GST registration, and fiscal year start used for document numbering and tax.
+        Legal profile, multiple GST letterheads, company addresses, and officers used on vendor
+        registration and documents.
       </p>
       {isError ? <p className="mb-4 text-sm">Unable to load organisation profile.</p> : null}
       {error ? (
@@ -89,7 +200,8 @@ export function FinanceSettingsPage() {
       {isLoading || !org ? (
         <p className="text-sm text-muted">Loading…</p>
       ) : (
-        <form key={org.updatedAt} onSubmit={onSubmit} className="max-w-xl space-y-4">
+        <form key={org.updatedAt} onSubmit={onSubmit} className="mb-10 max-w-xl space-y-4">
+          <h2 className="text-sm font-medium">Primary organisation profile</h2>
           <div>
             <Label htmlFor="legalName">Legal name</Label>
             <Input id="legalName" name="legalName" defaultValue={org.legalName} required />
@@ -99,7 +211,7 @@ export function FinanceSettingsPage() {
             <Input id="tradeName" name="tradeName" defaultValue={org.tradeName} />
           </div>
           <div>
-            <Label htmlFor="gstin">GSTIN</Label>
+            <Label htmlFor="gstin">Default GSTIN</Label>
             <Input id="gstin" name="gstin" defaultValue={org.gstin ?? ''} placeholder="22AAAAA0000A1Z5" />
           </div>
           <label className="flex items-center gap-2 text-sm">
@@ -162,6 +274,289 @@ export function FinanceSettingsPage() {
           </div>
         </form>
       )}
+
+      <section className="mb-10 max-w-3xl space-y-4">
+        <h2 className="text-sm font-medium">GST profiles (letterheads)</h2>
+        <p className="text-sm text-muted">
+          Register each company GST with its address, CIN, PAN, and logo. Vendor forms pick one profile
+          for the top-right letterhead.
+        </p>
+        {gstLoading ? <p className="text-sm text-muted">Loading GST profiles…</p> : null}
+        <ul className="space-y-3">
+          {profiles.map((profile) => (
+            <li key={profile.id} className="rounded border border-border p-4 text-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="font-medium">
+                    {profile.label || profile.gstin}
+                    {profile.isDefault ? ' · Default' : ''}
+                  </div>
+                  <div className="text-muted">
+                    GST {profile.gstin}
+                    {profile.cin ? ` · CIN ${profile.cin}` : ''}
+                    {profile.pan ? ` · PAN ${profile.pan}` : ''}
+                  </div>
+                  <div className="text-muted">
+                    {[profile.addressLine1, profile.city, profile.postalCode].filter(Boolean).join(', ')}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {!profile.isDefault ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          await updateGst({ id: profile.id, body: { isDefault: true } }).unwrap();
+                        } catch (cause) {
+                          setError(apiErrorMessage(cause, 'Unable to set default GST.'));
+                        }
+                      }}
+                    >
+                      Make default
+                    </Button>
+                  ) : null}
+                  <label className="inline-flex cursor-pointer items-center gap-2 text-xs">
+                    <span>Logo</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="max-w-[180px] text-xs"
+                      onChange={async (event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          await uploadFinanceOrgLogo(createLogo, profile.id, file);
+                        } catch (cause) {
+                          setError(apiErrorMessage(cause, 'Unable to upload logo.'));
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+              {profile.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profile.logoUrl} alt="" className="mt-3 h-10 object-contain" />
+              ) : null}
+            </li>
+          ))}
+        </ul>
+
+        <form onSubmit={onCreateGst} className="space-y-3 rounded border border-border p-4">
+          <h3 className="text-xs uppercase tracking-[0.18em] text-meta">Add GST profile</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="gstLabel">Label</Label>
+              <Input id="gstLabel" name="label" placeholder="GST 1 / Peenya" />
+            </div>
+            <div>
+              <Label htmlFor="gstGstin">GSTIN</Label>
+              <Input id="gstGstin" name="gstin" required />
+            </div>
+            <div>
+              <Label htmlFor="gstLegal">Legal name</Label>
+              <Input id="gstLegal" name="legalName" />
+            </div>
+            <div>
+              <Label htmlFor="gstTrade">Trade name</Label>
+              <Input id="gstTrade" name="tradeName" />
+            </div>
+            <div>
+              <Label htmlFor="gstCin">CIN</Label>
+              <Input id="gstCin" name="cin" />
+            </div>
+            <div>
+              <Label htmlFor="gstPan">PAN</Label>
+              <Input id="gstPan" name="pan" />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="gstAddr1">Address line 1</Label>
+              <Input id="gstAddr1" name="addressLine1" />
+            </div>
+            <div>
+              <Label htmlFor="gstAddr2">Address line 2</Label>
+              <Input id="gstAddr2" name="addressLine2" />
+            </div>
+            <div>
+              <Label htmlFor="gstCity">City</Label>
+              <Input id="gstCity" name="city" />
+            </div>
+            <div>
+              <Label htmlFor="gstState">State</Label>
+              <select id="gstState" name="stateCode" className={SELECT_CLASS} defaultValue="">
+                <option value="">Select state</option>
+                {INDIAN_STATES.map((state) => (
+                  <option key={state.code} value={state.code}>
+                    {state.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="gstPostal">Postal code</Label>
+              <Input id="gstPostal" name="postalCode" />
+            </div>
+            <div>
+              <Label htmlFor="gstLogo">Logo</Label>
+              <Input id="gstLogo" name="logo" type="file" accept="image/jpeg,image/png,image/webp" />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="isDefault" className="h-4 w-4 rounded border-border" />
+            Set as default letterhead
+          </label>
+          <Button type="submit" loading={creatingGst}>
+            Add GST profile
+          </Button>
+        </form>
+      </section>
+
+      <section className="mb-10 max-w-3xl space-y-4">
+        <h2 className="text-sm font-medium">Company addresses</h2>
+        <p className="text-sm text-muted">
+          Registered, operating, billing, and shipping addresses available in vendor registration
+          dropdowns.
+        </p>
+        <ul className="space-y-2 text-sm">
+          {addresses.map((address) => (
+            <li key={address.id} className="rounded border border-border px-3 py-2">
+              <span className="font-medium">{address.label}</span>
+              <span className="text-muted"> · {address.addressType}</span>
+              <div className="text-muted">
+                {[address.line1, address.line2, address.city, address.stateName, address.postalCode]
+                  .filter(Boolean)
+                  .join(', ')}
+              </div>
+              {!address.isDefault ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-2"
+                  onClick={async () => {
+                    try {
+                      await updateAddress({ id: address.id, body: { isDefault: true } }).unwrap();
+                    } catch (cause) {
+                      setError(apiErrorMessage(cause, 'Unable to update address.'));
+                    }
+                  }}
+                >
+                  Mark default
+                </Button>
+              ) : (
+                <span className="mt-1 inline-block text-xs text-muted">Default</span>
+              )}
+            </li>
+          ))}
+        </ul>
+        <form onSubmit={onCreateAddress} className="space-y-3 rounded border border-border p-4">
+          <h3 className="text-xs uppercase tracking-[0.18em] text-meta">Add address</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="addrLabel">Label</Label>
+              <Input id="addrLabel" name="label" placeholder="Registered office" />
+            </div>
+            <div>
+              <Label htmlFor="addrType">Type</Label>
+              <select id="addrType" name="addressType" className={SELECT_CLASS} defaultValue="registered">
+                <option value="registered">Registered</option>
+                <option value="operating">Operating</option>
+                <option value="billing">Billing</option>
+                <option value="shipping">Shipping</option>
+                <option value="factory">Factory</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="addrLine1">Line 1</Label>
+              <Input id="addrLine1" name="line1" required />
+            </div>
+            <div>
+              <Label htmlFor="addrLine2">Line 2</Label>
+              <Input id="addrLine2" name="line2" />
+            </div>
+            <div>
+              <Label htmlFor="addrCity">City</Label>
+              <Input id="addrCity" name="city" />
+            </div>
+            <div>
+              <Label htmlFor="addrState">State</Label>
+              <select id="addrState" name="stateCode" className={SELECT_CLASS} defaultValue="">
+                <option value="">Select state</option>
+                {INDIAN_STATES.map((state) => (
+                  <option key={state.code} value={state.code}>
+                    {state.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="addrPostal">Postal code</Label>
+              <Input id="addrPostal" name="postalCode" />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="isDefault" className="h-4 w-4 rounded border-border" />
+            Default address
+          </label>
+          <Button type="submit" loading={creatingAddress}>
+            Add address
+          </Button>
+        </form>
+      </section>
+
+      <section className="mb-10 max-w-3xl space-y-4">
+        <h2 className="text-sm font-medium">Directors & CEO</h2>
+        <ul className="space-y-2 text-sm">
+          {officers.map((officer) => (
+            <li key={officer.id} className="rounded border border-border px-3 py-2">
+              <span className="font-medium">{officer.fullName}</span>
+              <span className="text-muted">
+                {' '}
+                · {officer.role.toUpperCase()}
+                {officer.designation ? ` · ${officer.designation}` : ''}
+                {officer.din ? ` · DIN ${officer.din}` : ''}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <form onSubmit={onCreateOfficer} className="space-y-3 rounded border border-border p-4">
+          <h3 className="text-xs uppercase tracking-[0.18em] text-meta">Add officer</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="officerRole">Role</Label>
+              <select id="officerRole" name="role" className={SELECT_CLASS} defaultValue="director">
+                <option value="ceo">CEO</option>
+                <option value="director">Director</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="officerName">Full name</Label>
+              <Input id="officerName" name="fullName" required />
+            </div>
+            <div>
+              <Label htmlFor="officerDesignation">Designation</Label>
+              <Input id="officerDesignation" name="designation" />
+            </div>
+            <div>
+              <Label htmlFor="officerDin">DIN</Label>
+              <Input id="officerDin" name="din" />
+            </div>
+            <div>
+              <Label htmlFor="officerEmail">Email</Label>
+              <Input id="officerEmail" name="email" type="email" />
+            </div>
+            <div>
+              <Label htmlFor="officerPhone">Phone</Label>
+              <Input id="officerPhone" name="phone" />
+            </div>
+          </div>
+          <Button type="submit" loading={creatingOfficer}>
+            Add officer
+          </Button>
+        </form>
+      </section>
     </>
   );
 }
