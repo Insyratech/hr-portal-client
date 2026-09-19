@@ -16,29 +16,30 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
-import { SELECT_CLASS } from '@/features/finance/finance-constants';
-import {
-  formatInr,
-  newMoneyLine,
-  salesStatusTone,
-  type MoneyLineDraft,
-} from '@/features/finance/finance-procurement-utils';
+import { ACCENT, FORM_SECTION_TONE } from '@/lib/ui-accents';
+import { FinanceQuoteForm } from '@/features/finance/finance-quote-form';
+import { formatInr, salesStatusTone } from '@/features/finance/finance-procurement-utils';
 import { printSalesDocument } from '@/features/finance/finance-sales-print';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useAppSelector } from '@/store/hooks';
 import {
   useConvertFinanceSalesQuoteToInvoiceMutation,
   useConvertFinanceSalesQuoteToOrderMutation,
-  useCreateFinanceSalesQuoteMutation,
   useDecideFinanceSalesQuoteMutation,
+  useEmailFinanceSalesQuoteMutation,
   useExpireFinanceSalesQuoteMutation,
   useGetFinanceCustomersQuery,
+  useGetFinanceSalesQuoteQuery,
   useGetFinanceSalesQuotesQuery,
   useLazyGetFinanceSalesQuotePrintQuery,
   useSendFinanceSalesQuoteMutation,
 } from '@/store/api/api';
 import type { SalesQuote } from '@/types/api';
 import { PERMISSIONS } from '@/types/permissions';
+
+function canEditQuote(status: SalesQuote['status']): boolean {
+  return status === 'draft' || status === 'sent' || status === 'accepted';
+}
 
 export function FinanceQuotesPage() {
   const permissions = useAppSelector((state) => state.permissions.permissions);
@@ -48,59 +49,34 @@ export function FinanceQuotesPage() {
   const canManage = permissions.includes(PERMISSIONS.FINANCE_SALES_MANAGE);
 
   const { data, isLoading, isError } = useGetFinanceSalesQuotesQuery(undefined, { skip: !canView });
-  const { data: customersData } = useGetFinanceCustomersQuery(undefined, { skip: !canManage });
-  const [createQuote, { isLoading: creating }] = useCreateFinanceSalesQuoteMutation();
   const [sendQuote, { isLoading: sending }] = useSendFinanceSalesQuoteMutation();
   const [decideQuote, { isLoading: deciding }] = useDecideFinanceSalesQuoteMutation();
   const [expireQuote, { isLoading: expiring }] = useExpireFinanceSalesQuoteMutation();
   const [convertToOrder, { isLoading: convertingOrder }] = useConvertFinanceSalesQuoteToOrderMutation();
   const [convertToInvoice, { isLoading: convertingInvoice }] =
     useConvertFinanceSalesQuoteToInvoiceMutation();
+  const [emailQuote, { isLoading: emailing }] = useEmailFinanceSalesQuoteMutation();
   const [fetchPrint, { isFetching: printing }] = useLazyGetFinanceSalesQuotePrintQuery();
 
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [detail, setDetail] = useState<SalesQuote | null>(null);
-  const [lines, setLines] = useState<MoneyLineDraft[]>([newMoneyLine()]);
+  const [editQuote, setEditQuote] = useState<SalesQuote | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [expandedVersionId, setExpandedVersionId] = useState<string | null>(null);
 
-  async function onCreate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    const form = new FormData(event.currentTarget);
-    const prepared = lines
-      .map((line) => ({
-        description: line.description.trim(),
-        quantity: Number(line.quantity),
-        unit: line.unit.trim() || 'nos',
-        rate: Number(line.rate),
-        taxPercent: Number(line.taxPercent),
-      }))
-      .filter((line) => line.description && line.quantity > 0);
-    if (!prepared.length) {
-      setError('Add at least one quote line.');
-      return;
-    }
-    try {
-      await createQuote({
-        customerId: String(form.get('customerId') ?? ''),
-        quoteDate: String(form.get('quoteDate') ?? '').trim() || undefined,
-        expiryDate: String(form.get('expiryDate') ?? '').trim() || null,
-        notes: String(form.get('notes') ?? '').trim() || undefined,
-        terms: String(form.get('terms') ?? '').trim() || undefined,
-        lines: prepared,
-      }).unwrap();
-      setCreateOpen(false);
-      setLines([newMoneyLine()]);
-    } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to create quote.'));
-    }
-  }
+  const { data: customersData } = useGetFinanceCustomersQuery(undefined, { skip: !canManage });
+  const { data: detailData, isLoading: loadingDetail } = useGetFinanceSalesQuoteQuery(detailId ?? '', {
+    skip: !detailId,
+  });
+  const detail = detailData?.data ?? null;
+  const customerEmail =
+    customersData?.data.find((customer) => customer.id === detail?.customerId)?.email ?? '';
 
   async function onSend(id: string) {
     setError(null);
     try {
-      const result = await sendQuote(id).unwrap();
-      setDetail(result.data);
+      await sendQuote(id).unwrap();
     } catch (cause) {
       setError(apiErrorMessage(cause, 'Unable to send quote.'));
     }
@@ -109,8 +85,7 @@ export function FinanceQuotesPage() {
   async function onDecide(id: string, decision: 'accept' | 'decline') {
     setError(null);
     try {
-      const result = await decideQuote({ id, decision }).unwrap();
-      setDetail(result.data);
+      await decideQuote({ id, decision }).unwrap();
     } catch (cause) {
       setError(apiErrorMessage(cause, `Unable to ${decision} quote.`));
     }
@@ -119,8 +94,7 @@ export function FinanceQuotesPage() {
   async function onExpire(id: string) {
     setError(null);
     try {
-      const result = await expireQuote(id).unwrap();
-      setDetail(result.data);
+      await expireQuote(id).unwrap();
     } catch (cause) {
       setError(apiErrorMessage(cause, 'Unable to expire quote.'));
     }
@@ -130,7 +104,7 @@ export function FinanceQuotesPage() {
     setError(null);
     try {
       await convertToOrder(id).unwrap();
-      setDetail(null);
+      setDetailId(null);
     } catch (cause) {
       setError(apiErrorMessage(cause, 'Unable to convert quote to sales order.'));
     }
@@ -140,7 +114,7 @@ export function FinanceQuotesPage() {
     setError(null);
     try {
       await convertToInvoice(id).unwrap();
-      setDetail(null);
+      setDetailId(null);
     } catch (cause) {
       setError(apiErrorMessage(cause, 'Unable to convert quote to invoice.'));
     }
@@ -153,6 +127,27 @@ export function FinanceQuotesPage() {
       printSalesDocument(result.data);
     } catch (cause) {
       setError(apiErrorMessage(cause, 'Unable to load print payload.'));
+    }
+  }
+
+  async function onEmail(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!detail) return;
+    setError(null);
+    const form = new FormData(event.currentTarget);
+    try {
+      await emailQuote({
+        id: detail.id,
+        body: {
+          to: String(form.get('to') ?? '').trim(),
+          subject: String(form.get('subject') ?? '').trim() || undefined,
+          message: String(form.get('message') ?? '').trim() || undefined,
+          saveEmailToCustomer: form.get('saveEmailToCustomer') === 'on',
+        },
+      }).unwrap();
+      setEmailOpen(false);
+    } catch (cause) {
+      setError(apiErrorMessage(cause, 'Unable to email quote.'));
     }
   }
 
@@ -169,7 +164,14 @@ export function FinanceQuotesPage() {
     <>
       <DelayedLoadingOverlay
         active={
-          creating || sending || deciding || expiring || convertingOrder || convertingInvoice || printing
+          sending ||
+          deciding ||
+          expiring ||
+          convertingOrder ||
+          convertingInvoice ||
+          printing ||
+          emailing ||
+          loadingDetail
         }
       />
       <PageHeader
@@ -181,7 +183,6 @@ export function FinanceQuotesPage() {
               type="button"
               onClick={() => {
                 setError(null);
-                setLines([newMoneyLine()]);
                 setCreateOpen(true);
               }}
             >
@@ -191,9 +192,9 @@ export function FinanceQuotesPage() {
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Create customer quotes, send them, accept or decline, then convert to a sales order or invoice.
+        Create customer quotes with letterhead, structured addresses, version history, and Bioserve-style PDF output.
       </p>
-      {error && !createOpen && !detail ? (
+      {error && !createOpen && !detailId && !editQuote ? (
         <div className="mb-4">
           <StatusMessage tone="danger">{error}</StatusMessage>
         </div>
@@ -203,6 +204,7 @@ export function FinanceQuotesPage() {
         columns={[
           { id: 'documentNumber', header: 'Number', cell: (row) => row.documentNumber },
           { id: 'customer', header: 'Customer', cell: (row) => row.customerName || '—' },
+          { id: 'subject', header: 'Subject', cell: (row) => row.subject || '—' },
           { id: 'quoteDate', header: 'Date', cell: (row) => row.quoteDate },
           { id: 'total', header: 'Total', cell: (row) => formatInr(row.grandTotal) },
           {
@@ -210,164 +212,54 @@ export function FinanceQuotesPage() {
             header: 'Status',
             cell: (row) => <StatusBadge status={salesStatusTone(row.status)} label={row.status} />,
           },
-          {
-            id: 'actions',
-            header: 'Actions',
-            cell: (row) => (
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => setDetail(row)}>
-                  Open
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => void onPrint(row.id)}>
-                  Print
-                </Button>
-              </div>
-            ),
-          },
         ]}
         rows={data?.data ?? []}
         loading={isLoading}
         emptyTitle="No quotes"
         emptyDescription="Create a quote for a customer."
+        onRowClick={(row) => {
+          setError(null);
+          setDetailId(row.id);
+        }}
       />
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
           <DialogTitle>New quote</DialogTitle>
-          <DialogDescription>Customer quote with line items and tax.</DialogDescription>
-          <form onSubmit={onCreate} className="mt-6 space-y-4">
-            <div>
-              <Label htmlFor="customerId">Customer</Label>
-              <select id="customerId" name="customerId" className={SELECT_CLASS} required>
-                <option value="">Select customer</option>
-                {(customersData?.data ?? []).map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.displayName}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="quoteDate">Quote date</Label>
-                <Input id="quoteDate" name="quoteDate" type="date" />
-              </div>
-              <div>
-                <Label htmlFor="expiryDate">Expiry date</Label>
-                <Input id="expiryDate" name="expiryDate" type="date" />
-              </div>
-              <div>
-                <Label htmlFor="terms">Terms</Label>
-                <Input id="terms" name="terms" />
-              </div>
-              <div>
-                <Label htmlFor="notes">Notes</Label>
-                <Input id="notes" name="notes" />
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Lines</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setLines((prev) => [...prev, newMoneyLine()])}
-                >
-                  Add line
-                </Button>
-              </div>
-              {lines.map((line, index) => (
-                <div key={line.key} className="grid gap-2 sm:grid-cols-12">
-                  <Input
-                    className="sm:col-span-4"
-                    placeholder="Description"
-                    value={line.description}
-                    onChange={(event) =>
-                      setLines((prev) =>
-                        prev.map((item, i) => (i === index ? { ...item, description: event.target.value } : item)),
-                      )
-                    }
-                    required
-                  />
-                  <Input
-                    className="sm:col-span-2"
-                    type="number"
-                    min={0.01}
-                    step="any"
-                    value={line.quantity}
-                    onChange={(event) =>
-                      setLines((prev) =>
-                        prev.map((item, i) => (i === index ? { ...item, quantity: event.target.value } : item)),
-                      )
-                    }
-                    required
-                  />
-                  <Input
-                    className="sm:col-span-2"
-                    value={line.unit}
-                    onChange={(event) =>
-                      setLines((prev) =>
-                        prev.map((item, i) => (i === index ? { ...item, unit: event.target.value } : item)),
-                      )
-                    }
-                  />
-                  <Input
-                    className="sm:col-span-2"
-                    type="number"
-                    min={0}
-                    step="any"
-                    value={line.rate}
-                    onChange={(event) =>
-                      setLines((prev) =>
-                        prev.map((item, i) => (i === index ? { ...item, rate: event.target.value } : item)),
-                      )
-                    }
-                    required
-                  />
-                  <Input
-                    className="sm:col-span-1"
-                    type="number"
-                    min={0}
-                    step="any"
-                    value={line.taxPercent}
-                    onChange={(event) =>
-                      setLines((prev) =>
-                        prev.map((item, i) => (i === index ? { ...item, taxPercent: event.target.value } : item)),
-                      )
-                    }
-                    required
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="sm:col-span-1"
-                    disabled={lines.length === 1}
-                    onClick={() => setLines((prev) => prev.filter((_, i) => i !== index))}
-                  >
-                    ×
-                  </Button>
-                </div>
-              ))}
-            </div>
-            {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
-            <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" loading={creating}>
-                Create quote
-              </Button>
-            </div>
-          </form>
+          <DialogDescription>Step through letterhead, customer, lines, and review.</DialogDescription>
+          <FinanceQuoteForm
+            onCancel={() => setCreateOpen(false)}
+            onSaved={() => setCreateOpen(false)}
+          />
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(detail)} onOpenChange={(open) => !open && setDetail(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <Dialog open={Boolean(editQuote)} onOpenChange={(open) => !open && setEditQuote(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
+          <DialogTitle>Edit quote</DialogTitle>
+          <DialogDescription>Update quote details. A change note creates a new version when provided.</DialogDescription>
+          {editQuote ? (
+            <FinanceQuoteForm
+              key={editQuote.id}
+              quote={editQuote}
+              onCancel={() => setEditQuote(null)}
+              onSaved={() => {
+                setEditQuote(null);
+                if (detailId === editQuote.id) {
+                  /* refetch via tag invalidation */
+                }
+              }}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(detailId)} onOpenChange={(open) => !open && setDetailId(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogTitle>{detail?.documentNumber ?? 'Quote'}</DialogTitle>
-          <DialogDescription>Send, decide, expire, convert, or print this quote.</DialogDescription>
+          <DialogDescription>
+            Version {detail?.versionNumber ?? 1} · Send, decide, convert, print, or email this quote.
+          </DialogDescription>
           {detail ? (
             <div className="mt-6 space-y-4">
               <div className="grid gap-2 text-sm sm:grid-cols-2">
@@ -388,10 +280,47 @@ export function FinanceQuotesPage() {
                     <span className="text-muted">Expires:</span> {detail.expiryDate}
                   </p>
                 ) : null}
+                {detail.subject ? (
+                  <p>
+                    <span className="text-muted">Subject:</span> {detail.subject}
+                  </p>
+                ) : null}
+                {detail.referenceText ? (
+                  <p>
+                    <span className="text-muted">Reference:</span> {detail.referenceText}
+                  </p>
+                ) : null}
+                {detail.placeOfSupply ? (
+                  <p>
+                    <span className="text-muted">Place of supply:</span> {detail.placeOfSupply}
+                  </p>
+                ) : null}
               </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 text-sm">
+                <div className="rounded border border-border p-3">
+                  <p className="text-xs uppercase tracking-wide text-muted">Bill To</p>
+                  <p className="mt-1 whitespace-pre-wrap">{detail.billingAddressSnapshot || '—'}</p>
+                  {detail.customerGstinSnapshot ? (
+                    <p className="mt-1 text-muted">GSTIN: {detail.customerGstinSnapshot}</p>
+                  ) : null}
+                </div>
+                <div className="rounded border border-border p-3">
+                  <p className="text-xs uppercase tracking-wide text-muted">Ship To</p>
+                  {detail.shipToName ? <p className="font-medium">{detail.shipToName}</p> : null}
+                  <p className="mt-1 whitespace-pre-wrap">{detail.shippingAddressSnapshot || detail.billingAddressSnapshot || '—'}</p>
+                </div>
+              </div>
+
               <DataTable
                 columns={[
                   { id: 'description', header: 'Description', cell: (row) => row.description },
+                  {
+                    id: 'catalog',
+                    header: 'Catalog',
+                    cell: (row) => row.catalogNo || '—',
+                  },
+                  { id: 'hsn', header: 'HSN/SAC', cell: (row) => row.hsnSac || '—' },
                   { id: 'qty', header: 'Qty', cell: (row) => `${row.quantity} ${row.unit || ''}` },
                   { id: 'rate', header: 'Rate', cell: (row) => formatInr(row.rate) },
                   { id: 'amount', header: 'Amount', cell: (row) => formatInr(row.amount + row.taxAmount) },
@@ -400,10 +329,57 @@ export function FinanceQuotesPage() {
                 emptyTitle="No lines"
                 emptyDescription="This quote has no lines."
               />
+
+              {detail.versions.length ? (
+                <div>
+                  <h4 className="text-sm font-medium" style={{ color: ACCENT[FORM_SECTION_TONE] }}>
+                    Version history
+                  </h4>
+                  <ul className="mt-2 space-y-2">
+                    {detail.versions.map((version) => (
+                      <li key={version.id} className="rounded border border-border text-sm">
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-muted/20"
+                          onClick={() =>
+                            setExpandedVersionId((prev) => (prev === version.id ? null : version.id))
+                          }
+                        >
+                          <span>
+                            v{version.versionNumber}
+                            {version.changeNote ? ` — ${version.changeNote}` : ''}
+                          </span>
+                          <span className="text-xs text-muted">
+                            {new Date(version.createdAt).toLocaleString('en-IN')}
+                          </span>
+                        </button>
+                        {expandedVersionId === version.id ? (
+                          <div className="border-t border-border px-3 py-2 text-xs text-muted">
+                            <p>Total: {formatInr(version.snapshot.grandTotal)}</p>
+                            <p>Lines: {version.snapshot.lines.length}</p>
+                            {version.snapshot.subject ? <p>Subject: {version.snapshot.subject}</p> : null}
+                          </div>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={() => void onPrint(detail.id)}>
-                  Print
+                  View / Print PDF
                 </Button>
+                {canManage ? (
+                  <Button type="button" variant="outline" onClick={() => setEmailOpen(true)}>
+                    Email
+                  </Button>
+                ) : null}
+                {canManage && canEditQuote(detail.status) ? (
+                  <Button type="button" variant="outline" onClick={() => setEditQuote(detail)}>
+                    Edit
+                  </Button>
+                ) : null}
                 {canManage && detail.status === 'draft' ? (
                   <Button type="button" onClick={() => void onSend(detail.id)}>
                     Send
@@ -435,7 +411,52 @@ export function FinanceQuotesPage() {
               </div>
               {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
             </div>
+          ) : loadingDetail ? (
+            <p className="mt-6 text-sm text-muted">Loading quote…</p>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={emailOpen} onOpenChange={setEmailOpen}>
+        <DialogContent>
+          <DialogTitle>Email quote</DialogTitle>
+          <DialogDescription>Send this quote to the customer by email.</DialogDescription>
+          <form onSubmit={onEmail} className="mt-6 space-y-4">
+            <div>
+              <Label htmlFor="to">To</Label>
+              <Input id="to" name="to" type="email" required defaultValue={customerEmail} key={customerEmail} />
+            </div>
+            <div>
+              <Label htmlFor="subject">Subject</Label>
+              <Input
+                id="subject"
+                name="subject"
+                defaultValue={detail?.subject ? `Quote ${detail.documentNumber} — ${detail.subject}` : `Quote ${detail?.documentNumber ?? ''}`}
+              />
+            </div>
+            <div>
+              <Label htmlFor="message">Message</Label>
+              <textarea
+                id="message"
+                name="message"
+                className="min-h-[80px] w-full rounded border border-border bg-background px-3 py-2 text-sm"
+                placeholder="Optional message to include in the email"
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="saveEmailToCustomer" />
+              Save email to customer record
+            </label>
+            {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setEmailOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={emailing}>
+                Send email
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </>

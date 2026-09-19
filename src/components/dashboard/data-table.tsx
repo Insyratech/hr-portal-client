@@ -14,12 +14,14 @@ export function DataTable<T extends { id: string }>({
   emptyTitle,
   emptyDescription,
   loading = false,
+  onRowClick,
 }: {
   columns: DataTableColumn<T>[];
   rows: T[];
   emptyTitle: string;
   emptyDescription: string;
   loading?: boolean;
+  onRowClick?: (row: T) => void;
 }) {
   if (loading) {
     return <TableSkeleton columns={Math.max(columns.length, 3)} rows={6} />;
@@ -50,7 +52,11 @@ export function DataTable<T extends { id: string }>({
               rows.map((row) => (
                 <tr
                   key={row.id}
-                  className="border-b border-border transition-colors last:border-b-0 hover:bg-surface/80"
+                  className={[
+                    'border-b border-border transition-colors last:border-b-0 hover:bg-surface/80',
+                    onRowClick ? 'cursor-pointer' : '',
+                  ].join(' ')}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
                 >
                   {columns.map((column) => (
                     <td key={column.id} className="px-4 py-3.5 text-foreground">

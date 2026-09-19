@@ -28,6 +28,11 @@ import type {
   EmployeePayroll,
   FinanceAccount,
   FinanceCustomer,
+  FinanceCustomerChangeHistory,
+  GstinLookupResult,
+  QuoteNextNumberPreview,
+  SalesQuoteDetail,
+  SalesQuoteVersion,
   FinanceItem,
   FinanceNumberSeries,
   FinanceOrganization,
@@ -530,6 +535,20 @@ export const api = createApi({
         stateName?: string | null;
         billingAddress?: string;
         shippingAddress?: string;
+        billingLine1?: string;
+        billingLine2?: string;
+        billingCity?: string;
+        billingPostalCode?: string;
+        billingCountry?: string;
+        shippingLine1?: string;
+        shippingLine2?: string;
+        shippingCity?: string;
+        shippingStateCode?: string | null;
+        shippingStateName?: string | null;
+        shippingPostalCode?: string;
+        shippingCountry?: string;
+        shipToContactName?: string;
+        shipToCompanyName?: string;
         paymentTermsDays?: number;
         notes?: string;
       }
@@ -543,6 +562,12 @@ export const api = createApi({
     >({
       query: ({ id, body }) => ({ url: `/api/v1/finance/customers/${id}`, method: 'PATCH', body }),
       invalidatesTags: ['FinanceCustomers'],
+    }),
+    getFinanceCustomerHistory: builder.query<ApiSuccess<FinanceCustomerChangeHistory[]>, string>({
+      query: (id) => `/api/v1/finance/customers/${id}/history`,
+    }),
+    lookupFinanceGstin: builder.mutation<ApiSuccess<GstinLookupResult>, { gstin: string }>({
+      query: (body) => ({ url: '/api/v1/finance/gstin-lookup', method: 'POST', body }),
     }),
     getFinanceVendors: builder.query<ApiSuccess<FinanceVendor[]>, void>({
       query: () => '/api/v1/finance/vendors',
@@ -1017,8 +1042,15 @@ export const api = createApi({
       query: () => '/api/v1/finance/quotes',
       providesTags: ['FinanceSalesQuotes'],
     }),
-    getFinanceSalesQuote: builder.query<ApiSuccess<SalesQuote>, string>({
+    getFinanceQuoteNextNumber: builder.query<ApiSuccess<QuoteNextNumberPreview>, void>({
+      query: () => '/api/v1/finance/quotes/next-number',
+    }),
+    getFinanceSalesQuote: builder.query<ApiSuccess<SalesQuoteDetail>, string>({
       query: (id) => `/api/v1/finance/quotes/${id}`,
+      providesTags: ['FinanceSalesQuotes'],
+    }),
+    getFinanceSalesQuoteVersions: builder.query<ApiSuccess<SalesQuoteVersion[]>, string>({
+      query: (id) => `/api/v1/finance/quotes/${id}/versions`,
       providesTags: ['FinanceSalesQuotes'],
     }),
     getFinanceSalesQuotePrint: builder.query<ApiSuccess<SalesDocumentPrint>, string>({
@@ -1032,6 +1064,14 @@ export const api = createApi({
         expiryDate?: string | null;
         notes?: string;
         terms?: string;
+        subject?: string;
+        referenceText?: string;
+        placeOfSupply?: string;
+        orgGstProfileId?: string | null;
+        billingAddressSnapshot?: string;
+        shippingAddressSnapshot?: string;
+        customerGstinSnapshot?: string | null;
+        shipToName?: string;
         lines: {
           itemId?: string | null;
           description: string;
@@ -1039,6 +1079,8 @@ export const api = createApi({
           unit?: string;
           rate: number;
           taxPercent: number;
+          catalogNo?: string;
+          hsnSac?: string;
         }[];
       }
     >({
@@ -1050,10 +1092,20 @@ export const api = createApi({
       {
         id: string;
         body: {
+          customerId?: string;
           quoteDate?: string;
           expiryDate?: string | null;
           notes?: string;
           terms?: string;
+          subject?: string;
+          referenceText?: string;
+          placeOfSupply?: string;
+          orgGstProfileId?: string | null;
+          billingAddressSnapshot?: string;
+          shippingAddressSnapshot?: string;
+          customerGstinSnapshot?: string | null;
+          shipToName?: string;
+          changeNote?: string;
           lines?: {
             itemId?: string | null;
             description: string;
@@ -1061,12 +1113,24 @@ export const api = createApi({
             unit?: string;
             rate: number;
             taxPercent: number;
+            catalogNo?: string;
+            hsnSac?: string;
           }[];
         };
       }
     >({
       query: ({ id, body }) => ({ url: `/api/v1/finance/quotes/${id}`, method: 'PATCH', body }),
       invalidatesTags: ['FinanceSalesQuotes'],
+    }),
+    emailFinanceSalesQuote: builder.mutation<
+      ApiSuccess<{ sent: boolean; outcome: string; quote: SalesQuote }>,
+      {
+        id: string;
+        body: { to: string; subject?: string; message?: string; saveEmailToCustomer?: boolean };
+      }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/finance/quotes/${id}/email`, method: 'POST', body }),
+      invalidatesTags: ['FinanceSalesQuotes', 'FinanceCustomers'],
     }),
     sendFinanceSalesQuote: builder.mutation<ApiSuccess<SalesQuote>, string>({
       query: (id) => ({ url: `/api/v1/finance/quotes/${id}/send`, method: 'POST' }),
@@ -3334,6 +3398,8 @@ export const {
   useGetFinanceCustomersQuery,
   useCreateFinanceCustomerMutation,
   useUpdateFinanceCustomerMutation,
+  useGetFinanceCustomerHistoryQuery,
+  useLookupFinanceGstinMutation,
   useGetFinanceVendorsQuery,
   useCreateFinanceVendorMutation,
   useUpdateFinanceVendorMutation,
@@ -3396,11 +3462,15 @@ export const {
   useCreateFinanceVendorCreditMutation,
   usePostFinanceVendorCreditMutation,
   useGetFinanceSalesQuotesQuery,
+  useGetFinanceQuoteNextNumberQuery,
+  useLazyGetFinanceQuoteNextNumberQuery,
   useGetFinanceSalesQuoteQuery,
+  useGetFinanceSalesQuoteVersionsQuery,
   useGetFinanceSalesQuotePrintQuery,
   useLazyGetFinanceSalesQuotePrintQuery,
   useCreateFinanceSalesQuoteMutation,
   useUpdateFinanceSalesQuoteMutation,
+  useEmailFinanceSalesQuoteMutation,
   useSendFinanceSalesQuoteMutation,
   useDecideFinanceSalesQuoteMutation,
   useExpireFinanceSalesQuoteMutation,
