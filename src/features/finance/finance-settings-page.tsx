@@ -515,7 +515,9 @@ export function FinanceSettingsPage() {
                 <SubHeading>Add GST profile</SubHeading>
 
                 <div className="space-y-4 rounded-md bg-foreground/[0.03] p-4">
-                  <p className="text-xs text-muted">1 · Identity</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.14em]" style={{ color: ACCENT.orange }}>
+                    1 · Identity
+                  </p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <Label htmlFor="gstLabel">Label</Label>
@@ -537,7 +539,9 @@ export function FinanceSettingsPage() {
                 </div>
 
                 <div className="space-y-4 rounded-md bg-foreground/[0.03] p-4">
-                  <p className="text-xs text-muted">2 · CIN & PAN</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.14em]" style={{ color: ACCENT.orange }}>
+                    2 · CIN & PAN
+                  </p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <Label htmlFor="gstCin">CIN</Label>
@@ -551,7 +555,9 @@ export function FinanceSettingsPage() {
                 </div>
 
                 <div className="space-y-4 rounded-md bg-foreground/[0.03] p-4">
-                  <p className="text-xs text-muted">3 · Address & logo</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.14em]" style={{ color: ACCENT.orange }}>
+                    3 · Address & logo
+                  </p>
                   <div>
                     <Label htmlFor="gstAddr1">Address line 1</Label>
                     <Input id="gstAddr1" name="addressLine1" />

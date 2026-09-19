@@ -33,7 +33,7 @@ export function DataTable<T extends { id: string }>({
             <tr>
               {columns.map((column) => (
                 <th key={column.id} className="px-4 py-3.5 font-medium">
-                  <Meta tone="cyan">{column.header}</Meta>
+                  <Meta>{column.header}</Meta>
                 </th>
               ))}
             </tr>

@@ -1,23 +1,25 @@
 import { cn } from '@/lib/utils';
-import { ACCENT, type AccentTone } from '@/lib/ui-accents';
 import type { ReactNode } from 'react';
 
 /**
  * Major sidebar / mobile nav block title (HR Responsibility, My project, Employee Features).
+ * White, bold, and larger than subgroup Meta labels and nav links in the same block.
  */
 export function NavSectionTitle({
   children,
   className,
-  tone = 'gold',
 }: {
   children: ReactNode;
   className?: string;
-  tone?: AccentTone;
+  /** @deprecated Section titles are always white; kept for call-site compatibility. */
+  tone?: string;
 }) {
   return (
     <span
-      className={cn('block px-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em]', className)}
-      style={{ color: ACCENT[tone] }}
+      className={cn(
+        'block px-3 text-sm font-bold uppercase tracking-[0.12em] text-foreground',
+        className,
+      )}
     >
       {children}
     </span>
