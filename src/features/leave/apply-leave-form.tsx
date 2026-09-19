@@ -242,11 +242,14 @@ export function ApplyLeaveForm({
     if (needsHandover) {
       const colleague = (colleagues?.data ?? []).find((item) => item.id === handoverEmployeeId);
       if (!colleague) {
-        toast.warning('Select a colleague to take handover.');
+        toast.warning('Select a same-shift colleague to take handover.');
         return;
       }
       if (!colleague.available) {
-        toast.warning('That colleague is on leave then. Choose someone who is at work.');
+        toast.warning(
+          colleague.unavailableReason ??
+            'That colleague cannot take handover then. Choose someone on the same shift who is at work.',
+        );
         return;
       }
     }
@@ -388,7 +391,7 @@ export function ApplyLeaveForm({
       ) : null}
       {needsHandover ? (
         <div>
-          <Label htmlFor="handoverEmployeeId">Handover colleague</Label>
+          <Label htmlFor="handoverEmployeeId">Handover colleague (same shift)</Label>
           <select
             id="handoverEmployeeId"
             name="handoverEmployeeId"
@@ -398,18 +401,26 @@ export function ApplyLeaveForm({
             onChange={(event) => setHandoverEmployeeId(event.target.value)}
           >
             <option value="" disabled>
-              {startDate ? 'Select colleague at work' : 'Pick leave dates first'}
+              {startDate ? 'Select same-shift colleague at work' : 'Pick leave dates first'}
             </option>
             {(colleagues?.data ?? []).map((item) => (
               <option key={item.id} value={item.id} disabled={!item.available}>
                 {item.available
                   ? item.fullName
-                  : `${item.fullName} · on leave ${item.leaveDates ?? ''}`}
+                  : `${item.fullName} · ${item.unavailableReason ?? item.leaveDates ?? 'unavailable'}`}
               </option>
             ))}
           </select>
           {startDate ? (
-            <p className="mt-2 text-sm text-muted">Colleagues on leave for these dates cannot take handover.</p>
+            <p className="mt-2 text-sm text-muted">
+              Only colleagues on your shift for these dates appear. People on leave or already covering handover
+              cannot be selected.
+            </p>
+          ) : null}
+          {startDate && (colleagues?.data?.length ?? 0) === 0 ? (
+            <p className="mt-2 text-sm text-muted">
+              No same-shift colleagues found for these dates. Ask HR to assign shifts, or pick different dates.
+            </p>
           ) : null}
           {needsProject &&
           projectId &&

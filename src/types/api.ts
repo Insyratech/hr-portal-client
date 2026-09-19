@@ -935,6 +935,7 @@ export type LeaveColleague = {
   fullName: string;
   available: boolean;
   leaveDates: string | null;
+  unavailableReason?: string | null;
 };
 
 export type Holiday = {
