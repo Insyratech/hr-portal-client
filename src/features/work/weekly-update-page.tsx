@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { ActionConfirmDialog } from '@/components/dashboard/action-confirm-dialog';
 import { PageLoading } from '@/components/ui/page-loading';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
@@ -41,10 +42,11 @@ export function WeeklyUpdatePage() {
   const [createUpload, uploadState] = useCreateWeeklyWorkUpdateUploadMutation();
   const [fetchDownload] = useLazyGetWeeklyWorkUpdateDownloadQuery();
   const [dragging, setDragging] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const board = data?.data;
 
-  const onFile = useCallback(
-    async (file: File | null) => {
+  const requestUpload = useCallback(
+    (file: File | null) => {
       if (excluded || !file || !board) return;
       const lower = file.name.toLowerCase();
       if (!lower.endsWith('.ppt') && !lower.endsWith('.pptx')) {
@@ -59,22 +61,28 @@ export function WeeklyUpdatePage() {
         toast.error('You already used both uploads for this week.');
         return;
       }
-      try {
-        const result = await uploadWeeklyWorkUpdate(createUpload, file);
-        if (result.update.timing === 'late') {
-          toast.success('Uploaded (marked late — after Sunday 11:59 pm IST).');
-        } else if (result.update.timing === 'last_hour') {
-          toast.success('Uploaded (last hour submission — still within Sunday).');
-        } else {
-          toast.success('Weekly update uploaded.');
-        }
-        await refetch();
-      } catch (error) {
-        toast.error(apiErrorMessage(error, 'Could not upload the weekly PPT.'));
-      }
+      setPendingFile(file);
     },
-    [board, createUpload, excluded, refetch, toast],
+    [board, excluded, toast],
   );
+
+  const confirmUpload = useCallback(async () => {
+    if (!pendingFile || !board) return;
+    try {
+      const result = await uploadWeeklyWorkUpdate(createUpload, pendingFile);
+      setPendingFile(null);
+      if (result.update.timing === 'late') {
+        toast.success('Uploaded (marked late — after Sunday 11:59 pm IST).');
+      } else if (result.update.timing === 'last_hour') {
+        toast.success('Uploaded (last hour submission — still within Sunday).');
+      } else {
+        toast.success('Weekly update uploaded.');
+      }
+      await refetch();
+    } catch (error) {
+      toast.error(apiErrorMessage(error, 'Could not upload the weekly PPT.'));
+    }
+  }, [board, createUpload, pendingFile, refetch, toast]);
 
   if (excluded) {
     return <WorkLoopExcludedNotice title="My weekly update" />;
@@ -163,7 +171,7 @@ export function WeeklyUpdatePage() {
             onDrop={(event) => {
               event.preventDefault();
               setDragging(false);
-              void onFile(event.dataTransfer.files?.[0] ?? null);
+              requestUpload(event.dataTransfer.files?.[0] ?? null);
             }}
           >
             <Meta>Upload</Meta>
@@ -176,7 +184,7 @@ export function WeeklyUpdatePage() {
                   accept={ACCEPT}
                   disabled={uploadState.isLoading || board.uploadsRemaining <= 0}
                   onChange={(event) => {
-                    void onFile(event.target.files?.[0] ?? null);
+                    requestUpload(event.target.files?.[0] ?? null);
                     event.target.value = '';
                   }}
                 />
@@ -236,6 +244,24 @@ export function WeeklyUpdatePage() {
           </section>
         </div>
       ) : null}
+
+      <ActionConfirmDialog
+        open={Boolean(pendingFile)}
+        title={board?.current ? 'Replace weekly PPT?' : 'Upload weekly PPT?'}
+        description={
+          pendingFile
+            ? board?.current
+              ? `Upload “${pendingFile.name}”? This uses one of your two weekly uploads and replaces the current file.`
+              : `Upload “${pendingFile.name}” as this week’s update?`
+            : 'Confirm upload.'
+        }
+        confirmLabel={board?.current ? 'OK, replace' : 'OK, upload'}
+        pending={uploadState.isLoading}
+        onCancel={() => {
+          if (!uploadState.isLoading) setPendingFile(null);
+        }}
+        onConfirm={() => void confirmUpload()}
+      />
     </>
   );
 }

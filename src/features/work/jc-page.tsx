@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { ActionConfirmDialog } from '@/components/dashboard/action-confirm-dialog';
 import { PageLoading } from '@/components/ui/page-loading';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
@@ -35,10 +36,11 @@ export function JcPage() {
   const [createUpload, uploadState] = useCreateJcPptUploadMutation();
   const [fetchDownload] = useLazyGetJcPptDownloadQuery();
   const [dragging, setDragging] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const board = data?.data;
 
-  const onFile = useCallback(
-    async (file: File | null) => {
+  const requestUpload = useCallback(
+    (file: File | null) => {
       if (excluded || !file || !board) return;
       const lower = file.name.toLowerCase();
       if (!lower.endsWith('.ppt') && !lower.endsWith('.pptx')) {
@@ -49,16 +51,22 @@ export function JcPage() {
         toast.error('File must be 15 MB or smaller.');
         return;
       }
-      try {
-        await uploadJcPpt(createUpload, file);
-        toast.success(board.pending ? 'JC PPT replaced.' : 'JC PPT uploaded.');
-        await refetch();
-      } catch (error) {
-        toast.error(apiErrorMessage(error, 'Could not upload the JC PPT.'));
-      }
+      setPendingFile(file);
     },
-    [board, createUpload, excluded, refetch, toast],
+    [board, excluded, toast],
   );
+
+  const confirmUpload = useCallback(async () => {
+    if (!pendingFile || !board) return;
+    try {
+      await uploadJcPpt(createUpload, pendingFile);
+      setPendingFile(null);
+      toast.success(board.pending ? 'JC PPT replaced.' : 'JC PPT uploaded.');
+      await refetch();
+    } catch (error) {
+      toast.error(apiErrorMessage(error, 'Could not upload the JC PPT.'));
+    }
+  }, [board, createUpload, pendingFile, refetch, toast]);
 
   if (excluded) {
     return <WorkLoopExcludedNotice title="JC" />;
@@ -122,7 +130,7 @@ export function JcPage() {
             onDrop={(event) => {
               event.preventDefault();
               setDragging(false);
-              void onFile(event.dataTransfer.files?.[0] ?? null);
+              requestUpload(event.dataTransfer.files?.[0] ?? null);
             }}
           >
             <Meta>Upload</Meta>
@@ -138,7 +146,7 @@ export function JcPage() {
                   accept={ACCEPT}
                   disabled={uploadState.isLoading}
                   onChange={(event) => {
-                    void onFile(event.target.files?.[0] ?? null);
+                    requestUpload(event.target.files?.[0] ?? null);
                     event.target.value = '';
                   }}
                 />
@@ -206,6 +214,24 @@ export function JcPage() {
           ) : null}
         </div>
       ) : null}
+
+      <ActionConfirmDialog
+        open={Boolean(pendingFile)}
+        title={board?.pending ? 'Replace JC PPT?' : 'Upload JC PPT?'}
+        description={
+          pendingFile
+            ? board?.pending
+              ? `Upload “${pendingFile.name}”? This replaces the JC file currently pending with CSO.`
+              : `Upload “${pendingFile.name}” for CSO review?`
+            : 'Confirm upload.'
+        }
+        confirmLabel={board?.pending ? 'OK, replace' : 'OK, upload'}
+        pending={uploadState.isLoading}
+        onCancel={() => {
+          if (!uploadState.isLoading) setPendingFile(null);
+        }}
+        onConfirm={() => void confirmUpload()}
+      />
     </>
   );
 }

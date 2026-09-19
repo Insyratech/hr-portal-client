@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { ActionConfirmDialog } from '@/components/dashboard/action-confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,6 +48,9 @@ export function EmployeeAttendancePanel({
   const [shiftOpen, setShiftOpen] = useState(false);
   const [editingShift, setEditingShift] = useState<ShiftAssignment | null>(null);
   const [editingWeek, setEditingWeek] = useState<WorkWeek | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<
+    { kind: 'shift'; row: ShiftAssignment } | { kind: 'week'; row: WorkWeek } | null
+  >(null);
 
   const records = (dayData?.data.records ?? []).filter((item) => item.employeeId === employeeId);
   const assignments = sortAssignmentsCurrentFirst(
@@ -97,16 +101,34 @@ export function EmployeeAttendancePanel({
     }
   }
 
-  async function onDeleteShift(row: ShiftAssignment) {
+  async function confirmDelete() {
+    if (!pendingDelete) return;
     try {
-      await deleteShift(row.id).unwrap();
-      toast.success('Shift assignment removed.');
-      if (editingShift?.id === row.id) {
-        setShiftOpen(false);
-        setEditingShift(null);
+      if (pendingDelete.kind === 'shift') {
+        const row = pendingDelete.row;
+        await deleteShift(row.id).unwrap();
+        toast.success('Shift assignment removed.');
+        if (editingShift?.id === row.id) {
+          setShiftOpen(false);
+          setEditingShift(null);
+        }
+      } else {
+        const row = pendingDelete.row;
+        await deleteWeek({ employeeId, weekId: row.id }).unwrap();
+        toast.success('Working week removed.');
+        if (editingWeek?.id === row.id) {
+          setWeekOpen(false);
+          setEditingWeek(null);
+        }
       }
+      setPendingDelete(null);
     } catch (cause) {
-      toast.error(apiErrorMessage(cause, 'Unable to remove shift.'));
+      toast.error(
+        apiErrorMessage(
+          cause,
+          pendingDelete.kind === 'shift' ? 'Unable to remove shift.' : 'Unable to remove working week.',
+        ),
+      );
     }
   }
 
@@ -126,19 +148,6 @@ export function EmployeeAttendancePanel({
       setEditingWeek(null);
     } catch (cause) {
       toast.error(apiErrorMessage(cause, 'Unable to save working week.'));
-    }
-  }
-
-  async function onDeleteWeek(row: WorkWeek) {
-    try {
-      await deleteWeek({ employeeId, weekId: row.id }).unwrap();
-      toast.success('Working week removed.');
-      if (editingWeek?.id === row.id) {
-        setWeekOpen(false);
-        setEditingWeek(null);
-      }
-    } catch (cause) {
-      toast.error(apiErrorMessage(cause, 'Unable to remove working week.'));
     }
   }
 
@@ -175,7 +184,7 @@ export function EmployeeAttendancePanel({
                       <IconButton
                         label={`Remove working week from ${row.effectiveFrom}`}
                         icon="trash"
-                        onClick={() => void onDeleteWeek(row)}
+                        onClick={() => setPendingDelete({ kind: 'week', row })}
                       />
                     </div>
                   ),
@@ -216,7 +225,7 @@ export function EmployeeAttendancePanel({
                       <IconButton
                         label={`Remove ${row.shiftName ?? 'shift'} from ${row.effectiveFrom}`}
                         icon="trash"
-                        onClick={() => void onDeleteShift(row)}
+                        onClick={() => setPendingDelete({ kind: 'shift', row })}
                       />
                     </div>
                   ),
@@ -382,6 +391,19 @@ export function EmployeeAttendancePanel({
           </ul>
         )}
       </section>
+
+      <ActionConfirmDialog
+        open={Boolean(pendingDelete)}
+        title={pendingDelete?.kind === 'shift' ? 'Remove shift assignment?' : 'Remove working week?'}
+        description={
+          pendingDelete?.kind === 'shift'
+            ? 'Remove this shift assignment for the employee?'
+            : 'Remove this working-week entry? This cannot be undone.'
+        }
+        confirmLabel="OK, remove"
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => void confirmDelete()}
+      />
     </div>
   );
 }

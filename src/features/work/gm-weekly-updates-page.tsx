@@ -1,5 +1,6 @@
 'use client';
 
+import { ActionConfirmDialog } from '@/components/dashboard/action-confirm-dialog';
 import { PageLoading } from '@/components/ui/page-loading';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -51,7 +52,13 @@ function GmWeeklyUpdatesInner() {
   const [deleteAll, deleteAllState] = useGmDeleteAllWeeklyPptsInShareMutation();
   const [emailById, setEmailById] = useState<Record<string, string>>({});
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<
+    | { kind: 'one'; updateId: string; shareId: string }
+    | { kind: 'all'; shareId: string; count: number }
+    | null
+  >(null);
   const board = data?.data;
+  const deletePending = deleteState.isLoading || deleteAllState.isLoading;
 
   const ordered = useMemo(() => board?.shares ?? [], [board?.shares]);
 
@@ -120,31 +127,26 @@ function GmWeeklyUpdatesInner() {
     }
   }
 
-  async function onDelete(updateId: string, shareId: string) {
-    if (!window.confirm('Delete this weekly PPT from portal storage? Audit history will remain.')) return;
-    const key = `${shareId}:${updateId}`;
-    setBusyKey(key);
-    try {
-      await deletePpt({ id: updateId, shareId }).unwrap();
-      toast.success('Deleted from portal storage. Audit history kept.');
-      await refetch();
-    } catch (error) {
-      toast.error(apiErrorMessage(error, 'Could not delete weekly PPT.'));
-    } finally {
-      setBusyKey(null);
-    }
-  }
-
-  async function onDeleteAll(shareId: string, count: number) {
-    if (
-      !window.confirm(
-        `Delete all ${count} available weekly PPT(s) in this package from portal storage? Audit history will remain.`,
-      )
-    ) {
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    if (pendingDelete.kind === 'one') {
+      const key = `${pendingDelete.shareId}:${pendingDelete.updateId}`;
+      setBusyKey(key);
+      try {
+        await deletePpt({ id: pendingDelete.updateId, shareId: pendingDelete.shareId }).unwrap();
+        setPendingDelete(null);
+        toast.success('Deleted from portal storage. Audit history kept.');
+        await refetch();
+      } catch (error) {
+        toast.error(apiErrorMessage(error, 'Could not delete weekly PPT.'));
+      } finally {
+        setBusyKey(null);
+      }
       return;
     }
     try {
-      const result = await deleteAll(shareId).unwrap();
+      const result = await deleteAll(pendingDelete.shareId).unwrap();
+      setPendingDelete(null);
       toast.success(`Deleted ${result.data.removed} file(s). Audit history kept.`);
       await refetch();
     } catch (error) {
@@ -220,7 +222,13 @@ function GmWeeklyUpdatesInner() {
                               size="sm"
                               variant="ghost"
                               disabled={deleteAllState.isLoading}
-                              onClick={() => void onDeleteAll(share.id, available.length)}
+                              onClick={() =>
+                                setPendingDelete({
+                                  kind: 'all',
+                                  shareId: share.id,
+                                  count: available.length,
+                                })
+                              }
                             >
                               Delete all
                             </Button>
@@ -284,7 +292,13 @@ function GmWeeklyUpdatesInner() {
                                       size="sm"
                                       variant="ghost"
                                       disabled={busy || deleteState.isLoading}
-                                      onClick={() => void onDelete(file.updateId, share.id)}
+                                      onClick={() =>
+                                        setPendingDelete({
+                                          kind: 'one',
+                                          updateId: file.updateId,
+                                          shareId: share.id,
+                                        })
+                                      }
                                     >
                                       Delete
                                     </Button>
@@ -332,6 +346,22 @@ function GmWeeklyUpdatesInner() {
           )}
         </div>
       ) : null}
+
+      <ActionConfirmDialog
+        open={Boolean(pendingDelete)}
+        title={pendingDelete?.kind === 'all' ? 'Delete all weekly PPTs?' : 'Delete weekly PPT?'}
+        description={
+          pendingDelete?.kind === 'all'
+            ? `Delete all ${pendingDelete.count} available weekly PPT(s) in this package from portal storage? Audit history will remain.`
+            : 'Delete this weekly PPT from portal storage? Audit history will remain.'
+        }
+        confirmLabel="OK, delete"
+        pending={deletePending}
+        onCancel={() => {
+          if (!deletePending) setPendingDelete(null);
+        }}
+        onConfirm={() => void confirmDelete()}
+      />
     </>
   );
 }

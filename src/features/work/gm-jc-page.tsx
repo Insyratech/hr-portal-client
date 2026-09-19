@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import { ActionConfirmDialog } from '@/components/dashboard/action-confirm-dialog';
 import { PageLoading } from '@/components/ui/page-loading';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
@@ -58,6 +59,8 @@ function JcRow({
   );
 }
 
+type PendingDelete = { kind: 'one'; id: string } | { kind: 'all' };
+
 export function GmJcPage() {
   const toast = useToast();
   const { data, isLoading, isError, refetch } = useGetJcPptGmBoardQuery();
@@ -67,7 +70,9 @@ export function GmJcPage() {
   const [deleteAll, deleteAllState] = useGmDeleteAllJcPptsMutation();
   const [emailById, setEmailById] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const board = data?.data;
+  const deletePending = deleteState.isLoading || deleteAllState.isLoading;
 
   async function onDownload(id: string) {
     setBusyId(id);
@@ -127,31 +132,25 @@ export function GmJcPage() {
     }
   }
 
-  async function onDelete(id: string) {
-    if (!window.confirm('Delete this JC PPT from portal storage? Audit history will remain.')) return;
-    setBusyId(id);
-    try {
-      await deleteJc(id).unwrap();
-      toast.success('Deleted from portal storage. Audit history kept.');
-      await refetch();
-    } catch (error) {
-      toast.error(apiErrorMessage(error, 'Could not delete JC PPT.'));
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function onDeleteAll() {
-    if (!board?.inbox.length) return;
-    if (
-      !window.confirm(
-        `Delete all ${board.inbox.length} JC PPT(s) from portal storage? Audit history will remain.`,
-      )
-    ) {
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    if (pendingDelete.kind === 'one') {
+      setBusyId(pendingDelete.id);
+      try {
+        await deleteJc(pendingDelete.id).unwrap();
+        setPendingDelete(null);
+        toast.success('Deleted from portal storage. Audit history kept.');
+        await refetch();
+      } catch (error) {
+        toast.error(apiErrorMessage(error, 'Could not delete JC PPT.'));
+      } finally {
+        setBusyId(null);
+      }
       return;
     }
     try {
       const result = await deleteAll().unwrap();
+      setPendingDelete(null);
       toast.success(`Deleted ${result.data.removed} file(s). Audit history kept.`);
       await refetch();
     } catch (error) {
@@ -206,7 +205,7 @@ export function GmJcPage() {
                     size="sm"
                     variant="ghost"
                     disabled={deleteAllState.isLoading}
-                    onClick={() => void onDeleteAll()}
+                    onClick={() => setPendingDelete({ kind: 'all' })}
                   >
                     {deleteAllState.isLoading ? 'Deleting…' : 'Delete all'}
                   </Button>
@@ -246,7 +245,7 @@ export function GmJcPage() {
                           size="sm"
                           variant="ghost"
                           disabled={busy || deleteState.isLoading}
-                          onClick={() => void onDelete(item.id)}
+                          onClick={() => setPendingDelete({ kind: 'one', id: item.id })}
                         >
                           Delete
                         </Button>
@@ -315,6 +314,22 @@ export function GmJcPage() {
           ) : null}
         </div>
       ) : null}
+
+      <ActionConfirmDialog
+        open={Boolean(pendingDelete)}
+        title={pendingDelete?.kind === 'all' ? 'Delete all JC PPTs?' : 'Delete JC PPT?'}
+        description={
+          pendingDelete?.kind === 'all'
+            ? `Delete all ${board?.inbox.length ?? 0} JC PPT(s) from portal storage? Audit history will remain.`
+            : 'Delete this JC PPT from portal storage? Audit history will remain.'
+        }
+        confirmLabel="OK, delete"
+        pending={deletePending}
+        onCancel={() => {
+          if (!deletePending) setPendingDelete(null);
+        }}
+        onConfirm={() => void confirmDelete()}
+      />
     </>
   );
 }

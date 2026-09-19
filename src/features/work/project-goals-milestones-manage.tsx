@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { ActionConfirmDialog } from '@/components/dashboard/action-confirm-dialog';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
 import {
@@ -195,6 +196,9 @@ export function ProjectGoalsMilestonesManage({
   const [completeMilestone, completeState] = useCompleteProjectMilestoneMutation();
   const [cancelMilestone, cancelState] = useCancelProjectMilestoneMutation();
   const [deleteMilestone] = useDeleteProjectMilestoneMutation();
+  const [pendingDelete, setPendingDelete] = useState<
+    { kind: 'goal'; id: string } | { kind: 'milestone'; id: string } | null
+  >(null);
 
   const goals = data?.data.goals ?? [];
   const [expandedGoals, setExpandedGoals] = useState<Record<string, boolean>>({});
@@ -390,26 +394,26 @@ export function ProjectGoalsMilestonesManage({
     }
   }
 
-  async function onDeleteGoal(goalId: string) {
-    if (!window.confirm('Delete this goal and its milestones?')) return;
+  async function confirmDelete() {
+    if (!pendingDelete) return;
     try {
-      await deleteGoal(goalId).unwrap();
-      if (milestoneDialog?.goalId === goalId) setMilestoneDialog(null);
-      toast.success('Goal removed.');
+      if (pendingDelete.kind === 'goal') {
+        await deleteGoal(pendingDelete.id).unwrap();
+        if (milestoneDialog?.goalId === pendingDelete.id) setMilestoneDialog(null);
+        toast.success('Goal removed.');
+      } else {
+        await deleteMilestone(pendingDelete.id).unwrap();
+        toast.success('Milestone removed.');
+      }
+      setPendingDelete(null);
       await refetch();
     } catch (error) {
-      toast.error(apiErrorMessage(error, 'Could not delete the goal.'));
-    }
-  }
-
-  async function onDeleteMilestone(milestoneId: string) {
-    if (!window.confirm('Delete this milestone?')) return;
-    try {
-      await deleteMilestone(milestoneId).unwrap();
-      toast.success('Milestone removed.');
-      await refetch();
-    } catch (error) {
-      toast.error(apiErrorMessage(error, 'Could not delete the milestone.'));
+      toast.error(
+        apiErrorMessage(
+          error,
+          pendingDelete.kind === 'goal' ? 'Could not delete the goal.' : 'Could not delete the milestone.',
+        ),
+      );
     }
   }
 
@@ -515,7 +519,7 @@ export function ProjectGoalsMilestonesManage({
                         size="sm"
                         variant="ghost"
                         disabled={busy}
-                        onClick={() => void onDeleteGoal(goal.id)}
+                        onClick={() => setPendingDelete({ kind: 'goal', id: goal.id })}
                       >
                         Delete goal
                       </Button>
@@ -588,7 +592,7 @@ export function ProjectGoalsMilestonesManage({
                                   size="sm"
                                   variant="ghost"
                                   disabled={busy}
-                                  onClick={() => void onDeleteMilestone(milestone.id)}
+                                  onClick={() => setPendingDelete({ kind: 'milestone', id: milestone.id })}
                                 >
                                   Delete
                                 </Button>
@@ -781,6 +785,19 @@ export function ProjectGoalsMilestonesManage({
         milestone={historyMilestone}
         open={Boolean(historyMilestone)}
         onOpenChange={(open) => !open && setHistoryMilestone(null)}
+      />
+
+      <ActionConfirmDialog
+        open={Boolean(pendingDelete)}
+        title={pendingDelete?.kind === 'goal' ? 'Delete goal?' : 'Delete milestone?'}
+        description={
+          pendingDelete?.kind === 'goal'
+            ? 'Delete this goal and its milestones? This cannot be undone.'
+            : 'Delete this milestone? This cannot be undone.'
+        }
+        confirmLabel="OK, delete"
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => void confirmDelete()}
       />
     </div>
   );

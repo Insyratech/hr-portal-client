@@ -2,6 +2,7 @@
 
 import type { FormEvent } from 'react';
 import { useMemo, useState } from 'react';
+import { ActionConfirmDialog } from '@/components/dashboard/action-confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -52,6 +53,7 @@ export function EmployeeLeavesPanel({
   const [allocated, setAllocated] = useState('');
   const [allocateOpen, setAllocateOpen] = useState(false);
   const [editing, setEditing] = useState<LeaveAllocation | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<LeaveAllocation | null>(null);
 
   const period = String(new Date().getUTCFullYear());
   const allocations = allocationsData?.data ?? [];
@@ -106,9 +108,11 @@ export function EmployeeLeavesPanel({
     }
   }
 
-  async function onDelete(row: LeaveAllocation) {
+  async function confirmDelete() {
+    if (!pendingDelete) return;
     try {
-      await deleteAllocation(row.id).unwrap();
+      await deleteAllocation(pendingDelete.id).unwrap();
+      setPendingDelete(null);
       toast.success('Leave type removed.');
     } catch (cause) {
       toast.error(apiErrorMessage(cause, 'Unable to remove this leave type.'));
@@ -155,7 +159,11 @@ export function EmployeeLeavesPanel({
                 cell: (row) => (
                   <div className="flex gap-2">
                     <EditIconButton label={`Edit ${row.leaveTypeName ?? 'leave'}`} onClick={() => setEditing(row)} />
-                    <IconButton label={`Remove ${row.leaveTypeName ?? 'leave'}`} icon="trash" onClick={() => void onDelete(row)} />
+                    <IconButton
+                      label={`Remove ${row.leaveTypeName ?? 'leave'}`}
+                      icon="trash"
+                      onClick={() => setPendingDelete(row)}
+                    />
                   </div>
                 ),
               },
@@ -276,6 +284,22 @@ export function EmployeeLeavesPanel({
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <ActionConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Remove leave type?"
+        description={
+          pendingDelete
+            ? `Remove “${pendingDelete.leaveTypeName ?? 'this leave type'}” allocation for ${pendingDelete.period}?`
+            : 'Confirm removal.'
+        }
+        confirmLabel="OK, remove"
+        pending={removing}
+        onCancel={() => {
+          if (!removing) setPendingDelete(null);
+        }}
+        onConfirm={() => void confirmDelete()}
+      />
     </div>
   );
 }
