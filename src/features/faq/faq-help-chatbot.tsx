@@ -51,18 +51,18 @@ function uid(): string {
 
 function bubbleClass(from: 'bot' | 'user', tone: ChatTone = 'default'): string {
   if (from === 'user') {
-    return 'ml-8 bg-foreground text-background';
+    return 'ml-10 bg-foreground text-background shadow-sm';
   }
   if (tone === 'success') {
-    return 'mr-8 border border-[color:var(--success)]/30 bg-[color:var(--success)]/10 text-foreground';
+    return 'mr-6 border border-[color:var(--success)]/35 bg-[color:var(--success)]/12 text-foreground';
   }
   if (tone === 'error') {
-    return 'mr-8 border border-[color:var(--danger)]/30 bg-[color:var(--danger)]/10 text-foreground';
+    return 'mr-6 border border-[color:var(--danger)]/35 bg-[color:var(--danger)]/12 text-foreground';
   }
   if (tone === 'info') {
-    return 'mr-8 border border-[color:var(--accent-cyan)]/25 bg-[color:var(--accent-cyan)]/8 text-foreground';
+    return 'mr-6 border border-[color:var(--faq-help-header-border)] bg-[color:var(--faq-help-chip-bg)] text-foreground';
   }
-  return 'mr-8 border border-border bg-surface text-foreground';
+  return 'mr-6 border border-border bg-surface text-foreground';
 }
 
 export function FaqHelpChatbot() {
@@ -364,35 +364,46 @@ export function FaqHelpChatbot() {
         aria-controls={open ? titleId : undefined}
         aria-label={open ? 'Close help' : 'Open help'}
         className={cn(
-          'fixed z-[45] flex h-14 w-14 items-center justify-center rounded-full shadow-card transition-transform hover:scale-[1.03] active:scale-[0.98]',
-          'bottom-20 right-4 lg:bottom-6 lg:right-6',
-          open
-            ? 'bg-foreground text-background'
-            : 'bg-[color:var(--accent-cyan)] text-white',
+          'faq-help-fab fixed z-[45] bottom-20 right-4 lg:bottom-6 lg:right-6',
+          !open && 'faq-help-fab--float',
         )}
       >
-        <Icon name={open ? 'close' : 'message'} className="h-5 w-5" />
+        // eslint-disable-next-line @next/next/no-img-element -- static public asset for FAB
+        <img
+          src="/emoji-smile.png"
+          alt=""
+          width={56}
+          height={56}
+          draggable={false}
+          className="faq-help-fab__face"
+        />
       </button>
 
       {open ? (
         <section
           className={cn(
-            'fixed z-[46] flex w-[calc(100%-2rem)] max-w-md flex-col overflow-hidden rounded border border-border bg-background shadow-card',
-            'bottom-36 right-4 max-h-[min(34rem,calc(100vh-10rem))] lg:bottom-24 lg:right-6',
+            'faq-help-panel fixed z-[46] flex w-[calc(100%-2rem)] max-w-md flex-col overflow-hidden rounded-xl border border-border bg-background',
+            'bottom-36 right-4 max-h-[min(36rem,calc(100vh-10rem))] lg:bottom-24 lg:right-6',
           )}
           role="dialog"
           aria-modal="false"
           aria-labelledby={titleId}
         >
-          <header className="flex shrink-0 items-center gap-3 border-b border-border bg-[color:var(--accent-cyan)] px-4 py-3 text-white">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15">
-              <Icon name="message" className="h-4 w-4" />
-            </span>
+          <header className="faq-help-header flex shrink-0 items-center gap-3 px-4 py-3.5">
+            {/* eslint-disable-next-line @next/next/no-img-element -- static public asset */}
+            <img
+              src="/emoji-smile.png"
+              alt=""
+              width={36}
+              height={36}
+              draggable={false}
+              className="h-9 w-9 shrink-0 object-contain"
+            />
             <div className="min-w-0 flex-1">
               <h2 id={titleId} className="truncate text-sm font-semibold tracking-wide">
                 Portal help
               </h2>
-              <p className="truncate text-[11px] uppercase tracking-[0.14em] text-white/80">
+              <p className="faq-help-header__muted truncate text-[11px] uppercase tracking-[0.14em]">
                 {roleLabel} FAQ · guided answers
               </p>
             </div>
@@ -400,18 +411,21 @@ export function FaqHelpChatbot() {
               type="button"
               onClick={closePanel}
               aria-label="Close help"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25"
+              className="faq-help-header__close inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors"
             >
               <Icon name="close" className="h-3.5 w-3.5" />
             </button>
           </header>
 
-          <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+          <div
+            ref={listRef}
+            className="flex-1 space-y-3 overflow-y-auto bg-background px-4 py-4"
+          >
             {messages.map((message) => (
               <div
                 key={message.id}
                 className={cn(
-                  'whitespace-pre-wrap rounded px-3 py-2 text-sm leading-relaxed',
+                  'whitespace-pre-wrap rounded-lg px-3.5 py-2.5 text-sm leading-relaxed',
                   bubbleClass(message.from, message.tone),
                 )}
               >
@@ -420,9 +434,9 @@ export function FaqHelpChatbot() {
             ))}
           </div>
 
-          <div className="shrink-0 border-t border-border bg-surface px-3 py-3">
+          <div className="shrink-0 border-t border-border bg-surface/90 px-3 py-3 backdrop-blur-[1px]">
             {choices.length > 0 ? (
-              <div className="mb-2 flex max-h-40 flex-col gap-1.5 overflow-y-auto">
+              <div className="mb-1 flex max-h-44 flex-col gap-1.5 overflow-y-auto pr-0.5">
                 {choices.map((choice) => (
                   <button
                     key={choice.id}
@@ -430,17 +444,19 @@ export function FaqHelpChatbot() {
                     disabled={choice.disabled || sending}
                     onClick={() => onChoice(choice)}
                     className={cn(
-                      'rounded border px-3 py-2 text-left text-sm transition-colors disabled:opacity-40',
+                      'rounded-lg border px-3 py-2.5 text-left text-sm transition-colors disabled:opacity-40',
                       choice.accent === 'orange'
-                        ? 'border-[color:var(--accent-orange)]/35 bg-[color:var(--accent-orange)]/8 hover:bg-[color:var(--accent-orange)]/15'
+                        ? 'border-[color:var(--accent-orange)]/40 bg-[color:var(--accent-orange)]/10 hover:bg-[color:var(--accent-orange)]/18'
                         : choice.accent === 'cyan'
-                          ? 'border-[color:var(--accent-cyan)]/30 bg-background hover:bg-[color:var(--accent-cyan)]/8'
+                          ? 'faq-help-chip-cyan'
                           : 'border-border bg-background hover:bg-surface',
                     )}
                   >
                     <span className="font-medium text-foreground">{choice.label}</span>
                     {choice.description ? (
-                      <span className="mt-0.5 block text-xs text-muted">{choice.description}</span>
+                      <span className="mt-0.5 block text-xs leading-snug text-muted">
+                        {choice.description}
+                      </span>
                     ) : null}
                   </button>
                 ))}
@@ -448,20 +464,21 @@ export function FaqHelpChatbot() {
             ) : null}
 
             {needsText ? (
-              <div className="flex flex-col gap-2">
+              <div className="mt-2 flex flex-col gap-2">
                 {phase.kind === 'contact-message' ? (
                   <textarea
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
                     rows={3}
                     placeholder={textPlaceholder}
-                    className="w-full resize-none rounded border border-border bg-background px-3 py-2 text-sm text-foreground shadow-card outline-none placeholder:text-muted focus:border-foreground"
+                    className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground shadow-card outline-none placeholder:text-muted focus:border-foreground"
                   />
                 ) : (
                   <Input
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
                     placeholder={textPlaceholder}
+                    className="rounded-lg"
                     onKeyDown={(event) => {
                       if (event.key === 'Enter') {
                         event.preventDefault();
@@ -475,7 +492,7 @@ export function FaqHelpChatbot() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="flex-1"
+                    className="flex-1 rounded-lg"
                     onClick={resetToHome}
                   >
                     Cancel
@@ -483,7 +500,12 @@ export function FaqHelpChatbot() {
                   <Button
                     type="button"
                     size="sm"
-                    className="flex-1 bg-[color:var(--accent-cyan)] text-white hover:bg-[color:var(--accent-cyan)]/90"
+                    className="flex-1 rounded-lg"
+                    style={{
+                      background: 'var(--faq-help-header-bg)',
+                      color: 'var(--faq-help-header-fg)',
+                      borderColor: 'var(--faq-help-header-border)',
+                    }}
                     onClick={() =>
                       phase.kind === 'contact-subject' ? submitSubject() : submitMessageBody()
                     }
