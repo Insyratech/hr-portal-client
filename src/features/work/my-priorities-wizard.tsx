@@ -42,7 +42,10 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
   const [submitOne, submitOneState] = useSubmitWorkPriorityMutation();
 
   const [step, setStep] = useState<Step>(1);
-  const [workKind, setWorkKind] = useState<'PROJECT' | 'REGULAR'>('PROJECT');
+  const hasProjects = board.projects.length > 0;
+  const [workKind, setWorkKind] = useState<'PROJECT' | 'REGULAR'>(
+    hasProjects ? 'PROJECT' : 'REGULAR',
+  );
   const [projectId, setProjectId] = useState('');
   const [regularSubtype, setRegularSubtype] = useState<WorkRegularSubtype>('TESTING');
   const [regularSubtypeLabel, setRegularSubtypeLabel] = useState('');
@@ -249,8 +252,22 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
     }
     try {
       const result = await submitAll().unwrap();
-      const count = result.data.submitted.length;
-      toast.success(count === 1 ? 'Sent 1 priority to your project lead.' : `Sent ${count} priorities to your project lead.`);
+      const submitted = result.data.submitted;
+      const count = submitted.length;
+      const allApproved = submitted.every((row) => row.approvalStatus === 'APPROVED');
+      if (allApproved) {
+        toast.success(
+          count === 1
+            ? 'Priority approved. You can start daily updates once every line for the week is approved.'
+            : `${count} priorities approved. You can start daily updates once every line for the week is approved.`,
+        );
+      } else {
+        toast.success(
+          count === 1
+            ? 'Sent 1 priority to your project lead.'
+            : `Sent ${count} priorities to your project lead.`,
+        );
+      }
       setForcePlan(false);
     } catch (error) {
       toast.error(apiErrorMessage(error, 'Could not submit priorities.'));
@@ -267,8 +284,12 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
       if (nextTitle !== item.title) {
         await updatePriority({ id: item.id, body: { title: nextTitle } }).unwrap();
       }
-      await submitOne(item.id).unwrap();
-      toast.success('Resubmitted to your project lead.');
+      const result = await submitOne(item.id).unwrap();
+      if (result.data.approvalStatus === 'APPROVED') {
+        toast.success('Priority approved. No project lead review needed.');
+      } else {
+        toast.success('Resubmitted to your project lead.');
+      }
       setEditTitleById((prev) => {
         const next = { ...prev };
         delete next[item.id];
@@ -287,9 +308,9 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
           {board.week.start} → {board.week.end}
         </p>
         <p className="mt-2 text-sm text-muted">
-          Add work goals first, then an optional skill plan, then submit everything once for project lead approval. A
-          reminder goes out Monday at 4:00 pm IST — please submit before end of Monday. If you are on leave
-          Monday, submit when you are back. Daily updates unlock after every line is approved.
+          {hasProjects
+            ? 'Add work goals first, then an optional skill plan, then submit everything once for project lead approval. A reminder goes out Monday at 4:00 pm IST — please submit before end of Monday. If you are on leave Monday, submit when you are back. Daily updates unlock after every line is approved.'
+            : 'You are not on an active project yet, so regular work and skill plans do not need project lead approval — they approve automatically when you submit. Add work goals first, then an optional skill plan. A reminder goes out Monday at 4:00 pm IST. Daily updates unlock after every line is approved.'}
         </p>
         {board.overCap ? (
           <p className="mt-3 text-sm">You have {active.length} items. Aim for a focused week (about 3–5).</p>
@@ -443,7 +464,9 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
             <section className="space-y-4 border border-border bg-background p-5 shadow-card">
               <Meta>Step 1 — Work</Meta>
               <p className="text-sm text-muted">
-                R&amp;D needs a project. Testing, production, general management, and inventory do not.
+                {hasProjects
+                  ? 'R&D needs a project. Testing, production, general management, and inventory do not.'
+                  : 'You are not on an active project. Choose Regular work for this week’s goals (R&D becomes available after CSO adds you to a project).'}
               </p>
               <form onSubmit={(event) => void addWorkGoal(event)} className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -455,7 +478,7 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
                       value={workKind}
                       onChange={(event) => setWorkKind(event.target.value as 'PROJECT' | 'REGULAR')}
                     >
-                      <option value="PROJECT">Project (R&amp;D)</option>
+                      {hasProjects ? <option value="PROJECT">Project (R&amp;D)</option> : null}
                       <option value="REGULAR">Regular work</option>
                     </select>
                   </div>
@@ -661,8 +684,9 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
             <section className="space-y-4 border border-border bg-background p-5 shadow-card">
               <Meta>Step 3 — Review &amp; submit</Meta>
               <p className="text-sm text-muted">
-                One submit sends all draft work goals and skill plans to your project lead together. You need at least one
-                work goal; about 3–5 is a focused week.
+                {hasProjects
+                  ? 'One submit sends all draft work goals and skill plans to your project lead together. You need at least one work goal; about 3–5 is a focused week.'
+                  : 'One submit finalizes all draft work goals and skill plans. Because you are not on a project, they approve automatically — no project lead review. You need at least one work goal; about 3–5 is a focused week.'}
               </p>
               {allDrafts.length === 0 ? (
                 <p className="text-sm text-muted">No drafts yet. Go back and add at least one work goal.</p>
@@ -690,7 +714,11 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
                   disabled={submitAllState.isLoading || workDrafts.length === 0}
                   onClick={() => void onSubmitAll()}
                 >
-                  {submitAllState.isLoading ? 'Submitting…' : 'Submit for approval'}
+                  {submitAllState.isLoading
+                    ? 'Submitting…'
+                    : hasProjects
+                      ? 'Submit for approval'
+                      : 'Submit priorities'}
                 </Button>
                 <Button type="button" variant="ghost" onClick={() => setStep(2)}>
                   Back
