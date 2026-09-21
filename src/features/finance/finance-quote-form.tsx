@@ -449,7 +449,7 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
                   <option value="">Select GST profile</option>
                   {profiles.map((profile) => (
                     <option key={profile.id} value={profile.id}>
-                      {profile.label || profile.gstin} — {profile.gstin}
+                      {profile.gstin} — {profile.legalName || profile.tradeName}
                     </option>
                   ))}
                 </select>

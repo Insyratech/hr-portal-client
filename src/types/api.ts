@@ -1777,6 +1777,9 @@ export type FinanceOrgGstProfile = {
   postalCode: string;
   logoStoragePath: string | null;
   logoUrl: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
   registrationType: 'regular' | 'composition' | 'unregistered' | null;
   isDefault: boolean;
   active: boolean;

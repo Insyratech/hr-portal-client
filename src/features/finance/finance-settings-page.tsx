@@ -6,6 +6,12 @@ import { ActionConfirmDialog } from '@/components/dashboard/action-confirm-dialo
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +24,7 @@ import {
   optionalFormString,
   stateFromCode,
 } from '@/features/finance/finance-constants';
-import { uploadFinanceOrgLogo } from '@/features/finance/finance-vendor-uploads';
+import { FinanceGstRegistrationForm } from '@/features/finance/finance-gst-registration-form';
 import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import { ACCENT, FORM_SECTION_TONE } from '@/lib/ui-accents';
@@ -26,8 +32,6 @@ import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
   useCreateFinanceOrgAddressMutation,
-  useCreateFinanceOrgGstProfileLogoMutation,
-  useCreateFinanceOrgGstProfileMutation,
   useCreateFinanceOrgOfficerMutation,
   useGetFinanceOrgAddressesQuery,
   useGetFinanceOrgGstProfilesQuery,
@@ -37,6 +41,7 @@ import {
   useUpdateFinanceOrgGstProfileMutation,
   useUpdateFinanceOrganizationMutation,
 } from '@/store/api/api';
+import type { FinanceOrgGstProfile } from '@/types/api';
 
 const STEPS: {
   id: string;
@@ -51,16 +56,8 @@ const STEPS: {
     title: 'Organisation',
     subtitle: 'Legal & fiscal profile',
     heading: 'Primary organisation profile',
-    description: 'Legal name, default GSTIN, address, and fiscal year used across finance documents.',
+    description: 'Legal name, fiscal address, and fiscal year used across finance documents.',
     icon: 'building',
-  },
-  {
-    id: 'gst',
-    title: 'GST letterheads',
-    subtitle: 'Profiles, CIN, logo',
-    heading: 'GST profiles (letterheads)',
-    description: 'Register each company GST with address, CIN, PAN, and logo for vendor forms.',
-    icon: 'badge',
   },
   {
     id: 'addresses',
@@ -98,24 +95,6 @@ type OrgDraft = {
   city: string;
   postalCode: string;
   fiscalYearStartMonth: number;
-};
-
-type PendingGstProfile = {
-  tempId: string;
-  label: string;
-  gstin: string;
-  legalName: string;
-  tradeName: string;
-  cin: string | null;
-  pan: string | null;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  postalCode: string;
-  stateCode: string | null;
-  stateName: string | null;
-  isDefault: boolean;
-  logoFile: File | null;
 };
 
 type PendingOrgAddress = {
@@ -165,9 +144,7 @@ export function FinanceSettingsPage() {
   const { data: officerData } = useGetFinanceOrgOfficersQuery(undefined, { skip: !canManage });
 
   const [updateOrg, { isLoading: saving }] = useUpdateFinanceOrganizationMutation();
-  const [createGst] = useCreateFinanceOrgGstProfileMutation();
   const [updateGst, { isLoading: updatingGst }] = useUpdateFinanceOrgGstProfileMutation();
-  const [createLogo] = useCreateFinanceOrgGstProfileLogoMutation();
   const [createAddress] = useCreateFinanceOrgAddressMutation();
   const [updateAddress, { isLoading: updatingAddress }] = useUpdateFinanceOrgAddressMutation();
   const [createOfficer] = useCreateFinanceOrgOfficerMutation();
@@ -178,14 +155,18 @@ export function FinanceSettingsPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [orgDraft, setOrgDraft] = useState<OrgDraft | null>(null);
-  const [pendingGst, setPendingGst] = useState<PendingGstProfile[]>([]);
   const [pendingAddresses, setPendingAddresses] = useState<PendingOrgAddress[]>([]);
   const [pendingOfficers, setPendingOfficers] = useState<PendingOfficer[]>([]);
   const [defaultGstConfirmId, setDefaultGstConfirmId] = useState<string | null>(null);
   const [defaultAddressConfirmId, setDefaultAddressConfirmId] = useState<string | null>(null);
+  const [gstRegisterOpen, setGstRegisterOpen] = useState(false);
+  const [editingGst, setEditingGst] = useState<FinanceOrgGstProfile | null>(null);
 
   const org = data?.data;
   const profiles = gstData?.data ?? [];
+  const activeProfiles = profiles.filter((profile) => profile.active);
+  const defaultGstProfile = profiles.find((profile) => profile.isDefault && profile.active);
+  const canRegisterGst = activeProfiles.length < 3;
   const addresses = addressData?.data ?? [];
   const officers = officerData?.data ?? [];
   const lastStep = STEPS.length - 1;
@@ -232,42 +213,6 @@ export function FinanceSettingsPage() {
   function goBack() {
     setError(null);
     setStep((prev) => Math.max(prev - 1, 0));
-  }
-
-  function onAddGstToList(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    const form = new FormData(event.currentTarget);
-    const { stateCode, stateName } = stateFromCode(String(form.get('stateCode') ?? ''));
-    const gstin = String(form.get('gstin') ?? '').trim();
-    if (!gstin) {
-      setError('GSTIN is required.');
-      return;
-    }
-    setPendingGst((prev) => [
-      ...prev,
-      {
-        tempId: crypto.randomUUID(),
-        label: String(form.get('label') ?? '').trim(),
-        gstin,
-        legalName: String(form.get('legalName') ?? '').trim(),
-        tradeName: String(form.get('tradeName') ?? '').trim(),
-        cin: optionalFormString(form.get('cin')),
-        pan: optionalFormString(form.get('pan')),
-        addressLine1: String(form.get('addressLine1') ?? '').trim(),
-        addressLine2: String(form.get('addressLine2') ?? '').trim(),
-        city: String(form.get('city') ?? '').trim(),
-        postalCode: String(form.get('postalCode') ?? '').trim(),
-        stateCode,
-        stateName,
-        isDefault: form.get('isDefault') === 'on',
-        logoFile: (() => {
-          const logo = form.get('logo');
-          return logo instanceof File && logo.size > 0 ? logo : null;
-        })(),
-      },
-    ]);
-    event.currentTarget.reset();
   }
 
   function onAddAddressToList(event: FormEvent<HTMLFormElement>) {
@@ -342,27 +287,6 @@ export function FinanceSettingsPage() {
         fiscalYearStartMonth: orgDraft.fiscalYearStartMonth,
       }).unwrap();
 
-      for (const item of pendingGst) {
-        const created = await createGst({
-          label: item.label,
-          gstin: item.gstin,
-          legalName: item.legalName,
-          tradeName: item.tradeName,
-          cin: item.cin,
-          pan: item.pan,
-          addressLine1: item.addressLine1,
-          addressLine2: item.addressLine2,
-          city: item.city,
-          postalCode: item.postalCode,
-          stateCode: item.stateCode,
-          stateName: item.stateName,
-          isDefault: item.isDefault,
-        }).unwrap();
-        if (item.logoFile) {
-          await uploadFinanceOrgLogo(createLogo, created.data.id, item.logoFile);
-        }
-      }
-
       for (const item of pendingAddresses) {
         await createAddress({
           label: item.label,
@@ -388,7 +312,6 @@ export function FinanceSettingsPage() {
         }).unwrap();
       }
 
-      setPendingGst([]);
       setPendingAddresses([]);
       setPendingOfficers([]);
       setConfirmOpen(false);
@@ -437,9 +360,86 @@ export function FinanceSettingsPage() {
       <DelayedLoadingOverlay active={busy} />
       <PageHeader kicker="Finance" title="Organisation settings" />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Legal profile, multiple GST letterheads, company addresses, and officers used on vendor
+        Organisation profile, GST registrations, company addresses, and officers used on vendor
         registration and documents.
       </p>
+
+      <section className="mb-10 max-w-3xl">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <FormHeading>GST registrations</FormHeading>
+            <p className="mt-1 text-sm text-muted">
+              Register each GSTIN as a complete letterhead (max 3). GSTIN is the unique key.
+            </p>
+          </div>
+          <Button
+            type="button"
+            disabled={!canRegisterGst}
+            onClick={() => {
+              setEditingGst(null);
+              setGstRegisterOpen(true);
+            }}
+          >
+            Register GST
+          </Button>
+        </div>
+        {!canRegisterGst ? (
+          <p className="mt-2 text-xs text-muted">Maximum of 3 active GST registrations reached.</p>
+        ) : null}
+        {gstLoading ? (
+          <p className="mt-4 text-sm text-muted">Loading GST registrations…</p>
+        ) : activeProfiles.length ? (
+          <ul className="mt-4 space-y-3">
+            {activeProfiles.map((profile) => (
+              <li key={profile.id} className="rounded-lg border border-border p-4 text-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-foreground">
+                      {profile.gstin}
+                      {profile.isDefault ? (
+                        <span className="ml-2 rounded bg-foreground/10 px-2 py-0.5 text-xs font-normal text-muted">
+                          Default
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-1 text-muted">
+                      {profile.legalName || profile.tradeName || '—'}
+                      {profile.stateName ? ` · ${profile.stateName}` : ''}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {!profile.isDefault ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setDefaultGstConfirmId(profile.id)}
+                      >
+                        Make default
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setGstRegisterOpen(false);
+                        setEditingGst(profile);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                </div>
+                {profile.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profile.logoUrl} alt="" className="mt-3 h-10 object-contain" />
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 text-sm text-muted">No GST registrations yet. Register your first GSTIN above.</p>
+        )}
+      </section>
       {isError ? <p className="mb-4 text-sm">Unable to load organisation profile.</p> : null}
       {error ? (
         <div className="mb-4">
@@ -545,14 +545,33 @@ export function FinanceSettingsPage() {
                     </div>
                     <div>
                       <Label htmlFor="gstin">Default GSTIN</Label>
-                      <Input
-                        id="gstin"
-                        value={orgDraft.gstin}
-                        onChange={(event) =>
-                          setOrgDraft((prev) => (prev ? { ...prev, gstin: event.target.value } : prev))
-                        }
-                        placeholder="22AAAAA0000A1Z5"
-                      />
+                      {defaultGstProfile ? (
+                        <>
+                          <Input
+                            id="gstin"
+                            value={defaultGstProfile.gstin}
+                            readOnly
+                            className="bg-foreground/[0.03]"
+                          />
+                          <p className="mt-1 text-xs text-muted">
+                            Synced from default GST registration. Manage letterheads in GST registrations above.
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <Input
+                            id="gstin"
+                            value={orgDraft.gstin}
+                            onChange={(event) =>
+                              setOrgDraft((prev) => (prev ? { ...prev, gstin: event.target.value } : prev))
+                            }
+                            placeholder="22AAAAA0000A1Z5"
+                          />
+                          <p className="mt-1 text-xs text-muted">
+                            Optional fiscal GSTIN. Register full letterheads in GST registrations above.
+                          </p>
+                        </>
+                      )}
                     </div>
                     <label className="flex items-center gap-2 text-sm text-foreground">
                       <input
@@ -650,204 +669,6 @@ export function FinanceSettingsPage() {
           ) : null}
 
           {step === 1 ? (
-            <div className="mt-6 space-y-6">
-              {gstLoading ? <p className="text-sm text-muted">Loading GST profiles…</p> : null}
-
-              {pendingGst.length ? (
-                <div className="space-y-3">
-                  <SubHeading>Pending letterheads (submit on confirm)</SubHeading>
-                  <ul className="space-y-2 text-sm">
-                    {pendingGst.map((profile) => (
-                      <li
-                        key={profile.tempId}
-                        className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-dashed border-border px-4 py-3"
-                      >
-                        <div>
-                          <div className="font-medium text-foreground">
-                            {profile.label || profile.gstin}
-                            {profile.isDefault ? ' · Default (on submit)' : ''}
-                          </div>
-                          <div className="mt-1 text-muted">
-                            GST {profile.gstin}
-                            {profile.logoFile ? ` · Logo: ${profile.logoFile.name}` : ''}
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() =>
-                            setPendingGst((prev) => prev.filter((item) => item.tempId !== profile.tempId))
-                          }
-                        >
-                          Remove
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              {profiles.length ? (
-                <div className="space-y-3">
-                  <SubHeading>Saved letterheads</SubHeading>
-                  <ul className="space-y-3">
-                    {profiles.map((profile) => (
-                      <li key={profile.id} className="rounded-lg border border-border p-4 text-sm">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <div className="font-medium text-foreground">
-                              {profile.label || profile.gstin}
-                              {profile.isDefault ? ' · Default' : ''}
-                            </div>
-                            <div className="mt-1 text-muted">
-                              GST {profile.gstin}
-                              {profile.cin ? ` · CIN ${profile.cin}` : ''}
-                              {profile.pan ? ` · PAN ${profile.pan}` : ''}
-                            </div>
-                            <div className="text-muted">
-                              {[profile.addressLine1, profile.city, profile.postalCode]
-                                .filter(Boolean)
-                                .join(', ')}
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {!profile.isDefault ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setDefaultGstConfirmId(profile.id)}
-                              >
-                                Make default
-                              </Button>
-                            ) : null}
-                            <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-muted">
-                              <span>Logo</span>
-                              <input
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp"
-                                className="max-w-[180px] text-xs"
-                                onChange={async (event) => {
-                                  const file = event.target.files?.[0];
-                                  if (!file) return;
-                                  try {
-                                    await uploadFinanceOrgLogo(createLogo, profile.id, file);
-                                  } catch (cause) {
-                                    setError(apiErrorMessage(cause, 'Unable to upload logo.'));
-                                  }
-                                }}
-                              />
-                            </label>
-                          </div>
-                        </div>
-                        {profile.logoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={profile.logoUrl} alt="" className="mt-3 h-10 object-contain" />
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : (
-                <p className="text-sm text-muted">No GST profiles yet. Add one below.</p>
-              )}
-
-              <form onSubmit={onAddGstToList} className="space-y-4 rounded-lg border border-border p-5">
-                <SubHeading>Add GST profile to list</SubHeading>
-
-                <div className="space-y-4 rounded-md bg-foreground/[0.03] p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.14em]" style={{ color: ACCENT.orange }}>
-                    1 · Identity
-                  </p>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <Label htmlFor="gstLabel">Label</Label>
-                      <Input id="gstLabel" name="label" placeholder="GST 1 / Peenya" />
-                    </div>
-                    <div>
-                      <Label htmlFor="gstGstin">GSTIN</Label>
-                      <Input id="gstGstin" name="gstin" required />
-                    </div>
-                    <div>
-                      <Label htmlFor="gstLegal">Legal name</Label>
-                      <Input id="gstLegal" name="legalName" />
-                    </div>
-                    <div>
-                      <Label htmlFor="gstTrade">Trade name</Label>
-                      <Input id="gstTrade" name="tradeName" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4 rounded-md bg-foreground/[0.03] p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.14em]" style={{ color: ACCENT.orange }}>
-                    2 · CIN & PAN
-                  </p>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <Label htmlFor="gstCin">CIN</Label>
-                      <Input id="gstCin" name="cin" />
-                    </div>
-                    <div>
-                      <Label htmlFor="gstPan">PAN</Label>
-                      <Input id="gstPan" name="pan" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4 rounded-md bg-foreground/[0.03] p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.14em]" style={{ color: ACCENT.orange }}>
-                    3 · Address & logo
-                  </p>
-                  <div>
-                    <Label htmlFor="gstAddr1">Address line 1</Label>
-                    <Input id="gstAddr1" name="addressLine1" />
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <Label htmlFor="gstAddr2">Address line 2</Label>
-                      <Input id="gstAddr2" name="addressLine2" />
-                    </div>
-                    <div>
-                      <Label htmlFor="gstCity">City</Label>
-                      <Input id="gstCity" name="city" />
-                    </div>
-                    <div>
-                      <Label htmlFor="gstState">State</Label>
-                      <select id="gstState" name="stateCode" className={SELECT_CLASS} defaultValue="">
-                        <option value="">Select state</option>
-                        {INDIAN_STATES.map((state) => (
-                          <option key={state.code} value={state.code}>
-                            {state.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <Label htmlFor="gstPostal">Postal code</Label>
-                      <Input id="gstPostal" name="postalCode" />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <Label htmlFor="gstLogo">Logo</Label>
-                      <Input
-                        id="gstLogo"
-                        name="logo"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <label className="flex items-center gap-2 text-sm text-foreground">
-                  <input type="checkbox" name="isDefault" className="h-4 w-4 rounded border-border" />
-                  Set as default letterhead
-                </label>
-                <Button type="submit">Add to list</Button>
-              </form>
-            </div>
-          ) : null}
-
-          {step === 2 ? (
             <div className="mt-6 space-y-6">
               {pendingAddresses.length ? (
                 <div className="space-y-3">
@@ -976,7 +797,7 @@ export function FinanceSettingsPage() {
             </div>
           ) : null}
 
-          {step === 3 ? (
+          {step === 2 ? (
             <div className="mt-6 space-y-6">
               {pendingOfficers.length ? (
                 <div className="space-y-3">
@@ -1069,7 +890,7 @@ export function FinanceSettingsPage() {
             </div>
           ) : null}
 
-          {step === 4 && orgDraft ? (
+          {step === 3 && orgDraft ? (
             <div className="mt-6 space-y-5 text-sm">
               <div className="rounded-lg border border-border p-4">
                 <SubHeading>Organisation profile</SubHeading>
@@ -1082,7 +903,7 @@ export function FinanceSettingsPage() {
                   </div>
                   <div>
                     <dt className="text-xs text-muted">Default GSTIN</dt>
-                    <dd>{orgDraft.gstin || '—'}</dd>
+                    <dd>{defaultGstProfile?.gstin || orgDraft.gstin || '—'}</dd>
                   </div>
                   <div>
                     <dt className="text-xs text-muted">GST registered</dt>
@@ -1097,22 +918,6 @@ export function FinanceSettingsPage() {
                     </dd>
                   </div>
                 </dl>
-              </div>
-
-              <div className="rounded-lg border border-border p-4">
-                <SubHeading>GST letterheads</SubHeading>
-                <p className="mt-2 text-muted">
-                  {profiles.length} saved · {pendingGst.length} pending
-                </p>
-                {pendingGst.length ? (
-                  <ul className="mt-2 list-inside list-disc text-muted">
-                    {pendingGst.map((item) => (
-                      <li key={item.tempId}>
-                        {item.label || item.gstin} — {item.gstin}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
               </div>
 
               <div className="rounded-lg border border-border p-4">
@@ -1179,10 +984,8 @@ export function FinanceSettingsPage() {
         open={confirmOpen}
         title="Save organisation settings?"
         description={`This will update the organisation profile${
-          pendingGst.length ? `, create ${pendingGst.length} GST profile(s)` : ''
-        }${pendingAddresses.length ? `, create ${pendingAddresses.length} address(es)` : ''}${
-          pendingOfficers.length ? `, create ${pendingOfficers.length} officer(s)` : ''
-        }. Review the preview before confirming.`}
+          pendingAddresses.length ? `, create ${pendingAddresses.length} address(es)` : ''
+        }${pendingOfficers.length ? `, create ${pendingOfficers.length} officer(s)` : ''}. Review the preview before confirming.`}
         confirmLabel="Save settings"
         pending={submitting || saving}
         onConfirm={() => void executeBatchSubmit()}
@@ -1218,6 +1021,44 @@ export function FinanceSettingsPage() {
           if (!updatingAddress) setDefaultAddressConfirmId(null);
         }}
       />
+
+      <Dialog
+        open={gstRegisterOpen}
+        onOpenChange={setGstRegisterOpen}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+          <DialogTitle>Register GST</DialogTitle>
+          <DialogDescription>
+            Step through GSTIN, identity, address, contact, and logo for this letterhead.
+          </DialogDescription>
+          <FinanceGstRegistrationForm
+            onCancel={() => setGstRegisterOpen(false)}
+            onSaved={() => setGstRegisterOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(editingGst)}
+        onOpenChange={(open) => {
+          if (!open) setEditingGst(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+          <DialogTitle>Edit GST registration</DialogTitle>
+          <DialogDescription>
+            Update identity, address, contact, and logo for this GSTIN letterhead.
+          </DialogDescription>
+          {editingGst ? (
+            <FinanceGstRegistrationForm
+              key={editingGst.id}
+              profile={editingGst}
+              onCancel={() => setEditingGst(null)}
+              onSaved={(saved) => setEditingGst(saved)}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
