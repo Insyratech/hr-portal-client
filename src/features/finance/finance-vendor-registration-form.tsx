@@ -1,7 +1,8 @@
 'use client';
 
 import type { FormEvent, KeyboardEvent } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActionConfirmDialog } from '@/components/dashboard/action-confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
@@ -88,13 +89,41 @@ const STEPS: {
   },
   {
     id: 'declaration',
-    title: 'Declaration & save',
+    title: 'Declaration',
     subtitle: 'Sign-off & office use',
     heading: 'Declaration and office use',
-    description: 'Vendor declaration, internal approval fields, then save and download the PDF.',
+    description: 'Vendor declaration and internal approval fields.',
     icon: 'check',
   },
+  {
+    id: 'preview',
+    title: 'Preview',
+    subtitle: 'Review & submit',
+    heading: 'Review and submit',
+    description: 'Read-only summary of the registration. Confirm to save and upload documents.',
+    icon: 'file',
+  },
 ];
+
+type PendingOrgAddress = {
+  tempId: string;
+  label: string;
+  addressType: 'billing' | 'shipping';
+  line1: string;
+  line2: string;
+  city: string;
+  stateCode: string | null;
+  stateName: string | null;
+  postalCode: string;
+};
+
+function pendingAddressKey(tempId: string) {
+  return `pending:${tempId}`;
+}
+
+function isPendingAddressId(id: string) {
+  return id.startsWith('pending:');
+}
 
 function formatOrgAddress(address: FinanceOrgAddress): string {
   return [address.line1, address.line2, address.city, address.stateName, address.postalCode]
@@ -133,9 +162,10 @@ export function FinanceVendorRegistrationForm({
   );
   const [createRegistration, { isLoading: creating }] = useCreateFinanceVendorRegistrationMutation();
   const [updateRegistration, { isLoading: updating }] = useUpdateFinanceVendorRegistrationMutation();
-  const [createAddress, { isLoading: creatingAddress }] = useCreateFinanceOrgAddressMutation();
+  const [createAddress] = useCreateFinanceOrgAddressMutation();
   const [createDocUpload] = useCreateFinanceVendorDocumentUploadMutation();
   const [fetchPrint] = useLazyGetFinanceVendorPrintQuery();
+  const formRef = useRef<HTMLFormElement>(null);
 
   const profiles = useMemo(
     () => (profilesData?.data ?? []).filter((item) => item.active),
@@ -148,6 +178,9 @@ export function FinanceVendorRegistrationForm({
   const [maxReached, setMaxReached] = useState(() => (vendorId ? STEPS.length - 1 : 0));
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [pendingAddresses, setPendingAddresses] = useState<PendingOrgAddress[]>([]);
   const [gstProfileId, setGstProfileId] = useState('');
   const [billingAddressId, setBillingAddressId] = useState('');
   const [shippingAddressId, setShippingAddressId] = useState('');
@@ -191,19 +224,44 @@ export function FinanceVendorRegistrationForm({
 
   const selectedProfile = profiles.find((item) => item.id === gstProfileId) ?? null;
 
+  const addressOptions = useMemo(() => {
+    const saved = addresses.map((address) => ({
+      id: address.id,
+      label: address.label,
+      text: formatOrgAddress(address),
+      pending: false,
+    }));
+    const pending = pendingAddresses.map((address) => ({
+      id: pendingAddressKey(address.tempId),
+      label: `${address.label} (pending)`,
+      text: [address.line1, address.line2, address.city, address.stateName, address.postalCode]
+        .filter(Boolean)
+        .join(', '),
+      pending: true,
+    }));
+    return [...saved, ...pending];
+  }, [addresses, pendingAddresses]);
+
   function applyAddressSelection(kind: 'billing' | 'shipping', addressId: string) {
-    const address = addresses.find((item) => item.id === addressId);
-    const text = address ? formatOrgAddress(address) : '';
+    const saved = addresses.find((item) => item.id === addressId);
+    const pending = pendingAddresses.find((item) => pendingAddressKey(item.tempId) === addressId);
+    const text = saved
+      ? formatOrgAddress(saved)
+      : pending
+        ? [pending.line1, pending.line2, pending.city, pending.stateName, pending.postalCode]
+            .filter(Boolean)
+            .join(', ')
+        : '';
     if (kind === 'billing') {
       setBillingAddressId(addressId);
-      if (address) setBillingAddress(text);
+      if (text) setBillingAddress(text);
     } else {
       setShippingAddressId(addressId);
-      if (address) setShippingAddress(text);
+      if (text) setShippingAddress(text);
     }
   }
 
-  async function onAddAddress() {
+  function onAddAddressToPending() {
     if (!showAddAddress) return;
     setError(null);
     const labelEl = document.getElementById('addrLabel') as HTMLInputElement | null;
@@ -218,26 +276,28 @@ export function FinanceVendorRegistrationForm({
       return;
     }
     const { stateCode, stateName } = stateFromCode(stateEl?.value ?? '');
-    try {
-      const created = await createAddress({
-        label: labelEl?.value.trim() || 'Address',
-        addressType: showAddAddress,
-        line1,
-        line2: line2El?.value.trim() ?? '',
-        city: cityEl?.value.trim() ?? '',
-        postalCode: postalEl?.value.trim() ?? '',
-        stateCode,
-        stateName,
-      }).unwrap();
-      await refetchAddresses();
-      applyAddressSelection(showAddAddress, created.data.id);
-      setShowAddAddress(null);
-    } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to add address.'));
-    }
+    const tempId = crypto.randomUUID();
+    const entry: PendingOrgAddress = {
+      tempId,
+      label: labelEl?.value.trim() || 'Address',
+      addressType: showAddAddress,
+      line1,
+      line2: line2El?.value.trim() ?? '',
+      city: cityEl?.value.trim() ?? '',
+      postalCode: postalEl?.value.trim() ?? '',
+      stateCode,
+      stateName,
+    };
+    setPendingAddresses((prev) => [...prev, entry]);
+    applyAddressSelection(showAddAddress, pendingAddressKey(tempId));
+    setShowAddAddress(null);
   }
 
-  function collectBody(form: FormData) {
+  function collectBody(
+    form: FormData,
+    resolvedBillingId = billingAddressId,
+    resolvedShippingId = shippingAddressId,
+  ) {
     const { stateCode, stateName } = stateFromCode(String(form.get('stateCode') ?? ''));
     return {
       displayName: String(form.get('displayName') ?? '').trim(),
@@ -277,8 +337,9 @@ export function FinanceVendorRegistrationForm({
       declarationPlace: String(form.get('declarationPlace') ?? '').trim(),
       declarationDate: optionalFormString(form.get('declarationDate')),
       orgGstProfileId: gstProfileId || null,
-      billingAddressId: billingAddressId || null,
-      shippingAddressId: shippingAddressId || null,
+      billingAddressId: resolvedBillingId && !isPendingAddressId(resolvedBillingId) ? resolvedBillingId : null,
+      shippingAddressId:
+        resolvedShippingId && !isPendingAddressId(resolvedShippingId) ? resolvedShippingId : null,
       officeInspectedBy: String(form.get('officeInspectedBy') ?? '').trim(),
       officeInspectionDate: optionalFormString(form.get('officeInspectionDate')),
       vendorCode: optionalFormString(form.get('vendorCode')),
@@ -335,30 +396,85 @@ export function FinanceVendorRegistrationForm({
     setStep((prev) => Math.max(prev - 1, 0));
   }
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (step !== lastStep) {
-      goNext();
-      return;
-    }
+  function openConfirmDialog() {
     setError(null);
-    setSuccess(null);
-    const body = collectBody(new FormData(event.currentTarget));
+    const form = formRef.current;
+    if (!form) return;
+    const body = collectBody(new FormData(form));
     if (!body.displayName) {
       setError('Vendor name is required.');
       setStep(0);
       return;
     }
+    setConfirmOpen(true);
+  }
+
+  async function executeSubmit() {
+    const form = formRef.current;
+    if (!form) return;
+    setError(null);
+    setSuccess(null);
+    setSubmitting(true);
     try {
+      let resolvedBillingId = billingAddressId;
+      let resolvedShippingId = shippingAddressId;
+      for (const pending of pendingAddresses) {
+        const created = await createAddress({
+          label: pending.label,
+          addressType: pending.addressType,
+          line1: pending.line1,
+          line2: pending.line2,
+          city: pending.city,
+          postalCode: pending.postalCode,
+          stateCode: pending.stateCode,
+          stateName: pending.stateName,
+        }).unwrap();
+        const key = pendingAddressKey(pending.tempId);
+        if (resolvedBillingId === key) resolvedBillingId = created.data.id;
+        if (resolvedShippingId === key) resolvedShippingId = created.data.id;
+      }
+      if (pendingAddresses.length) {
+        await refetchAddresses();
+        setPendingAddresses([]);
+      }
+      const body = collectBody(new FormData(form), resolvedBillingId, resolvedShippingId);
+      if (!body.displayName) {
+        setError('Vendor name is required.');
+        setStep(0);
+        return;
+      }
       const result = activeVendorId
         ? await updateRegistration({ id: activeVendorId, body }).unwrap()
         : await createRegistration(body).unwrap();
       setSavedId(result.data.id);
       await uploadPending(result.data);
+      setConfirmOpen(false);
       setSuccess('Vendor registration saved. You can download the PDF or close when finished.');
     } catch (cause) {
       setError(apiErrorMessage(cause, 'Unable to save vendor registration.'));
+    } finally {
+      setSubmitting(false);
     }
+  }
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (step < lastStep) goNext();
+  }
+
+  function readPreviewSnapshot() {
+    const form = formRef.current;
+    if (!form) return null;
+    const formData = new FormData(form);
+    const body = collectBody(formData);
+    const { stateName } = stateFromCode(String(formData.get('stateCode') ?? ''));
+    const pendingDocNames = DOCUMENT_TYPES.filter((item) => pendingDocs[item.type]).map(
+      (item) => `${item.label}: ${pendingDocs[item.type]?.name}`,
+    );
+    const principalCount = principals.filter(
+      (row) => row.customerNameAddress.trim() || row.productSupplied.trim(),
+    ).length;
+    return { body, stateName, pendingDocNames, principalCount };
   }
 
   async function onDownloadPdf() {
@@ -393,8 +509,10 @@ export function FinanceVendorRegistrationForm({
 
   const defaults = existing;
 
+  const preview = step === lastStep ? readPreviewSnapshot() : null;
+
   return (
-    <form onSubmit={onSubmit} onKeyDown={onFormKeyDown} className="mt-4">
+    <form ref={formRef} onSubmit={onSubmit} onKeyDown={onFormKeyDown} className="mt-4">
       <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
         <nav aria-label="Registration stages" className="shrink-0 lg:w-56">
           <ol className="relative space-y-0">
@@ -635,9 +753,9 @@ export function FinanceVendorRegistrationForm({
                   }}
                 >
                   <option value="">Select or type below</option>
-                  {addresses.map((address) => (
+                  {addressOptions.map((address) => (
                     <option key={address.id} value={address.id}>
-                      {address.label} — {formatOrgAddress(address)}
+                      {address.label} — {address.text}
                     </option>
                   ))}
                   <option value="__add__">+ Add new address…</option>
@@ -666,9 +784,9 @@ export function FinanceVendorRegistrationForm({
                   }}
                 >
                   <option value="">Select or type below</option>
-                  {addresses.map((address) => (
+                  {addressOptions.map((address) => (
                     <option key={address.id} value={address.id}>
-                      {address.label} — {formatOrgAddress(address)}
+                      {address.label} — {address.text}
                     </option>
                   ))}
                   <option value="__add__">+ Add new address…</option>
@@ -686,7 +804,7 @@ export function FinanceVendorRegistrationForm({
             {showAddAddress ? (
               <div className="rounded border border-border p-4">
                 <p className="mb-3 text-sm font-medium">
-                  Add {showAddAddress} address (saved to company address book)
+                  Add {showAddAddress} address (saved to company address book on final submit)
                 </p>
                 <div className="space-y-3">
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -723,8 +841,8 @@ export function FinanceVendorRegistrationForm({
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button type="button" loading={creatingAddress} onClick={onAddAddress}>
-                      Save address
+                    <Button type="button" onClick={onAddAddressToPending}>
+                      Add to list
                     </Button>
                     <Button type="button" variant="outline" onClick={() => setShowAddAddress(null)}>
                       Cancel
@@ -1004,11 +1122,9 @@ export function FinanceVendorRegistrationForm({
                   </div>
                 );
               })}
-              {!activeVendorId ? (
-                <p className="text-xs text-muted">
-                  Selected documents are uploaded when you save the registration.
-                </p>
-              ) : null}
+              <p className="text-xs text-muted">
+                Selected documents are uploaded when you confirm and submit the registration.
+              </p>
             </div>
           </div>
 
@@ -1119,6 +1235,146 @@ export function FinanceVendorRegistrationForm({
             </div>
           </div>
 
+          {step === lastStep && preview ? (
+            <div className="mt-6 space-y-5">
+              <div className="rounded-lg border border-border p-4 text-sm">
+                <Meta tone="purple">Letterhead & identity</Meta>
+                <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs text-muted">GST profile</dt>
+                    <dd>{selectedProfile ? `${selectedProfile.label || selectedProfile.gstin} — ${selectedProfile.gstin}` : '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Vendor name</dt>
+                    <dd>{preview.body.displayName || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Company name</dt>
+                    <dd>{preview.body.companyName || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Email</dt>
+                    <dd>{preview.body.email || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Primary contact</dt>
+                    <dd>
+                      {[preview.body.contactPersonName, preview.body.contactPersonDesignation]
+                        .filter(Boolean)
+                        .join(' · ') || '—'}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+
+              <div className="rounded-lg border border-border p-4 text-sm">
+                <Meta tone="purple">Addresses</Meta>
+                <dl className="mt-3 space-y-2">
+                  <div>
+                    <dt className="text-xs text-muted">Registered office</dt>
+                    <dd>{preview.body.registeredAddress || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Factory / operating</dt>
+                    <dd>{preview.body.factoryAddress || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Billing</dt>
+                    <dd>{preview.body.billingAddress || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Shipping</dt>
+                    <dd>{preview.body.shippingAddress || '—'}</dd>
+                  </div>
+                  {pendingAddresses.length ? (
+                    <div>
+                      <dt className="text-xs text-muted">Pending company addresses</dt>
+                      <dd>{pendingAddresses.length} to create on submit</dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </div>
+
+              <div className="rounded-lg border border-border p-4 text-sm">
+                <Meta tone="purple">Business & banking</Meta>
+                <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs text-muted">PAN / GST</dt>
+                    <dd>
+                      {[preview.body.pan, preview.body.gstin].filter(Boolean).join(' · ') || '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">State</dt>
+                    <dd>{preview.stateName || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Bank</dt>
+                    <dd>{preview.body.bankNameAddress || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Account / IFSC</dt>
+                    <dd>
+                      {[preview.body.bankAccountNo, preview.body.ifsc].filter(Boolean).join(' · ') || '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Payment terms</dt>
+                    <dd>{preview.body.paymentTermsDays ? `${preview.body.paymentTermsDays} days` : '—'}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              <div className="rounded-lg border border-border p-4 text-sm">
+                <Meta tone="purple">Commercial & documents</Meta>
+                <p className="mt-2 text-muted">Principal customers: {preview.principalCount}</p>
+                {preview.pendingDocNames.length ? (
+                  <ul className="mt-2 list-inside list-disc text-muted">
+                    {preview.pendingDocNames.map((name) => (
+                      <li key={name}>{name}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-muted">No new documents selected.</p>
+                )}
+              </div>
+
+              <div className="rounded-lg border border-border p-4 text-sm">
+                <Meta tone="purple">Declaration & office use</Meta>
+                <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs text-muted">Declaration</dt>
+                    <dd>
+                      {[preview.body.declarationName, preview.body.declarationDesignation, preview.body.declarationPlace]
+                        .filter(Boolean)
+                        .join(' · ') || '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Declaration date</dt>
+                    <dd>{preview.body.declarationDate || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Inspection</dt>
+                    <dd>
+                      {[preview.body.officeInspectedBy, preview.body.officeInspectionDate]
+                        .filter(Boolean)
+                        .join(' · ') || '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Office decision</dt>
+                    <dd>
+                      {[preview.body.vendorCode, preview.body.officeApprovedBy, preview.body.officeDecision]
+                        .filter(Boolean)
+                        .join(' · ') || 'Pending review'}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          ) : null}
+
           {error ? (
             <div className="mt-4">
               <StatusMessage tone="danger">{error}</StatusMessage>
@@ -1146,27 +1402,38 @@ export function FinanceVendorRegistrationForm({
                 </Button>
               ) : (
                 <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onDownloadPdf}
-                    disabled={!activeVendorId}
-                  >
-                    Download as PDF
-                  </Button>
-                  <Button type="submit" loading={creating || updating}>
-                    {creating || updating
-                      ? 'Saving…'
-                      : activeVendorId
-                        ? 'Save registration'
-                        : 'Register vendor'}
-                  </Button>
+                  {success && activeVendorId ? (
+                    <Button type="button" variant="outline" onClick={onDownloadPdf}>
+                      Download as PDF
+                    </Button>
+                  ) : null}
+                  {!success ? (
+                    <Button type="button" onClick={openConfirmDialog}>
+                      {activeVendorId ? 'Confirm & save' : 'Confirm & register'}
+                    </Button>
+                  ) : null}
                 </>
               )}
             </div>
           </div>
         </div>
       </div>
+
+      <ActionConfirmDialog
+        open={confirmOpen}
+        title={activeVendorId ? 'Save vendor registration?' : 'Register vendor?'}
+        description={
+          pendingAddresses.length
+            ? `This will create ${pendingAddresses.length} company address(es), save the vendor registration, and upload selected documents. Review the preview before confirming.`
+            : 'This will save the vendor registration and upload any selected documents. Review the preview before confirming.'
+        }
+        confirmLabel={activeVendorId ? 'Save registration' : 'Register vendor'}
+        pending={submitting || creating || updating}
+        onConfirm={() => void executeSubmit()}
+        onCancel={() => {
+          if (!submitting) setConfirmOpen(false);
+        }}
+      />
     </form>
   );
 }

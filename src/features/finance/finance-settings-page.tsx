@@ -1,7 +1,8 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { ActionConfirmDialog } from '@/components/dashboard/action-confirm-dialog';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
@@ -77,7 +78,68 @@ const STEPS: {
     description: 'Record directors and CEO details for company compliance records.',
     icon: 'users',
   },
+  {
+    id: 'preview',
+    title: 'Preview',
+    subtitle: 'Review & submit',
+    heading: 'Review and submit',
+    description: 'Summary of organisation changes and new items to create on confirm.',
+    icon: 'file',
+  },
 ];
+
+type OrgDraft = {
+  legalName: string;
+  tradeName: string;
+  gstin: string;
+  gstRegistered: boolean;
+  stateCode: string;
+  addressLine1: string;
+  city: string;
+  postalCode: string;
+  fiscalYearStartMonth: number;
+};
+
+type PendingGstProfile = {
+  tempId: string;
+  label: string;
+  gstin: string;
+  legalName: string;
+  tradeName: string;
+  cin: string | null;
+  pan: string | null;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  postalCode: string;
+  stateCode: string | null;
+  stateName: string | null;
+  isDefault: boolean;
+  logoFile: File | null;
+};
+
+type PendingOrgAddress = {
+  tempId: string;
+  label: string;
+  addressType: 'registered' | 'operating' | 'billing' | 'shipping' | 'factory' | 'other';
+  line1: string;
+  line2: string;
+  city: string;
+  postalCode: string;
+  stateCode: string | null;
+  stateName: string | null;
+  isDefault: boolean;
+};
+
+type PendingOfficer = {
+  tempId: string;
+  role: 'ceo' | 'director' | 'other';
+  fullName: string;
+  designation: string;
+  email: string | null;
+  phone: string | null;
+  din: string | null;
+};
 
 function FormHeading({ children }: { children: React.ReactNode }) {
   return (
@@ -103,19 +165,24 @@ export function FinanceSettingsPage() {
   const { data: officerData } = useGetFinanceOrgOfficersQuery(undefined, { skip: !canManage });
 
   const [updateOrg, { isLoading: saving }] = useUpdateFinanceOrganizationMutation();
-  const [createGst, { isLoading: creatingGst }] = useCreateFinanceOrgGstProfileMutation();
+  const [createGst] = useCreateFinanceOrgGstProfileMutation();
   const [updateGst, { isLoading: updatingGst }] = useUpdateFinanceOrgGstProfileMutation();
   const [createLogo] = useCreateFinanceOrgGstProfileLogoMutation();
-  const [createAddress, { isLoading: creatingAddress }] = useCreateFinanceOrgAddressMutation();
-  const [updateAddress] = useUpdateFinanceOrgAddressMutation();
-  const [createOfficer, { isLoading: creatingOfficer }] = useCreateFinanceOrgOfficerMutation();
+  const [createAddress] = useCreateFinanceOrgAddressMutation();
+  const [updateAddress, { isLoading: updatingAddress }] = useUpdateFinanceOrgAddressMutation();
+  const [createOfficer] = useCreateFinanceOrgOfficerMutation();
 
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [gstSaved, setGstSaved] = useState(false);
-  const [addressSaved, setAddressSaved] = useState(false);
-  const [officerSaved, setOfficerSaved] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [orgDraft, setOrgDraft] = useState<OrgDraft | null>(null);
+  const [pendingGst, setPendingGst] = useState<PendingGstProfile[]>([]);
+  const [pendingAddresses, setPendingAddresses] = useState<PendingOrgAddress[]>([]);
+  const [pendingOfficers, setPendingOfficers] = useState<PendingOfficer[]>([]);
+  const [defaultGstConfirmId, setDefaultGstConfirmId] = useState<string | null>(null);
+  const [defaultAddressConfirmId, setDefaultAddressConfirmId] = useState<string | null>(null);
 
   const org = data?.data;
   const profiles = gstData?.data ?? [];
@@ -124,42 +191,65 @@ export function FinanceSettingsPage() {
   const lastStep = STEPS.length - 1;
   const current = STEPS[step]!;
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!canManage) return;
-    setError(null);
-    setSaved(false);
-    const form = new FormData(event.currentTarget);
-    const { stateCode, stateName } = stateFromCode(String(form.get('stateCode') ?? ''));
-    try {
-      await updateOrg({
-        legalName: String(form.get('legalName') ?? '').trim(),
-        tradeName: String(form.get('tradeName') ?? '').trim(),
-        gstin: optionalFormString(form.get('gstin')),
-        gstRegistered: form.get('gstRegistered') === 'on',
-        stateCode,
-        stateName,
-        addressLine1: String(form.get('addressLine1') ?? '').trim(),
-        city: String(form.get('city') ?? '').trim(),
-        postalCode: String(form.get('postalCode') ?? '').trim(),
-        fiscalYearStartMonth: Number(form.get('fiscalYearStartMonth') ?? 4),
-      }).unwrap();
-      setSaved(true);
-    } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to save organisation profile.'));
+  useEffect(() => {
+    if (!org) return;
+    setOrgDraft({
+      legalName: org.legalName,
+      tradeName: org.tradeName,
+      gstin: org.gstin ?? '',
+      gstRegistered: org.gstRegistered,
+      stateCode: org.stateCode ?? '',
+      addressLine1: org.addressLine1,
+      city: org.city,
+      postalCode: org.postalCode,
+      fiscalYearStartMonth: org.fiscalYearStartMonth,
+    });
+  }, [org]);
+
+  function validateOrgDraft(): boolean {
+    if (!orgDraft?.legalName.trim()) {
+      setError('Legal name is required.');
+      return false;
     }
+    if (!orgDraft.stateCode) {
+      setError('State is required.');
+      return false;
+    }
+    if (!orgDraft.addressLine1.trim()) {
+      setError('Address is required.');
+      return false;
+    }
+    setError(null);
+    return true;
   }
 
-  async function onCreateGst(event: FormEvent<HTMLFormElement>) {
+  function goNext() {
+    if (step === 0 && !validateOrgDraft()) return;
+    setError(null);
+    setStep((prev) => Math.min(prev + 1, lastStep));
+  }
+
+  function goBack() {
+    setError(null);
+    setStep((prev) => Math.max(prev - 1, 0));
+  }
+
+  function onAddGstToList(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setGstSaved(false);
     const form = new FormData(event.currentTarget);
     const { stateCode, stateName } = stateFromCode(String(form.get('stateCode') ?? ''));
-    try {
-      const created = await createGst({
+    const gstin = String(form.get('gstin') ?? '').trim();
+    if (!gstin) {
+      setError('GSTIN is required.');
+      return;
+    }
+    setPendingGst((prev) => [
+      ...prev,
+      {
+        tempId: crypto.randomUUID(),
         label: String(form.get('label') ?? '').trim(),
-        gstin: String(form.get('gstin') ?? '').trim(),
+        gstin,
         legalName: String(form.get('legalName') ?? '').trim(),
         tradeName: String(form.get('tradeName') ?? '').trim(),
         cin: optionalFormString(form.get('cin')),
@@ -171,67 +261,160 @@ export function FinanceSettingsPage() {
         stateCode,
         stateName,
         isDefault: form.get('isDefault') === 'on',
-      }).unwrap();
-      const logo = form.get('logo');
-      if (logo instanceof File && logo.size > 0) {
-        await uploadFinanceOrgLogo(createLogo, created.data.id, logo);
-      }
-      event.currentTarget.reset();
-      setGstSaved(true);
-    } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to add GST profile.'));
-    }
+        logoFile: (() => {
+          const logo = form.get('logo');
+          return logo instanceof File && logo.size > 0 ? logo : null;
+        })(),
+      },
+    ]);
+    event.currentTarget.reset();
   }
 
-  async function onCreateAddress(event: FormEvent<HTMLFormElement>) {
+  function onAddAddressToList(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setAddressSaved(false);
     const form = new FormData(event.currentTarget);
+    const line1 = String(form.get('line1') ?? '').trim();
+    if (!line1) {
+      setError('Address line 1 is required.');
+      return;
+    }
     const { stateCode, stateName } = stateFromCode(String(form.get('stateCode') ?? ''));
-    try {
-      await createAddress({
+    setPendingAddresses((prev) => [
+      ...prev,
+      {
+        tempId: crypto.randomUUID(),
         label: String(form.get('label') ?? '').trim() || 'Address',
-        addressType: String(form.get('addressType') ?? 'other') as
-          | 'registered'
-          | 'operating'
-          | 'billing'
-          | 'shipping'
-          | 'factory'
-          | 'other',
-        line1: String(form.get('line1') ?? '').trim(),
+        addressType: String(form.get('addressType') ?? 'other') as PendingOrgAddress['addressType'],
+        line1,
         line2: String(form.get('line2') ?? '').trim(),
         city: String(form.get('city') ?? '').trim(),
         postalCode: String(form.get('postalCode') ?? '').trim(),
         stateCode,
         stateName,
         isDefault: form.get('isDefault') === 'on',
-      }).unwrap();
-      event.currentTarget.reset();
-      setAddressSaved(true);
-    } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to add address.'));
-    }
+      },
+    ]);
+    event.currentTarget.reset();
   }
 
-  async function onCreateOfficer(event: FormEvent<HTMLFormElement>) {
+  function onAddOfficerToList(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setOfficerSaved(false);
     const form = new FormData(event.currentTarget);
-    try {
-      await createOfficer({
-        role: String(form.get('role') ?? 'other') as 'ceo' | 'director' | 'other',
-        fullName: String(form.get('fullName') ?? '').trim(),
+    const fullName = String(form.get('fullName') ?? '').trim();
+    if (!fullName) {
+      setError('Officer full name is required.');
+      return;
+    }
+    setPendingOfficers((prev) => [
+      ...prev,
+      {
+        tempId: crypto.randomUUID(),
+        role: String(form.get('role') ?? 'other') as PendingOfficer['role'],
+        fullName,
         designation: String(form.get('designation') ?? '').trim(),
         email: optionalFormString(form.get('email')),
         phone: optionalFormString(form.get('phone')),
         din: optionalFormString(form.get('din')),
+      },
+    ]);
+    event.currentTarget.reset();
+  }
+
+  async function executeBatchSubmit() {
+    if (!orgDraft) return;
+    setError(null);
+    setSuccess(null);
+    setSubmitting(true);
+    try {
+      const { stateCode, stateName } = stateFromCode(orgDraft.stateCode);
+      await updateOrg({
+        legalName: orgDraft.legalName.trim(),
+        tradeName: orgDraft.tradeName.trim(),
+        gstin: optionalFormString(orgDraft.gstin),
+        gstRegistered: orgDraft.gstRegistered,
+        stateCode,
+        stateName,
+        addressLine1: orgDraft.addressLine1.trim(),
+        city: orgDraft.city.trim(),
+        postalCode: orgDraft.postalCode.trim(),
+        fiscalYearStartMonth: orgDraft.fiscalYearStartMonth,
       }).unwrap();
-      event.currentTarget.reset();
-      setOfficerSaved(true);
+
+      for (const item of pendingGst) {
+        const created = await createGst({
+          label: item.label,
+          gstin: item.gstin,
+          legalName: item.legalName,
+          tradeName: item.tradeName,
+          cin: item.cin,
+          pan: item.pan,
+          addressLine1: item.addressLine1,
+          addressLine2: item.addressLine2,
+          city: item.city,
+          postalCode: item.postalCode,
+          stateCode: item.stateCode,
+          stateName: item.stateName,
+          isDefault: item.isDefault,
+        }).unwrap();
+        if (item.logoFile) {
+          await uploadFinanceOrgLogo(createLogo, created.data.id, item.logoFile);
+        }
+      }
+
+      for (const item of pendingAddresses) {
+        await createAddress({
+          label: item.label,
+          addressType: item.addressType,
+          line1: item.line1,
+          line2: item.line2,
+          city: item.city,
+          postalCode: item.postalCode,
+          stateCode: item.stateCode,
+          stateName: item.stateName,
+          isDefault: item.isDefault,
+        }).unwrap();
+      }
+
+      for (const item of pendingOfficers) {
+        await createOfficer({
+          role: item.role,
+          fullName: item.fullName,
+          designation: item.designation,
+          email: item.email,
+          phone: item.phone,
+          din: item.din,
+        }).unwrap();
+      }
+
+      setPendingGst([]);
+      setPendingAddresses([]);
+      setPendingOfficers([]);
+      setConfirmOpen(false);
+      setSuccess('Organisation settings saved successfully.');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to add officer.'));
+      setError(apiErrorMessage(cause, 'Unable to save organisation settings.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function confirmDefaultGst(id: string) {
+    try {
+      await updateGst({ id, body: { isDefault: true } }).unwrap();
+      setDefaultGstConfirmId(null);
+    } catch (cause) {
+      setError(apiErrorMessage(cause, 'Unable to set default GST.'));
+    }
+  }
+
+  async function confirmDefaultAddress(id: string) {
+    try {
+      await updateAddress({ id, body: { isDefault: true } }).unwrap();
+      setDefaultAddressConfirmId(null);
+    } catch (cause) {
+      setError(apiErrorMessage(cause, 'Unable to update address.'));
     }
   }
 
@@ -246,7 +429,8 @@ export function FinanceSettingsPage() {
     );
   }
 
-  const busy = saving || creatingGst || updatingGst || creatingAddress || creatingOfficer;
+  const busy = saving || updatingGst || updatingAddress || submitting;
+  const orgStateName = orgDraft ? stateFromCode(orgDraft.stateCode).stateName : null;
 
   return (
     <>
@@ -260,6 +444,11 @@ export function FinanceSettingsPage() {
       {error ? (
         <div className="mb-4">
           <StatusMessage tone="danger">{error}</StatusMessage>
+        </div>
+      ) : null}
+      {success ? (
+        <div className="mb-4">
+          <StatusMessage tone="success">{success}</StatusMessage>
         </div>
       ) : null}
 
@@ -325,41 +514,55 @@ export function FinanceSettingsPage() {
 
           {step === 0 ? (
             <div className="mt-6">
-              {saved ? (
-                <div className="mb-4">
-                  <StatusMessage tone="success">Organisation profile saved.</StatusMessage>
-                </div>
-              ) : null}
-              {isLoading || !org ? (
+              {isLoading || !org || !orgDraft ? (
                 <p className="text-sm text-muted">Loading…</p>
               ) : (
-                <form key={org.updatedAt} onSubmit={onSubmit} className="space-y-5">
+                <div className="space-y-5">
                   <div className="rounded-lg border border-border p-5 space-y-4">
                     <SubHeading>Identity</SubHeading>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <Label htmlFor="legalName">Legal name</Label>
-                        <Input id="legalName" name="legalName" defaultValue={org.legalName} required />
+                        <Input
+                          id="legalName"
+                          value={orgDraft.legalName}
+                          onChange={(event) =>
+                            setOrgDraft((prev) => (prev ? { ...prev, legalName: event.target.value } : prev))
+                          }
+                          required
+                        />
                       </div>
                       <div>
                         <Label htmlFor="tradeName">Trade name</Label>
-                        <Input id="tradeName" name="tradeName" defaultValue={org.tradeName} />
+                        <Input
+                          id="tradeName"
+                          value={orgDraft.tradeName}
+                          onChange={(event) =>
+                            setOrgDraft((prev) => (prev ? { ...prev, tradeName: event.target.value } : prev))
+                          }
+                        />
                       </div>
                     </div>
                     <div>
                       <Label htmlFor="gstin">Default GSTIN</Label>
                       <Input
                         id="gstin"
-                        name="gstin"
-                        defaultValue={org.gstin ?? ''}
+                        value={orgDraft.gstin}
+                        onChange={(event) =>
+                          setOrgDraft((prev) => (prev ? { ...prev, gstin: event.target.value } : prev))
+                        }
                         placeholder="22AAAAA0000A1Z5"
                       />
                     </div>
                     <label className="flex items-center gap-2 text-sm text-foreground">
                       <input
                         type="checkbox"
-                        name="gstRegistered"
-                        defaultChecked={org.gstRegistered}
+                        checked={orgDraft.gstRegistered}
+                        onChange={(event) =>
+                          setOrgDraft((prev) =>
+                            prev ? { ...prev, gstRegistered: event.target.checked } : prev,
+                          )
+                        }
                         className="h-4 w-4 rounded border-border"
                       />
                       GST registered
@@ -372,9 +575,11 @@ export function FinanceSettingsPage() {
                       <Label htmlFor="stateCode">State</Label>
                       <select
                         id="stateCode"
-                        name="stateCode"
                         className={SELECT_CLASS}
-                        defaultValue={org.stateCode ?? ''}
+                        value={orgDraft.stateCode}
+                        onChange={(event) =>
+                          setOrgDraft((prev) => (prev ? { ...prev, stateCode: event.target.value } : prev))
+                        }
                         required
                       >
                         <option value="">Select state</option>
@@ -389,28 +594,47 @@ export function FinanceSettingsPage() {
                       <Label htmlFor="addressLine1">Address</Label>
                       <Input
                         id="addressLine1"
-                        name="addressLine1"
-                        defaultValue={org.addressLine1}
+                        value={orgDraft.addressLine1}
+                        onChange={(event) =>
+                          setOrgDraft((prev) => (prev ? { ...prev, addressLine1: event.target.value } : prev))
+                        }
                         required
                       />
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <Label htmlFor="city">City</Label>
-                        <Input id="city" name="city" defaultValue={org.city} required />
+                        <Input
+                          id="city"
+                          value={orgDraft.city}
+                          onChange={(event) =>
+                            setOrgDraft((prev) => (prev ? { ...prev, city: event.target.value } : prev))
+                          }
+                          required
+                        />
                       </div>
                       <div>
                         <Label htmlFor="postalCode">Postal code</Label>
-                        <Input id="postalCode" name="postalCode" defaultValue={org.postalCode} />
+                        <Input
+                          id="postalCode"
+                          value={orgDraft.postalCode}
+                          onChange={(event) =>
+                            setOrgDraft((prev) => (prev ? { ...prev, postalCode: event.target.value } : prev))
+                          }
+                        />
                       </div>
                     </div>
                     <div>
                       <Label htmlFor="fiscalYearStartMonth">Fiscal year start month</Label>
                       <select
                         id="fiscalYearStartMonth"
-                        name="fiscalYearStartMonth"
                         className={SELECT_CLASS}
-                        defaultValue={org.fiscalYearStartMonth}
+                        value={orgDraft.fiscalYearStartMonth}
+                        onChange={(event) =>
+                          setOrgDraft((prev) =>
+                            prev ? { ...prev, fiscalYearStartMonth: Number(event.target.value) } : prev,
+                          )
+                        }
                       >
                         {FISCAL_YEAR_MONTHS.map((month) => (
                           <option key={month.value} value={month.value}>
@@ -420,13 +644,7 @@ export function FinanceSettingsPage() {
                       </select>
                     </div>
                   </div>
-
-                  <div className="flex justify-end">
-                    <Button type="submit" loading={saving}>
-                      {saving ? 'Saving…' : 'Save settings'}
-                    </Button>
-                  </div>
-                </form>
+                </div>
               )}
             </div>
           ) : null}
@@ -434,8 +652,39 @@ export function FinanceSettingsPage() {
           {step === 1 ? (
             <div className="mt-6 space-y-6">
               {gstLoading ? <p className="text-sm text-muted">Loading GST profiles…</p> : null}
-              {gstSaved ? (
-                <StatusMessage tone="success">GST profile added.</StatusMessage>
+
+              {pendingGst.length ? (
+                <div className="space-y-3">
+                  <SubHeading>Pending letterheads (submit on confirm)</SubHeading>
+                  <ul className="space-y-2 text-sm">
+                    {pendingGst.map((profile) => (
+                      <li
+                        key={profile.tempId}
+                        className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-dashed border-border px-4 py-3"
+                      >
+                        <div>
+                          <div className="font-medium text-foreground">
+                            {profile.label || profile.gstin}
+                            {profile.isDefault ? ' · Default (on submit)' : ''}
+                          </div>
+                          <div className="mt-1 text-muted">
+                            GST {profile.gstin}
+                            {profile.logoFile ? ` · Logo: ${profile.logoFile.name}` : ''}
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() =>
+                            setPendingGst((prev) => prev.filter((item) => item.tempId !== profile.tempId))
+                          }
+                        >
+                          Remove
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ) : null}
 
               {profiles.length ? (
@@ -466,16 +715,7 @@ export function FinanceSettingsPage() {
                               <Button
                                 type="button"
                                 variant="outline"
-                                onClick={async () => {
-                                  try {
-                                    await updateGst({
-                                      id: profile.id,
-                                      body: { isDefault: true },
-                                    }).unwrap();
-                                  } catch (cause) {
-                                    setError(apiErrorMessage(cause, 'Unable to set default GST.'));
-                                  }
-                                }}
+                                onClick={() => setDefaultGstConfirmId(profile.id)}
                               >
                                 Make default
                               </Button>
@@ -511,8 +751,8 @@ export function FinanceSettingsPage() {
                 <p className="text-sm text-muted">No GST profiles yet. Add one below.</p>
               )}
 
-              <form onSubmit={onCreateGst} className="space-y-4 rounded-lg border border-border p-5">
-                <SubHeading>Add GST profile</SubHeading>
+              <form onSubmit={onAddGstToList} className="space-y-4 rounded-lg border border-border p-5">
+                <SubHeading>Add GST profile to list</SubHeading>
 
                 <div className="space-y-4 rounded-md bg-foreground/[0.03] p-4">
                   <p className="text-xs font-bold uppercase tracking-[0.14em]" style={{ color: ACCENT.orange }}>
@@ -602,17 +842,46 @@ export function FinanceSettingsPage() {
                   <input type="checkbox" name="isDefault" className="h-4 w-4 rounded border-border" />
                   Set as default letterhead
                 </label>
-                <Button type="submit" loading={creatingGst}>
-                  Add GST profile
-                </Button>
+                <Button type="submit">Add to list</Button>
               </form>
             </div>
           ) : null}
 
           {step === 2 ? (
             <div className="mt-6 space-y-6">
-              {addressSaved ? (
-                <StatusMessage tone="success">Address added.</StatusMessage>
+              {pendingAddresses.length ? (
+                <div className="space-y-3">
+                  <SubHeading>Pending addresses (submit on confirm)</SubHeading>
+                  <ul className="space-y-2 text-sm">
+                    {pendingAddresses.map((address) => (
+                      <li
+                        key={address.tempId}
+                        className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-dashed border-border px-4 py-3"
+                      >
+                        <div>
+                          <span className="font-medium text-foreground">{address.label}</span>
+                          <span className="text-muted"> · {address.addressType}</span>
+                          <div className="mt-1 text-muted">
+                            {[address.line1, address.city, address.stateName, address.postalCode]
+                              .filter(Boolean)
+                              .join(', ')}
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() =>
+                            setPendingAddresses((prev) =>
+                              prev.filter((item) => item.tempId !== address.tempId),
+                            )
+                          }
+                        >
+                          Remove
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ) : null}
               <div className="space-y-3">
                 <SubHeading>Saved addresses</SubHeading>
@@ -632,16 +901,7 @@ export function FinanceSettingsPage() {
                             type="button"
                             variant="outline"
                             className="mt-2"
-                            onClick={async () => {
-                              try {
-                                await updateAddress({
-                                  id: address.id,
-                                  body: { isDefault: true },
-                                }).unwrap();
-                              } catch (cause) {
-                                setError(apiErrorMessage(cause, 'Unable to update address.'));
-                              }
-                            }}
+                            onClick={() => setDefaultAddressConfirmId(address.id)}
                           >
                             Mark default
                           </Button>
@@ -656,8 +916,8 @@ export function FinanceSettingsPage() {
                 )}
               </div>
 
-              <form onSubmit={onCreateAddress} className="space-y-4 rounded-lg border border-border p-5">
-                <SubHeading>Add address</SubHeading>
+              <form onSubmit={onAddAddressToList} className="space-y-4 rounded-lg border border-border p-5">
+                <SubHeading>Add address to list</SubHeading>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <Label htmlFor="addrLabel">Label</Label>
@@ -711,17 +971,45 @@ export function FinanceSettingsPage() {
                   <input type="checkbox" name="isDefault" className="h-4 w-4 rounded border-border" />
                   Default address
                 </label>
-                <Button type="submit" loading={creatingAddress}>
-                  Add address
-                </Button>
+                <Button type="submit">Add to list</Button>
               </form>
             </div>
           ) : null}
 
           {step === 3 ? (
             <div className="mt-6 space-y-6">
-              {officerSaved ? (
-                <StatusMessage tone="success">Officer added.</StatusMessage>
+              {pendingOfficers.length ? (
+                <div className="space-y-3">
+                  <SubHeading>Pending officers (submit on confirm)</SubHeading>
+                  <ul className="space-y-2 text-sm">
+                    {pendingOfficers.map((officer) => (
+                      <li
+                        key={officer.tempId}
+                        className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-dashed border-border px-4 py-3"
+                      >
+                        <div>
+                          <span className="font-medium text-foreground">{officer.fullName}</span>
+                          <span className="text-muted">
+                            {' '}
+                            · {officer.role.toUpperCase()}
+                            {officer.designation ? ` · ${officer.designation}` : ''}
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() =>
+                            setPendingOfficers((prev) =>
+                              prev.filter((item) => item.tempId !== officer.tempId),
+                            )
+                          }
+                        >
+                          Remove
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ) : null}
               <div className="space-y-3">
                 <SubHeading>Saved officers</SubHeading>
@@ -744,8 +1032,8 @@ export function FinanceSettingsPage() {
                 )}
               </div>
 
-              <form onSubmit={onCreateOfficer} className="space-y-4 rounded-lg border border-border p-5">
-                <SubHeading>Add officer</SubHeading>
+              <form onSubmit={onAddOfficerToList} className="space-y-4 rounded-lg border border-border p-5">
+                <SubHeading>Add officer to list</SubHeading>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <Label htmlFor="officerRole">Role</Label>
@@ -776,38 +1064,160 @@ export function FinanceSettingsPage() {
                     <Input id="officerPhone" name="phone" />
                   </div>
                 </div>
-                <Button type="submit" loading={creatingOfficer}>
-                  Add officer
-                </Button>
+                <Button type="submit">Add to list</Button>
               </form>
             </div>
           ) : null}
 
+          {step === 4 && orgDraft ? (
+            <div className="mt-6 space-y-5 text-sm">
+              <div className="rounded-lg border border-border p-4">
+                <SubHeading>Organisation profile</SubHeading>
+                <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs text-muted">Legal / trade name</dt>
+                    <dd>
+                      {[orgDraft.legalName, orgDraft.tradeName].filter(Boolean).join(' · ') || '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Default GSTIN</dt>
+                    <dd>{orgDraft.gstin || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">GST registered</dt>
+                    <dd>{orgDraft.gstRegistered ? 'Yes' : 'No'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Location</dt>
+                    <dd>
+                      {[orgDraft.addressLine1, orgDraft.city, orgStateName, orgDraft.postalCode]
+                        .filter(Boolean)
+                        .join(', ') || '—'}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+
+              <div className="rounded-lg border border-border p-4">
+                <SubHeading>GST letterheads</SubHeading>
+                <p className="mt-2 text-muted">
+                  {profiles.length} saved · {pendingGst.length} pending
+                </p>
+                {pendingGst.length ? (
+                  <ul className="mt-2 list-inside list-disc text-muted">
+                    {pendingGst.map((item) => (
+                      <li key={item.tempId}>
+                        {item.label || item.gstin} — {item.gstin}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+
+              <div className="rounded-lg border border-border p-4">
+                <SubHeading>Addresses</SubHeading>
+                <p className="mt-2 text-muted">
+                  {addresses.length} saved · {pendingAddresses.length} pending
+                </p>
+                {pendingAddresses.length ? (
+                  <ul className="mt-2 list-inside list-disc text-muted">
+                    {pendingAddresses.map((item) => (
+                      <li key={item.tempId}>
+                        {item.label} · {item.addressType}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+
+              <div className="rounded-lg border border-border p-4">
+                <SubHeading>Directors & CEO</SubHeading>
+                <p className="mt-2 text-muted">
+                  {officers.length} saved · {pendingOfficers.length} pending
+                </p>
+                {pendingOfficers.length ? (
+                  <ul className="mt-2 list-inside list-disc text-muted">
+                    {pendingOfficers.map((item) => (
+                      <li key={item.tempId}>
+                        {item.fullName} · {item.role}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
           <div className="mt-8 flex flex-wrap justify-between gap-3 border-t border-border pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={step === 0}
-              onClick={() => {
-                setError(null);
-                setStep((prev) => Math.max(prev - 1, 0));
-              }}
-            >
+            <Button type="button" variant="outline" disabled={step === 0} onClick={goBack}>
               Back
             </Button>
-            <Button
-              type="button"
-              disabled={step === lastStep}
-              onClick={() => {
-                setError(null);
-                setStep((prev) => Math.min(prev + 1, lastStep));
-              }}
-            >
-              Next stage
-            </Button>
+            {step < lastStep ? (
+              <Button type="button" onClick={goNext}>
+                Next stage
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={() => {
+                  if (!validateOrgDraft()) {
+                    setStep(0);
+                    return;
+                  }
+                  setConfirmOpen(true);
+                }}
+              >
+                Confirm & submit
+              </Button>
+            )}
           </div>
         </div>
       </div>
+
+      <ActionConfirmDialog
+        open={confirmOpen}
+        title="Save organisation settings?"
+        description={`This will update the organisation profile${
+          pendingGst.length ? `, create ${pendingGst.length} GST profile(s)` : ''
+        }${pendingAddresses.length ? `, create ${pendingAddresses.length} address(es)` : ''}${
+          pendingOfficers.length ? `, create ${pendingOfficers.length} officer(s)` : ''
+        }. Review the preview before confirming.`}
+        confirmLabel="Save settings"
+        pending={submitting || saving}
+        onConfirm={() => void executeBatchSubmit()}
+        onCancel={() => {
+          if (!submitting) setConfirmOpen(false);
+        }}
+      />
+
+      <ActionConfirmDialog
+        open={Boolean(defaultGstConfirmId)}
+        title="Set default letterhead?"
+        description="This will immediately set this GST profile as the default letterhead for new documents."
+        confirmLabel="Make default"
+        pending={updatingGst}
+        onConfirm={() => {
+          if (defaultGstConfirmId) void confirmDefaultGst(defaultGstConfirmId);
+        }}
+        onCancel={() => {
+          if (!updatingGst) setDefaultGstConfirmId(null);
+        }}
+      />
+
+      <ActionConfirmDialog
+        open={Boolean(defaultAddressConfirmId)}
+        title="Mark default address?"
+        description="This will immediately set this address as the company default."
+        confirmLabel="Mark default"
+        pending={updatingAddress}
+        onConfirm={() => {
+          if (defaultAddressConfirmId) void confirmDefaultAddress(defaultAddressConfirmId);
+        }}
+        onCancel={() => {
+          if (!updatingAddress) setDefaultAddressConfirmId(null);
+        }}
+      />
     </>
   );
 }

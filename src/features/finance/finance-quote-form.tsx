@@ -1,7 +1,8 @@
 'use client';
 
-import type { FormEvent, KeyboardEvent } from 'react';
+import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { ActionConfirmDialog } from '@/components/dashboard/action-confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
@@ -68,14 +69,41 @@ const STEPS: {
     icon: 'grid',
   },
   {
-    id: 'review',
-    title: 'Review',
-    subtitle: 'Terms & totals',
+    id: 'terms',
+    title: 'Terms & notes',
+    subtitle: 'Totals & terms',
     heading: 'Terms, notes, and totals',
-    description: 'Review terms, notes, and calculated totals before saving.',
+    description: 'Edit payment terms, notes, and review calculated totals.',
+    icon: 'file',
+  },
+  {
+    id: 'preview',
+    title: 'Preview',
+    subtitle: 'Confirm & submit',
+    heading: 'Review quote',
+    description: 'Check all details, then confirm to save.',
     icon: 'check',
   },
 ];
+
+function PreviewRow({ label, value }: { label: string; value?: string | number | null }) {
+  const text = value != null && String(value).trim() ? String(value) : '—';
+  return (
+    <div className="grid gap-1 sm:grid-cols-3">
+      <dt className="text-muted">{label}</dt>
+      <dd className="whitespace-pre-wrap sm:col-span-2 text-foreground">{text}</dd>
+    </div>
+  );
+}
+
+function PreviewSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded border border-border p-4">
+      <h4 className="text-sm font-medium text-foreground">{title}</h4>
+      <dl className="mt-3 space-y-2 text-sm">{children}</dl>
+    </section>
+  );
+}
 
 type QuoteLineDraft = {
   key: string;
@@ -150,6 +178,7 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
   const [step, setStep] = useState(0);
   const [maxReached, setMaxReached] = useState(() => (quote ? STEPS.length - 1 : 0));
   const [error, setError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [documentNumber, setDocumentNumber] = useState(quote?.documentNumber ?? '');
   const [quoteDate, setQuoteDate] = useState(quote?.quoteDate ?? '');
   const [expiryDate, setExpiryDate] = useState(quote?.expiryDate ?? '');
@@ -184,7 +213,20 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
   const current = STEPS[step]!;
   const saving = creating || updating;
   const selectedProfile = profiles.find((item) => item.id === orgGstProfileId) ?? null;
+  const selectedCustomer = customers.find((item) => item.id === customerId) ?? null;
   const totals = lineTotals(lines);
+  const preparedLines = lines
+    .map((line) => ({
+      description: line.description.trim(),
+      catalogNo: line.catalogNo.trim() || undefined,
+      hsnSac: line.hsnSac.trim() || undefined,
+      quantity: Number(line.quantity),
+      unit: line.unit.trim() || 'nos',
+      rate: Number(line.rate),
+      taxPercent: Number(line.taxPercent),
+      amount: (Number(line.quantity) || 0) * (Number(line.rate) || 0),
+    }))
+    .filter((line) => line.description && line.quantity > 0);
 
   useEffect(() => {
     if (quote || orgGstProfileId || !profiles.length) return;
@@ -261,35 +303,8 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
     setStep((prev) => Math.max(prev - 1, 0));
   }
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (step !== lastStep) {
-      goNext();
-      return;
-    }
-    setError(null);
-    const prepared = lines
-      .map((line) => ({
-        description: line.description.trim(),
-        catalogNo: line.catalogNo.trim() || undefined,
-        hsnSac: line.hsnSac.trim() || undefined,
-        quantity: Number(line.quantity),
-        unit: line.unit.trim() || 'nos',
-        rate: Number(line.rate),
-        taxPercent: Number(line.taxPercent),
-      }))
-      .filter((line) => line.description && line.quantity > 0);
-    if (!prepared.length) {
-      setError('Add at least one quote line.');
-      setStep(3);
-      return;
-    }
-    if (!customerId) {
-      setError('Select a customer.');
-      setStep(1);
-      return;
-    }
-    const body = {
+  function buildBody() {
+    return {
       customerId,
       quoteDate: quoteDate || undefined,
       expiryDate: expiryDate || null,
@@ -303,17 +318,43 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
       shippingAddressSnapshot: shippingAddressSnapshot.trim() || undefined,
       customerGstinSnapshot: customerGstinSnapshot.trim() || null,
       shipToName: shipToName.trim() || undefined,
-      lines: prepared,
+      lines: preparedLines.map(({ amount: _amount, ...line }) => line),
       ...(isEdit && changeNote.trim() ? { changeNote: changeNote.trim() } : {}),
     };
+  }
+
+  async function handleConfirmSave() {
+    setError(null);
+    if (!preparedLines.length) {
+      setError('Add at least one quote line.');
+      setConfirmOpen(false);
+      setStep(3);
+      return;
+    }
+    if (!customerId) {
+      setError('Select a customer.');
+      setConfirmOpen(false);
+      setStep(1);
+      return;
+    }
     try {
       const result = quote
-        ? await updateQuote({ id: quote.id, body }).unwrap()
-        : await createQuote(body).unwrap();
+        ? await updateQuote({ id: quote.id, body: buildBody() }).unwrap()
+        : await createQuote(buildBody()).unwrap();
+      setConfirmOpen(false);
       onSaved(result.data);
     } catch (cause) {
       setError(apiErrorMessage(cause, quote ? 'Unable to update quote.' : 'Unable to create quote.'));
     }
+  }
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (step !== lastStep) {
+      goNext();
+      return;
+    }
+    setConfirmOpen(true);
   }
 
   function onFormKeyDown(event: KeyboardEvent<HTMLFormElement>) {
@@ -706,6 +747,83 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
             </div>
           </div>
 
+          <div className={cn('mt-6 space-y-4', step !== 5 && 'hidden')} aria-hidden={step !== 5}>
+            <PreviewSection title="Letterhead">
+              <PreviewRow
+                label="GST profile"
+                value={
+                  selectedProfile
+                    ? `${selectedProfile.label || selectedProfile.gstin} — ${selectedProfile.gstin}`
+                    : null
+                }
+              />
+            </PreviewSection>
+            <PreviewSection title="Customer">
+              <PreviewRow label="Customer" value={selectedCustomer?.displayName ?? shipToName} />
+              <PreviewRow label="Ship to name" value={shipToName} />
+              <PreviewRow label="Billing address" value={billingAddressSnapshot} />
+              <PreviewRow label="Shipping address" value={shippingAddressSnapshot} />
+              <PreviewRow label="Customer GSTIN" value={customerGstinSnapshot} />
+              <PreviewRow label="Place of supply" value={placeOfSupply} />
+            </PreviewSection>
+            <PreviewSection title="Quote details">
+              <PreviewRow label="Quote number" value={documentNumber} />
+              <PreviewRow label="Quote date" value={quoteDate} />
+              <PreviewRow label="Expiry date" value={expiryDate} />
+              <PreviewRow label="Subject" value={subject} />
+              <PreviewRow label="Reference" value={referenceText} />
+            </PreviewSection>
+            <section className="rounded border border-border p-4">
+              <h4 className="text-sm font-medium text-foreground">Line items</h4>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[640px] text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted">
+                      <th className="pb-2 pr-3 font-normal">Description</th>
+                      <th className="pb-2 pr-3 font-normal">Catalog</th>
+                      <th className="pb-2 pr-3 font-normal">HSN/SAC</th>
+                      <th className="pb-2 pr-3 font-normal">Qty</th>
+                      <th className="pb-2 pr-3 font-normal">Rate</th>
+                      <th className="pb-2 pr-3 font-normal">Tax %</th>
+                      <th className="pb-2 font-normal text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preparedLines.map((line, index) => (
+                      <tr key={index} className="border-b border-border/60 last:border-0">
+                        <td className="py-2 pr-3">{line.description}</td>
+                        <td className="py-2 pr-3">{line.catalogNo || '—'}</td>
+                        <td className="py-2 pr-3">{line.hsnSac || '—'}</td>
+                        <td className="py-2 pr-3">
+                          {line.quantity} {line.unit}
+                        </td>
+                        <td className="py-2 pr-3">{formatInr(line.rate)}</td>
+                        <td className="py-2 pr-3">{line.taxPercent}%</td>
+                        <td className="py-2 text-right">{formatInr(line.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+            <PreviewSection title="Terms & notes">
+              <PreviewRow label="Terms" value={terms} />
+              <PreviewRow label="Notes" value={notes} />
+              {isEdit && changeNote.trim() ? <PreviewRow label="Change note" value={changeNote} /> : null}
+            </PreviewSection>
+            <div className="rounded border border-border p-4 text-sm">
+              <p>
+                <span className="text-muted">Subtotal:</span> {formatInr(totals.subtotal)}
+              </p>
+              <p>
+                <span className="text-muted">Tax:</span> {formatInr(totals.taxTotal)}
+              </p>
+              <p className="font-medium">
+                <span className="text-muted">Grand total:</span> {formatInr(totals.grandTotal)}
+              </p>
+            </div>
+          </div>
+
           {error ? (
             <div className="mt-4">
               <StatusMessage tone="danger">{error}</StatusMessage>
@@ -723,18 +841,28 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
                 </Button>
               ) : null}
             </div>
-            <Button type="submit" loading={saving}>
-              {step === lastStep
-                ? saving
-                  ? 'Saving…'
-                  : isEdit
-                    ? 'Save quote'
-                    : 'Create quote'
-                : 'Next'}
+            <Button type="submit" loading={step === lastStep && saving}>
+              {step === lastStep ? 'Confirm & submit' : 'Next'}
             </Button>
           </div>
         </div>
       </div>
+
+      <ActionConfirmDialog
+        open={confirmOpen}
+        title={isEdit ? 'Save quote changes?' : 'Submit this quote?'}
+        description={
+          isEdit
+            ? 'This will update the quote record. You can edit again later if needed.'
+            : 'Submit this quote? You cannot undo from here without editing later.'
+        }
+        confirmLabel="OK, submit"
+        pending={saving}
+        onCancel={() => {
+          if (!saving) setConfirmOpen(false);
+        }}
+        onConfirm={() => void handleConfirmSave()}
+      />
     </form>
   );
 }

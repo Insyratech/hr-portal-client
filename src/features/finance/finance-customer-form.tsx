@@ -1,7 +1,8 @@
 'use client';
 
-import type { FormEvent, KeyboardEvent } from 'react';
+import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import { ActionConfirmDialog } from '@/components/dashboard/action-confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,6 @@ import { ACCENT, FORM_SECTION_TONE } from '@/lib/ui-accents';
 import {
   INDIAN_STATES,
   SELECT_CLASS,
-  optionalFormString,
   stateFromCode,
 } from '@/features/finance/finance-constants';
 import { composeAddressLines } from '@/features/finance/finance-address-utils';
@@ -71,9 +71,36 @@ const STEPS: {
     subtitle: 'Payment & status',
     heading: 'Payment terms and notes',
     description: 'Default payment terms and internal notes.',
+    icon: 'file',
+  },
+  {
+    id: 'preview',
+    title: 'Preview',
+    subtitle: 'Confirm & submit',
+    heading: 'Review customer',
+    description: 'Check all details, then confirm to save.',
     icon: 'check',
   },
 ];
+
+function PreviewRow({ label, value }: { label: string; value?: string | number | null }) {
+  const text = value != null && String(value).trim() ? String(value) : '—';
+  return (
+    <div className="grid gap-1 sm:grid-cols-3">
+      <dt className="text-muted">{label}</dt>
+      <dd className="sm:col-span-2 text-foreground">{text}</dd>
+    </div>
+  );
+}
+
+function PreviewSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded border border-border p-4">
+      <h4 className="text-sm font-medium text-foreground">{title}</h4>
+      <dl className="mt-3 space-y-2 text-sm">{children}</dl>
+    </section>
+  );
+}
 
 type CustomerFormProps = {
   customer?: FinanceCustomer | null;
@@ -116,6 +143,14 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
   const [step, setStep] = useState(0);
   const [maxReached, setMaxReached] = useState(() => (customer ? STEPS.length - 1 : 0));
   const [error, setError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [displayName, setDisplayName] = useState(customer?.displayName ?? '');
+  const [companyName, setCompanyName] = useState(customer?.companyName ?? '');
+  const [email, setEmail] = useState(customer?.email ?? '');
+  const [phone, setPhone] = useState(customer?.phone ?? '');
+  const [paymentTermsDays, setPaymentTermsDays] = useState(customer?.paymentTermsDays ?? 0);
+  const [notes, setNotes] = useState(customer?.notes ?? '');
+  const [status, setStatus] = useState<'active' | 'inactive'>(customer?.status ?? 'active');
   const [gstin, setGstin] = useState(customer?.gstin ?? '');
   const [pan, setPan] = useState(customer?.pan ?? '');
   const [stateCode, setStateCode] = useState(customer?.stateCode ?? '');
@@ -140,6 +175,13 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
 
   useEffect(() => {
     if (!customer) return;
+    setDisplayName(customer.displayName ?? '');
+    setCompanyName(customer.companyName ?? '');
+    setEmail(customer.email ?? '');
+    setPhone(customer.phone ?? '');
+    setPaymentTermsDays(customer.paymentTermsDays ?? 0);
+    setNotes(customer.notes ?? '');
+    setStatus(customer.status ?? 'active');
     setGstin(customer.gstin ?? '');
     setPan(customer.pan ?? '');
     setStateCode(customer.stateCode ?? '');
@@ -206,12 +248,9 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
   }
 
   function validateStep(index: number): boolean {
-    if (index === 0) {
-      const name = (document.getElementById('displayName') as HTMLInputElement | null)?.value.trim() ?? '';
-      if (!name) {
-        setError('Display name is required.');
-        return false;
-      }
+    if (index === 0 && !displayName.trim()) {
+      setError('Display name is required.');
+      return false;
     }
     setError(null);
     return true;
@@ -235,35 +274,33 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
     setStep((prev) => Math.max(prev - 1, 0));
   }
 
-  function collectBody(form: FormData) {
+  function collectBody() {
     const { stateCode: resolvedStateCode, stateName } = stateFromCode(stateCode);
     const { stateCode: shipStateCode, stateName: shipStateName } = stateFromCode(shippingStateCode || stateCode);
-    const billingAddress =
-      composeAddressLines({
-        line1: billingLine1,
-        line2: billingLine2,
-        city: billingCity,
-        stateName,
-        postalCode: billingPostalCode,
-        country: billingCountry,
-      }) || String(form.get('billingAddressLegacy') ?? '').trim();
-    const shippingAddress =
-      composeAddressLines({
-        line1: shippingLine1,
-        line2: shippingLine2,
-        city: shippingCity,
-        stateName: shipStateName,
-        postalCode: shippingPostalCode,
-        country: shippingCountry,
-      }) || String(form.get('shippingAddressLegacy') ?? '').trim();
+    const billingAddress = composeAddressLines({
+      line1: billingLine1,
+      line2: billingLine2,
+      city: billingCity,
+      stateName,
+      postalCode: billingPostalCode,
+      country: billingCountry,
+    });
+    const shippingAddress = composeAddressLines({
+      line1: shippingLine1,
+      line2: shippingLine2,
+      city: shippingCity,
+      stateName: shipStateName,
+      postalCode: shippingPostalCode,
+      country: shippingCountry,
+    });
 
     return {
-      displayName: String(form.get('displayName') ?? '').trim(),
-      companyName: String(form.get('companyName') ?? '').trim(),
-      email: optionalFormString(form.get('email')),
-      phone: optionalFormString(form.get('phone')),
-      gstin: optionalFormString(gstin),
-      pan: optionalFormString(pan),
+      displayName: displayName.trim(),
+      companyName: companyName.trim(),
+      email: email.trim() || null,
+      phone: phone.trim() || null,
+      gstin: gstin.trim() || null,
+      pan: pan.trim() || null,
       stateCode: resolvedStateCode,
       stateName,
       billingAddress,
@@ -282,24 +319,18 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
       shippingCountry: shippingCountry.trim() || 'India',
       shipToContactName: shipToContactName.trim(),
       shipToCompanyName: shipToCompanyName.trim(),
-      paymentTermsDays: Number(form.get('paymentTermsDays') ?? 0) || 0,
-      notes: String(form.get('notes') ?? '').trim(),
-      ...(isEdit
-        ? { status: String(form.get('status') ?? 'active') as 'active' | 'inactive' }
-        : {}),
+      paymentTermsDays: Number(paymentTermsDays) || 0,
+      notes: notes.trim(),
+      ...(isEdit ? { status } : {}),
     };
   }
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (step !== lastStep) {
-      goNext();
-      return;
-    }
+  async function handleConfirmSave() {
     setError(null);
-    const body = collectBody(new FormData(event.currentTarget));
+    const body = collectBody();
     if (!body.displayName) {
       setError('Display name is required.');
+      setConfirmOpen(false);
       setStep(0);
       return;
     }
@@ -307,10 +338,20 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
       const result = customer
         ? await updateCustomer({ id: customer.id, body }).unwrap()
         : await createCustomer(body).unwrap();
+      setConfirmOpen(false);
       onSaved(result.data);
     } catch (cause) {
       setError(apiErrorMessage(cause, customer ? 'Unable to update customer.' : 'Unable to create customer.'));
     }
+  }
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (step !== lastStep) {
+      goNext();
+      return;
+    }
+    setConfirmOpen(true);
   }
 
   function onFormKeyDown(event: KeyboardEvent<HTMLFormElement>) {
@@ -324,6 +365,24 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
   }
 
   const history = historyData?.data ?? [];
+  const { stateName: billingStateName } = stateFromCode(stateCode);
+  const { stateName: previewShippingStateName } = stateFromCode(shippingStateCode || stateCode);
+  const billingAddressPreview = composeAddressLines({
+    line1: billingLine1,
+    line2: billingLine2,
+    city: billingCity,
+    stateName: billingStateName,
+    postalCode: billingPostalCode,
+    country: billingCountry,
+  });
+  const shippingAddressPreview = composeAddressLines({
+    line1: shippingLine1,
+    line2: shippingLine2,
+    city: shippingCity,
+    stateName: previewShippingStateName,
+    postalCode: shippingPostalCode,
+    country: shippingCountry,
+  });
 
   return (
     <form onSubmit={onSubmit} onKeyDown={onFormKeyDown} className="mt-4">
@@ -412,8 +471,8 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
               <Label htmlFor="displayName">Display name</Label>
               <Input
                 id="displayName"
-                name="displayName"
-                defaultValue={customer?.displayName}
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
                 required
                 tabIndex={step === 0 ? undefined : -1}
               />
@@ -422,8 +481,8 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
               <Label htmlFor="companyName">Company name</Label>
               <Input
                 id="companyName"
-                name="companyName"
-                defaultValue={customer?.companyName}
+                value={companyName}
+                onChange={(event) => setCompanyName(event.target.value)}
                 tabIndex={step === 0 ? undefined : -1}
               />
             </div>
@@ -432,9 +491,9 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
-                  name="email"
                   type="email"
-                  defaultValue={customer?.email ?? ''}
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
                   tabIndex={step === 0 ? undefined : -1}
                 />
               </div>
@@ -442,8 +501,8 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
                 <Label htmlFor="phone">Phone</Label>
                 <Input
                   id="phone"
-                  name="phone"
-                  defaultValue={customer?.phone ?? ''}
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
                   tabIndex={step === 0 ? undefined : -1}
                 />
               </div>
@@ -653,10 +712,10 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
               <Label htmlFor="paymentTermsDays">Payment terms (days)</Label>
               <Input
                 id="paymentTermsDays"
-                name="paymentTermsDays"
                 type="number"
                 min={0}
-                defaultValue={customer?.paymentTermsDays ?? 0}
+                value={paymentTermsDays}
+                onChange={(event) => setPaymentTermsDays(Number(event.target.value) || 0)}
                 tabIndex={step === 4 ? undefined : -1}
               />
             </div>
@@ -664,8 +723,8 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
               <Label htmlFor="notes">Notes</Label>
               <Input
                 id="notes"
-                name="notes"
-                defaultValue={customer?.notes}
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
                 tabIndex={step === 4 ? undefined : -1}
               />
             </div>
@@ -674,9 +733,9 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
                 <Label htmlFor="status">Status</Label>
                 <select
                   id="status"
-                  name="status"
                   className={SELECT_CLASS}
-                  defaultValue={customer?.status ?? 'active'}
+                  value={status}
+                  onChange={(event) => setStatus(event.target.value as 'active' | 'inactive')}
                   tabIndex={step === 4 ? undefined : -1}
                 >
                   <option value="active">Active</option>
@@ -684,6 +743,33 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
                 </select>
               </div>
             ) : null}
+          </div>
+
+          <div className={cn('mt-6 space-y-4', step !== 5 && 'hidden')} aria-hidden={step !== 5}>
+            <PreviewSection title="Identity">
+              <PreviewRow label="Display name" value={displayName} />
+              <PreviewRow label="Company name" value={companyName} />
+              <PreviewRow label="Email" value={email} />
+              <PreviewRow label="Phone" value={phone} />
+            </PreviewSection>
+            <PreviewSection title="Tax">
+              <PreviewRow label="GSTIN" value={gstin} />
+              <PreviewRow label="PAN" value={pan} />
+              <PreviewRow label="State" value={billingStateName || stateCode} />
+            </PreviewSection>
+            <PreviewSection title="Billing address">
+              <PreviewRow label="Address" value={billingAddressPreview} />
+            </PreviewSection>
+            <PreviewSection title="Shipping address">
+              <PreviewRow label="Ship-to contact" value={shipToContactName} />
+              <PreviewRow label="Ship-to company" value={shipToCompanyName} />
+              <PreviewRow label="Address" value={shippingAddressPreview} />
+            </PreviewSection>
+            <PreviewSection title="Terms & notes">
+              <PreviewRow label="Payment terms (days)" value={paymentTermsDays} />
+              <PreviewRow label="Notes" value={notes} />
+              {isEdit ? <PreviewRow label="Status" value={status} /> : null}
+            </PreviewSection>
           </div>
 
           {isEdit && history.length ? (
@@ -720,12 +806,28 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
                 </Button>
               ) : null}
             </div>
-            <Button type="submit" loading={saving}>
-              {step === lastStep ? (saving ? 'Saving…' : isEdit ? 'Save customer' : 'Add customer') : 'Next'}
+            <Button type="submit" loading={step === lastStep && saving}>
+              {step === lastStep ? 'Confirm & submit' : 'Next'}
             </Button>
           </div>
         </div>
       </div>
+
+      <ActionConfirmDialog
+        open={confirmOpen}
+        title={isEdit ? 'Save customer changes?' : 'Submit this customer?'}
+        description={
+          isEdit
+            ? 'This will update the customer record. You can edit again later if needed.'
+            : 'Submit this customer? You cannot undo from here without editing later.'
+        }
+        confirmLabel="OK, submit"
+        pending={saving}
+        onCancel={() => {
+          if (!saving) setConfirmOpen(false);
+        }}
+        onConfirm={() => void handleConfirmSave()}
+      />
     </form>
   );
 }
