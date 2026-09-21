@@ -73,6 +73,8 @@ import type {
   ExpenseClaim,
   ExpenseReimbursement,
   EwayBillRecord,
+  FaqContactResult,
+  FaqContactTarget,
   GeneralLedger,
   GstnSyncJob,
   IntegrationSettings,
@@ -3357,6 +3359,15 @@ export const api = createApi({
     unsubscribeWebPush: builder.mutation<ApiSuccess<{ revoked: boolean }>, { endpoint: string }>({
       query: (body) => ({ url: '/api/v1/web-push/subscribe', method: 'DELETE', body }),
     }),
+    getFaqContactTargets: builder.query<ApiSuccess<FaqContactTarget[]>, void>({
+      query: () => '/api/v1/faq/contact-targets',
+    }),
+    sendFaqContact: builder.mutation<
+      ApiSuccess<FaqContactResult>,
+      { roleCode: string; subject: string; message: string }
+    >({
+      query: (body) => ({ url: '/api/v1/faq/contact', method: 'POST', body }),
+    }),
     getReportsOverview: builder.query<
       ApiSuccess<ReportsOverview>,
       { from?: string; to?: string; period?: string; companyId?: string } | void
@@ -3781,5 +3792,7 @@ export const {
   useMarkAllNotificationsReadMutation,
   useSubscribeWebPushMutation,
   useUnsubscribeWebPushMutation,
+  useGetFaqContactTargetsQuery,
+  useSendFaqContactMutation,
   useGetReportsOverviewQuery,
 } = api;

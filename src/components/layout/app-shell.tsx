@@ -9,6 +9,7 @@ import { ManagerBottomNav } from '@/components/layout/manager-bottom-nav';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
 import type { ShellVariant } from '@/features/auth/role-access';
+import { FaqHelpChatbot } from '@/features/faq/faq-help-chatbot';
 
 export function AppShell({
   variant,
@@ -23,6 +24,7 @@ export function AppShell({
         <Topbar variant="employee" />
         <main className="mx-auto max-w-6xl px-4 pb-28 pt-8 md:px-8 lg:pb-16">{children}</main>
         <BottomNav />
+        <FaqHelpChatbot />
         <ConfirmDialog />
         <EntityDrawer />
         <CommandPalette />
@@ -38,6 +40,7 @@ export function AppShell({
         <main className="flex-1 px-4 py-8 pb-28 md:px-8 md:py-10 lg:pb-10">{children}</main>
         <ManagerBottomNav variant={variant} />
       </div>
+      <FaqHelpChatbot />
       <ConfirmDialog />
       <EntityDrawer />
       <CommandPalette />

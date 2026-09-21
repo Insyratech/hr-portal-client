@@ -28,7 +28,8 @@ export type IconName =
   | 'close'
   | 'sun'
   | 'moon'
-  | 'menu';
+  | 'menu'
+  | 'message';
 
 const paths: Record<IconName, ReactNode> = {
   overview: (
@@ -159,6 +160,12 @@ const paths: Record<IconName, ReactNode> = {
       <path d="M4 7h16" strokeWidth="2.25" />
       <path d="M4 12h16" strokeWidth="2.25" />
       <path d="M4 17h16" strokeWidth="2.25" />
+    </>
+  ),
+  message: (
+    <>
+      <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4 3v-3H6.5A2.5 2.5 0 0 1 4 14.5v-8z" />
+      <path d="M8 9h8M8 12h5" />
     </>
   ),
 };

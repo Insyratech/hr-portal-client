@@ -1302,6 +1302,20 @@ export type NotificationItem = {
   unread: boolean;
 };
 
+export type FaqContactTarget = {
+  roleCode: string;
+  label: string;
+  available: boolean;
+  recipientCount: number;
+};
+
+export type FaqContactResult = {
+  sent: boolean;
+  roleCode: string;
+  label: string;
+  recipientCount: number;
+};
+
 export type DirectoryEditRequestStatus =
   | 'PENDING'
   | 'APPROVED'
