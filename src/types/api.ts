@@ -1832,6 +1832,16 @@ export type FinanceOrgOfficer = {
   updatedAt: string;
 };
 
+/** Slim employee row for finance officer pickers (not full HR directory). */
+export type FinanceEmployeeOption = {
+  id: string;
+  employeeCode: string;
+  fullName: string;
+  email: string;
+  phone: string | null;
+  designationName: string | null;
+};
+
 export type FinanceVendorDocumentType =
   | 'income_tax'
   | 'sales_tax_license'

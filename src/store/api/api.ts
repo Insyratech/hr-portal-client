@@ -44,6 +44,7 @@ import type {
   FinanceOrgGstProfile,
   FinanceOrgAddress,
   FinanceOrgOfficer,
+  FinanceEmployeeOption,
   FinanceVendorRegistration,
   FinanceVendorPrintPayload,
   FinanceSignedUpload,
@@ -612,14 +613,14 @@ export const api = createApi({
     }),
     createFinanceOrgGstProfile: builder.mutation<
       ApiSuccess<FinanceOrgGstProfile>,
-      Partial<FinanceOrgGstProfile> & { gstin: string }
+      Partial<FinanceOrgGstProfile> & { gstin: string; fiscalYearStartMonth?: number }
     >({
       query: (body) => ({ url: '/api/v1/finance/org/gst-profiles', method: 'POST', body }),
       invalidatesTags: ['FinanceOrgGstProfiles', 'FinanceOrganization', 'FinanceOrgOfficers'],
     }),
     updateFinanceOrgGstProfile: builder.mutation<
       ApiSuccess<FinanceOrgGstProfile>,
-      { id: string; body: Partial<FinanceOrgGstProfile> }
+      { id: string; body: Partial<FinanceOrgGstProfile> & { fiscalYearStartMonth?: number } }
     >({
       query: ({ id, body }) => ({ url: `/api/v1/finance/org/gst-profiles/${id}`, method: 'PATCH', body }),
       invalidatesTags: ['FinanceOrgGstProfiles', 'FinanceOrganization'],
@@ -652,6 +653,10 @@ export const api = createApi({
     >({
       query: ({ id, body }) => ({ url: `/api/v1/finance/org/addresses/${id}`, method: 'PATCH', body }),
       invalidatesTags: ['FinanceOrgAddresses'],
+    }),
+    getFinanceOrgEmployeeOptions: builder.query<ApiSuccess<FinanceEmployeeOption[]>, void>({
+      query: () => '/api/v1/finance/org/employee-options',
+      providesTags: ['Employees'],
     }),
     getFinanceOrgOfficers: builder.query<
       ApiSuccess<FinanceOrgOfficer[]>,
@@ -3420,6 +3425,7 @@ export const {
   useGetFinanceOrgAddressesQuery,
   useCreateFinanceOrgAddressMutation,
   useUpdateFinanceOrgAddressMutation,
+  useGetFinanceOrgEmployeeOptionsQuery,
   useGetFinanceOrgOfficersQuery,
   useCreateFinanceOrgOfficerMutation,
   useUpdateFinanceOrgOfficerMutation,

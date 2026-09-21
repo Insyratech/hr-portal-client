@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
 import {
+  FISCAL_YEAR_MONTHS,
   INDIAN_STATES,
   SELECT_CLASS,
   optionalFormString,
@@ -23,12 +24,13 @@ import {
   useCreateFinanceOrgGstProfileLogoMutation,
   useCreateFinanceOrgGstProfileMutation,
   useCreateFinanceOrgOfficerMutation,
-  useGetEmployeesQuery,
+  useGetFinanceOrgEmployeeOptionsQuery,
   useGetFinanceOrgOfficersQuery,
+  useGetFinanceOrganizationQuery,
   useLookupFinanceGstinMutation,
   useUpdateFinanceOrgGstProfileMutation,
 } from '@/store/api/api';
-import type { Employee, FinanceOrgGstProfile, FinanceOrgOfficer, GstinLookupResult } from '@/types/api';
+import type { FinanceEmployeeOption, FinanceOrgGstProfile, FinanceOrgOfficer, GstinLookupResult } from '@/types/api';
 
 const STEPS: {
   id: string;
@@ -92,7 +94,6 @@ type PendingOfficer = {
   tempId: string;
   role: 'ceo' | 'director' | 'other';
   fullName: string;
-  designation: string;
   email: string | null;
   phone: string | null;
   din: string | null;
@@ -164,7 +165,8 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
   const [createLogo] = useCreateFinanceOrgGstProfileLogoMutation();
   const [createOfficer] = useCreateFinanceOrgOfficerMutation();
   const [lookupGstin, { isLoading: lookingUp }] = useLookupFinanceGstinMutation();
-  const { data: employeesData } = useGetEmployeesQuery({ status: 'active' });
+  const { data: orgData } = useGetFinanceOrganizationQuery();
+  const { data: employeesData, isLoading: employeesLoading } = useGetFinanceOrgEmployeeOptionsQuery();
   const { data: officersData } = useGetFinanceOrgOfficersQuery(
     profile?.id ? { orgGstProfileId: profile.id } : undefined,
     { skip: !profile?.id },
@@ -182,6 +184,7 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
     'regular' | 'composition' | 'unregistered'
   >(profile?.registrationType ?? 'regular');
   const [isDefault, setIsDefault] = useState(profile?.isDefault ?? false);
+  const [fiscalYearStartMonth, setFiscalYearStartMonth] = useState(4);
   const [legalName, setLegalName] = useState(profile?.legalName ?? '');
   const [tradeName, setTradeName] = useState(profile?.tradeName ?? '');
   const [cin, setCin] = useState(profile?.cin ?? '');
@@ -200,7 +203,6 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
     role: 'director' as PendingOfficer['role'],
     employeeId: '',
     fullName: '',
-    designation: '',
     email: '',
     phone: '',
     din: '',
@@ -218,6 +220,12 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
       [...employees].sort((a, b) => a.fullName.localeCompare(b.fullName, undefined, { sensitivity: 'base' })),
     [employees],
   );
+
+  useEffect(() => {
+    if (orgData?.data?.fiscalYearStartMonth) {
+      setFiscalYearStartMonth(orgData.data.fiscalYearStartMonth);
+    }
+  }, [orgData?.data?.fiscalYearStartMonth]);
 
   useEffect(() => {
     if (!profile) return;
@@ -292,7 +300,7 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
   }
 
   function fillOfficerFromEmployee(employeeId: string) {
-    const employee = employees.find((item: Employee) => item.id === employeeId);
+    const employee = employees.find((item: FinanceEmployeeOption) => item.id === employeeId);
     if (!employee) {
       setOfficerDraft((prev) => ({ ...prev, employeeId }));
       return;
@@ -301,7 +309,6 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
       ...prev,
       employeeId,
       fullName: employee.fullName,
-      designation: employee.designationName ?? prev.designation,
       email: employee.email ?? '',
       phone: employee.phone ?? '',
     }));
@@ -320,7 +327,6 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
         tempId: crypto.randomUUID(),
         role: officerDraft.role,
         fullName,
-        designation: officerDraft.designation.trim(),
         email: optionalFormString(officerDraft.email),
         phone: optionalFormString(officerDraft.phone),
         din: optionalFormString(officerDraft.din),
@@ -331,7 +337,6 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
       role: 'director',
       employeeId: '',
       fullName: '',
-      designation: '',
       email: '',
       phone: '',
       din: '',
@@ -409,6 +414,7 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
       email: email.trim() || null,
       website: website.trim() || null,
       isDefault,
+      fiscalYearStartMonth,
     };
   }
 
@@ -433,7 +439,7 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
           orgGstProfileId: savedId,
           role: officer.role,
           fullName: officer.fullName,
-          designation: officer.designation,
+          designation: officerRoleLabel(officer.role),
           email: officer.email,
           phone: officer.phone,
           din: officer.din,
@@ -614,6 +620,25 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
               />
               Set as default letterhead
             </label>
+            <div>
+              <Label htmlFor="gstFiscalYearStartMonth">Fiscal year start month</Label>
+              <select
+                id="gstFiscalYearStartMonth"
+                className={SELECT_CLASS}
+                value={fiscalYearStartMonth}
+                onChange={(event) => setFiscalYearStartMonth(Number(event.target.value))}
+                tabIndex={step === 0 ? undefined : -1}
+              >
+                {FISCAL_YEAR_MONTHS.map((month) => (
+                  <option key={month.value} value={month.value}>
+                    {month.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-muted">
+                Company fiscal calendar for reports. Saved with this GST registration.
+              </p>
+            </div>
           </div>
 
           <div className={cn('mt-6 space-y-4', step !== 1 && 'hidden')} aria-hidden={step !== 1}>
@@ -777,7 +802,6 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
                       <span className="text-foreground">{officer.fullName}</span>
                       {' · '}
                       {officerRoleLabel(officer.role)}
-                      {officer.designation ? ` · ${officer.designation}` : ''}
                     </li>
                   ))}
                 </ul>
@@ -794,8 +818,15 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
                   value={officerDraft.employeeId}
                   onChange={(event) => fillOfficerFromEmployee(event.target.value)}
                   tabIndex={step === 4 ? undefined : -1}
+                  disabled={employeesLoading}
                 >
-                  <option value="">Select employee or type manually</option>
+                  <option value="">
+                    {employeesLoading
+                      ? 'Loading employees…'
+                      : employeeOptions.length
+                        ? 'Select employee or type manually'
+                        : 'No employees found — type manually'}
+                  </option>
                   {employeeOptions.map((employee) => (
                     <option key={employee.id} value={employee.id}>
                       {employee.fullName}
@@ -837,29 +868,16 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
                   />
                 </div>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="gstOfficerDesignation">Designation</Label>
-                  <Input
-                    id="gstOfficerDesignation"
-                    value={officerDraft.designation}
-                    onChange={(event) =>
-                      setOfficerDraft((prev) => ({ ...prev, designation: event.target.value }))
-                    }
-                    tabIndex={step === 4 ? undefined : -1}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="gstOfficerDin">DIN</Label>
-                  <Input
-                    id="gstOfficerDin"
-                    value={officerDraft.din}
-                    onChange={(event) =>
-                      setOfficerDraft((prev) => ({ ...prev, din: event.target.value.toUpperCase() }))
-                    }
-                    tabIndex={step === 4 ? undefined : -1}
-                  />
-                </div>
+              <div>
+                <Label htmlFor="gstOfficerDin">DIN</Label>
+                <Input
+                  id="gstOfficerDin"
+                  value={officerDraft.din}
+                  onChange={(event) =>
+                    setOfficerDraft((prev) => ({ ...prev, din: event.target.value.toUpperCase() }))
+                  }
+                  tabIndex={step === 4 ? undefined : -1}
+                />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -902,7 +920,6 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
                       <span className="text-foreground">{officer.fullName}</span>
                       {' · '}
                       {officerRoleLabel(officer.role)}
-                      {officer.designation ? ` · ${officer.designation}` : ''}
                     </span>
                     <Button
                       type="button"
@@ -930,6 +947,13 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
               <PreviewRow label="GSTIN" value={gstin.trim().toUpperCase()} />
               <PreviewRow label="Registration type" value={registrationTypeLabel} />
               <PreviewRow label="Default letterhead" value={isDefault} />
+              <PreviewRow
+                label="Fiscal year start"
+                value={
+                  FISCAL_YEAR_MONTHS.find((month) => month.value === fiscalYearStartMonth)?.label ??
+                  String(fiscalYearStartMonth)
+                }
+              />
             </PreviewSection>
             <PreviewSection title="Identity">
               <PreviewRow label="Legal name" value={legalName} />
@@ -959,14 +983,14 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
                     <PreviewRow
                       key={officer.id}
                       label={officerRoleLabel(officer.role)}
-                      value={`${officer.fullName}${officer.designation ? ` (${officer.designation})` : ''}`}
+                      value={officer.fullName}
                     />
                   ))}
                   {pendingOfficers.map((officer) => (
                     <PreviewRow
                       key={officer.tempId}
                       label={`${officerRoleLabel(officer.role)} (new)`}
-                      value={`${officer.fullName}${officer.designation ? ` (${officer.designation})` : ''}`}
+                      value={officer.fullName}
                     />
                   ))}
                 </>
