@@ -86,7 +86,7 @@ export function FinanceCustomersPage() {
         open={createOpen}
         onOpenChange={setCreateOpen}
       >
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
           <DialogTitle>Add customer</DialogTitle>
           <DialogDescription>Step through identity, tax, addresses, and payment terms.</DialogDescription>
           <FinanceCustomerForm
@@ -102,7 +102,7 @@ export function FinanceCustomersPage() {
           if (!open) setEditing(null);
         }}
       >
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
           <DialogTitle>Edit customer</DialogTitle>
           <DialogDescription>Update contact, tax, and address details. Change history is shown when editing.</DialogDescription>
           {editing ? (

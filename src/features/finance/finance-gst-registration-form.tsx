@@ -577,7 +577,7 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
                   <Button
                     type="button"
                     variant="outline"
-                    className="shrink-0 sm:min-w-[6.5rem]"
+                    className="shrink-0 whitespace-nowrap sm:min-w-[7rem]"
                     loading={lookingUp}
                     onClick={() => void runGstinLookup()}
                     tabIndex={step === 0 ? undefined : -1}

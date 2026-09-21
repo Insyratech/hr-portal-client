@@ -520,38 +520,40 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
           </div>
 
           <div className={cn('mt-6 space-y-4', step !== 1 && 'hidden')} aria-hidden={step !== 1}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="gstin">GSTIN</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="gstin"
-                    value={gstin}
-                    onChange={(event) => setGstin(event.target.value.toUpperCase())}
-                    onBlur={() => void runGstinLookup()}
-                    maxLength={15}
-                    tabIndex={step === 1 ? undefined : -1}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    loading={lookingUp}
-                    onClick={() => void runGstinLookup()}
-                    tabIndex={step === 1 ? undefined : -1}
-                  >
-                    Look up
-                  </Button>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="pan">PAN</Label>
+            <div>
+              <Label htmlFor="gstin">GSTIN</Label>
+              <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
                 <Input
-                  id="pan"
-                  value={pan}
-                  onChange={(event) => setPan(event.target.value.toUpperCase())}
+                  id="gstin"
+                  className="min-w-0 flex-1 font-mono tracking-wide"
+                  value={gstin}
+                  onChange={(event) => setGstin(event.target.value.toUpperCase())}
+                  onBlur={() => void runGstinLookup()}
+                  maxLength={15}
                   tabIndex={step === 1 ? undefined : -1}
+                  autoComplete="off"
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0 whitespace-nowrap sm:min-w-[7rem]"
+                  loading={lookingUp}
+                  onClick={() => void runGstinLookup()}
+                  tabIndex={step === 1 ? undefined : -1}
+                >
+                  Look up
+                </Button>
               </div>
+            </div>
+            <div>
+              <Label htmlFor="pan">PAN</Label>
+              <Input
+                id="pan"
+                className="font-mono tracking-wide"
+                value={pan}
+                onChange={(event) => setPan(event.target.value.toUpperCase())}
+                tabIndex={step === 1 ? undefined : -1}
+              />
             </div>
             <div>
               <Label htmlFor="stateCode">State</Label>
