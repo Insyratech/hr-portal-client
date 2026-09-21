@@ -422,6 +422,8 @@ export type WeeklyWorkUpdate = {
   /** Derived from `timing` — true only for submissions after Sunday 23:59 IST. */
   late: boolean;
   fileAvailable?: boolean;
+  /** True after CSO shared this update in a package to GM — emp/CSO lose view access. */
+  sharedToGm?: boolean;
   fileRemovedAt?: string | null;
   fileRemovedReason?: 'downloaded' | 'emailed' | 'deleted' | null;
   emailRecipient?: string | null;

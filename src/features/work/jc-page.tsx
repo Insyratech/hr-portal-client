@@ -16,6 +16,7 @@ import {
   formatJcWhen,
   jcStatusLabel,
   jcStatusTone,
+  openPptView,
   uploadJcPpt,
 } from '@/features/work/jc-helpers';
 import {
@@ -72,12 +73,12 @@ export function JcPage() {
     return <WorkLoopExcludedNotice title="JC" />;
   }
 
-  async function onDownload(id: string) {
+  async function onView(id: string) {
     try {
       const result = await fetchDownload(id).unwrap();
-      window.open(result.data.url, '_blank', 'noopener,noreferrer');
+      openPptView(result.data.url);
     } catch (error) {
-      toast.error(apiErrorMessage(error, 'Could not open download.'));
+      toast.error(apiErrorMessage(error, 'Could not open the PPT for viewing.'));
     }
   }
 
@@ -85,8 +86,8 @@ export function JcPage() {
     <>
       <PageHeader kicker="Work" title="JC" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
-        Upload a JC PowerPoint for CSO review. CSO can transfer it to General Manager. After GM downloads or emails
-        the file, it is removed from portal storage — this page keeps the audit history.
+        Upload a JC PowerPoint for CSO review. Use View to check your file in the browser. After CSO transfers it to
+        General Manager, the file leaves this page (history remains). GM then downloads or emails it from their inbox.
       </p>
 
       {isLoading ? <PageLoading compact message="Loading…" /> : null}
@@ -102,13 +103,9 @@ export function JcPage() {
                 <span className="font-medium">{board.pending.systemFileName}</span>
                 <span className="text-muted">{formatJcWhen(board.pending.uploadedAt)}</span>
                 {board.pending.fileAvailable ? (
-                  <button
-                    type="button"
-                    className="underline text-muted hover:text-foreground"
-                    onClick={() => void onDownload(board.pending!.id)}
-                  >
-                    Download
-                  </button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void onView(board.pending!.id)}>
+                    View
+                  </Button>
                 ) : null}
               </div>
             ) : (
@@ -182,9 +179,11 @@ export function JcPage() {
                     <div className="flex items-center gap-3">
                       <StatusBadge status={jcStatusTone(item.status)} label={jcStatusLabel(item.status)} />
                       {item.fileAvailable ? (
-                        <Button type="button" size="sm" variant="ghost" onClick={() => void onDownload(item.id)}>
-                          Download
+                        <Button type="button" size="sm" variant="outline" onClick={() => void onView(item.id)}>
+                          View
                         </Button>
+                      ) : item.status === 'with_gm' ? (
+                        <span className="text-xs text-muted">With GM — view closed</span>
                       ) : null}
                     </div>
                   </li>

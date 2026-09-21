@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/dashboard/status-badge';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import { weeklyPptStatusLabel, weeklyPptStatusTone } from '@/features/work/weekly-ppt-status';
+import { openPptView } from '@/features/work/jc-helpers';
 import {
   useGetWeeklyPptAdminBoardQuery,
   useLazyGetWeeklyWorkUpdateDownloadQuery,
@@ -47,13 +48,13 @@ function CsoWeeklyUpdatesInner() {
   const [fetchDownload] = useLazyGetWeeklyWorkUpdateDownloadQuery();
   const board = data?.data;
 
-  const onDownload = useCallback(
+  const onView = useCallback(
     async (id: string) => {
       try {
         const result = await fetchDownload(id).unwrap();
-        window.open(result.data.url, '_blank', 'noopener,noreferrer');
+        openPptView(result.data.url);
       } catch (error) {
-        toast.error(apiErrorMessage(error, 'Could not open download.'));
+        toast.error(apiErrorMessage(error, 'Could not open the PPT for viewing.'));
       }
     },
     [fetchDownload, toast],
@@ -76,9 +77,8 @@ function CsoWeeklyUpdatesInner() {
     <>
       <PageHeader kicker="Work" title="Weekly work updates" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
-        Master archive for this week’s employee PPTs (max 15 MB). Download any file still in storage, then share the
-        package with General Manager. After GM downloads, emails, or deletes a file, storage is cleared but history
-        remains.
+        Review this week’s employee PPTs with View, then share the package with General Manager. After you share, files
+        leave this desk (history remains). GM downloads or emails them from Shared weekly updates.
       </p>
 
       {isLoading ? <PageLoading compact message="Loading…" /> : null}
@@ -186,11 +186,13 @@ function CsoWeeklyUpdatesInner() {
                           <Button
                             type="button"
                             size="sm"
-                            variant="ghost"
-                            onClick={() => void onDownload(person.update!.id)}
+                            variant="outline"
+                            onClick={() => void onView(person.update!.id)}
                           >
-                            Download
+                            View
                           </Button>
+                        ) : person.update?.sharedToGm ? (
+                          <span className="text-xs text-muted">Shared with GM — view closed</span>
                         ) : person.update ? (
                           <span className="text-xs text-muted">Removed from storage</span>
                         ) : null}

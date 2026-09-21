@@ -12,6 +12,7 @@ import {
   formatJcWhen,
   jcStatusLabel,
   jcStatusTone,
+  openPptView,
 } from '@/features/work/jc-helpers';
 import type { JcPptItem } from '@/types/api';
 import {
@@ -56,13 +57,13 @@ export function CsoJcPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const board = data?.data;
 
-  const onPreview = useCallback(
+  const onView = useCallback(
     async (id: string) => {
       try {
         const result = await fetchPreview(id).unwrap();
-        window.open(result.data.url, '_blank', 'noopener,noreferrer');
+        openPptView(result.data.url);
       } catch (error) {
-        toast.error(apiErrorMessage(error, 'Could not open download.'));
+        toast.error(apiErrorMessage(error, 'Could not open the PPT for viewing.'));
       }
     },
     [fetchPreview, toast],
@@ -87,8 +88,8 @@ export function CsoJcPage() {
     <>
       <PageHeader kicker="Work" title="Team JC" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
-        Review employee JC PowerPoints, then transfer each file to General Manager. After GM downloads or emails a
-        file, it leaves portal storage — audit history stays here.
+        Review employee JC PowerPoints with View, then transfer each file to General Manager. After transfer, the file
+        leaves this desk (history remains). GM downloads or emails it from their inbox.
       </p>
 
       {isLoading ? <PageLoading compact message="Loading…" /> : null}
@@ -127,9 +128,11 @@ export function CsoJcPage() {
                     item={item}
                     actions={
                       <>
-                        <Button type="button" size="sm" variant="ghost" onClick={() => void onPreview(item.id)}>
-                          Preview
-                        </Button>
+                        {item.fileAvailable ? (
+                          <Button type="button" size="sm" variant="outline" onClick={() => void onView(item.id)}>
+                            View
+                          </Button>
+                        ) : null}
                         <Button
                           type="button"
                           size="sm"
@@ -156,11 +159,7 @@ export function CsoJcPage() {
                   <JcRow
                     key={item.id}
                     item={item}
-                    actions={
-                      <Button type="button" size="sm" variant="ghost" onClick={() => void onPreview(item.id)}>
-                        Preview
-                      </Button>
-                    }
+                    actions={<span className="text-xs text-muted">With GM — view closed</span>}
                   />
                 ))}
               </ul>

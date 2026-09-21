@@ -44,6 +44,17 @@ export function downloadBase64File(fileName: string, contentType: string, conten
   URL.revokeObjectURL(url);
 }
 
+/** Open a PPT/PPTX in Microsoft Office Online viewer (falls back to the signed URL). */
+export function openPptView(signedUrl: string) {
+  if (!signedUrl) return;
+  try {
+    const viewer = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(signedUrl)}`;
+    window.open(viewer, '_blank', 'noopener,noreferrer');
+  } catch {
+    window.open(signedUrl, '_blank', 'noopener,noreferrer');
+  }
+}
+
 export function jcStatusTone(status: string): 'approved' | 'pending' | 'rejected' {
   if (status === 'downloaded' || status === 'emailed' || status === 'deleted') return 'approved';
   if (status === 'with_gm') return 'pending';
