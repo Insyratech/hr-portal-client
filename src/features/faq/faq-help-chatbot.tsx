@@ -67,9 +67,9 @@ function bubbleClass(from: 'bot' | 'user', tone: ChatTone = 'default'): string {
 
 export function FaqHelpChatbot() {
   const user = useAppSelector((state) => state.auth.user);
-  const roles = user?.roles ?? [];
-  const categories = useMemo(() => faqCategoriesForRoles(roles), [roles]);
-  const roleLabel = useMemo(() => faqRoleLabel(roles), [roles]);
+  const roles = user?.roles;
+  const categories = useMemo(() => faqCategoriesForRoles(roles ?? []), [roles]);
+  const roleLabel = useMemo(() => faqRoleLabel(roles ?? []), [roles]);
 
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -368,7 +368,7 @@ export function FaqHelpChatbot() {
           !open && 'faq-help-fab--float',
         )}
       >
-        // eslint-disable-next-line @next/next/no-img-element -- static public asset for FAB
+        {/* eslint-disable-next-line @next/next/no-img-element -- static public asset for FAB */}
         <img
           src="/emoji-smile.png"
           alt=""
