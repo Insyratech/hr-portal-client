@@ -615,14 +615,14 @@ export const api = createApi({
       Partial<FinanceOrgGstProfile> & { gstin: string }
     >({
       query: (body) => ({ url: '/api/v1/finance/org/gst-profiles', method: 'POST', body }),
-      invalidatesTags: ['FinanceOrgGstProfiles'],
+      invalidatesTags: ['FinanceOrgGstProfiles', 'FinanceOrganization', 'FinanceOrgOfficers'],
     }),
     updateFinanceOrgGstProfile: builder.mutation<
       ApiSuccess<FinanceOrgGstProfile>,
       { id: string; body: Partial<FinanceOrgGstProfile> }
     >({
       query: ({ id, body }) => ({ url: `/api/v1/finance/org/gst-profiles/${id}`, method: 'PATCH', body }),
-      invalidatesTags: ['FinanceOrgGstProfiles'],
+      invalidatesTags: ['FinanceOrgGstProfiles', 'FinanceOrganization'],
     }),
     createFinanceOrgGstProfileLogo: builder.mutation<
       ApiSuccess<FinanceSignedUpload>,
@@ -653,13 +653,22 @@ export const api = createApi({
       query: ({ id, body }) => ({ url: `/api/v1/finance/org/addresses/${id}`, method: 'PATCH', body }),
       invalidatesTags: ['FinanceOrgAddresses'],
     }),
-    getFinanceOrgOfficers: builder.query<ApiSuccess<FinanceOrgOfficer[]>, void>({
-      query: () => '/api/v1/finance/org/officers',
+    getFinanceOrgOfficers: builder.query<
+      ApiSuccess<FinanceOrgOfficer[]>,
+      { orgGstProfileId?: string } | void
+    >({
+      query: (arg) => ({
+        url: '/api/v1/finance/org/officers',
+        params:
+          arg && typeof arg === 'object' && arg.orgGstProfileId
+            ? { orgGstProfileId: arg.orgGstProfileId }
+            : undefined,
+      }),
       providesTags: ['FinanceOrgOfficers'],
     }),
     createFinanceOrgOfficer: builder.mutation<
       ApiSuccess<FinanceOrgOfficer>,
-      Partial<FinanceOrgOfficer> & { fullName: string }
+      Partial<FinanceOrgOfficer> & { fullName: string; orgGstProfileId?: string | null }
     >({
       query: (body) => ({ url: '/api/v1/finance/org/officers', method: 'POST', body }),
       invalidatesTags: ['FinanceOrgOfficers'],

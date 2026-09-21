@@ -1,7 +1,7 @@
 'use client';
 
 import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActionConfirmDialog } from '@/components/dashboard/action-confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Icon, type IconName } from '@/components/ui/icon';
@@ -11,6 +11,7 @@ import { StatusMessage } from '@/components/ui/status-message';
 import {
   INDIAN_STATES,
   SELECT_CLASS,
+  optionalFormString,
   stateFromCode,
 } from '@/features/finance/finance-constants';
 import { uploadFinanceOrgLogo } from '@/features/finance/finance-vendor-uploads';
@@ -20,10 +21,13 @@ import { ACCENT, FORM_SECTION_TONE } from '@/lib/ui-accents';
 import {
   useCreateFinanceOrgGstProfileLogoMutation,
   useCreateFinanceOrgGstProfileMutation,
+  useCreateFinanceOrgOfficerMutation,
+  useGetEmployeesQuery,
+  useGetFinanceOrgOfficersQuery,
   useLookupFinanceGstinMutation,
   useUpdateFinanceOrgGstProfileMutation,
 } from '@/store/api/api';
-import type { FinanceOrgGstProfile, GstinLookupResult } from '@/types/api';
+import type { Employee, FinanceOrgGstProfile, FinanceOrgOfficer, GstinLookupResult } from '@/types/api';
 
 const STEPS: {
   id: string;
@@ -38,7 +42,7 @@ const STEPS: {
     title: 'GSTIN',
     subtitle: 'Registration key',
     heading: 'GST registration',
-    description: 'GSTIN is the unique key for this letterhead. Lookup can pre-fill state and PAN.',
+    description: 'GSTIN is the unique key for this letterhead. Use Look up to decode state and PAN.',
     icon: 'badge',
   },
   {
@@ -46,7 +50,7 @@ const STEPS: {
     title: 'Identity',
     subtitle: 'Legal & trade name',
     heading: 'Company identity',
-    description: 'Legal name is required and used as the display label for this registration.',
+    description: 'Legal name, trade name, CIN, and PAN for this GSTIN letterhead.',
     icon: 'building',
   },
   {
@@ -66,6 +70,14 @@ const STEPS: {
     icon: 'user',
   },
   {
+    id: 'officers',
+    title: 'Officers',
+    subtitle: 'Directors & CEO',
+    heading: 'Directors & CEO',
+    description: 'Link directors and CEO for this GST registration. Pick from employees or enter manually.',
+    icon: 'users',
+  },
+  {
     id: 'preview',
     title: 'Preview',
     subtitle: 'Confirm & submit',
@@ -74,6 +86,17 @@ const STEPS: {
     icon: 'check',
   },
 ];
+
+type PendingOfficer = {
+  tempId: string;
+  role: 'ceo' | 'director' | 'other';
+  fullName: string;
+  designation: string;
+  email: string | null;
+  phone: string | null;
+  din: string | null;
+  employeeId: string | null;
+};
 
 function PreviewRow({ label, value }: { label: string; value?: string | number | boolean | null }) {
   let text = '—';
@@ -99,6 +122,34 @@ function PreviewSection({ title, children }: { title: string; children: ReactNod
   );
 }
 
+function parseMultilineAddress(text: string | null | undefined): {
+  line1: string;
+  line2: string;
+  city: string;
+  postalCode: string;
+} {
+  if (!text?.trim()) {
+    return { line1: '', line2: '', city: '', postalCode: '' };
+  }
+  const lines = text
+    .split(/\n|,/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const postalMatch = text.match(/\b(\d{6})\b/);
+  return {
+    line1: lines[0] ?? '',
+    line2: lines[1] ?? '',
+    city: lines[2] ?? '',
+    postalCode: postalMatch?.[1] ?? '',
+  };
+}
+
+function officerRoleLabel(role: PendingOfficer['role'] | FinanceOrgOfficer['role']) {
+  if (role === 'ceo') return 'CEO';
+  if (role === 'director') return 'Director';
+  return 'Other';
+}
+
 type GstRegistrationFormProps = {
   profile?: FinanceOrgGstProfile | null;
   onSaved: (profile: FinanceOrgGstProfile) => void;
@@ -110,13 +161,20 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
   const [createProfile, { isLoading: creating }] = useCreateFinanceOrgGstProfileMutation();
   const [updateProfile, { isLoading: updating }] = useUpdateFinanceOrgGstProfileMutation();
   const [createLogo] = useCreateFinanceOrgGstProfileLogoMutation();
+  const [createOfficer] = useCreateFinanceOrgOfficerMutation();
   const [lookupGstin, { isLoading: lookingUp }] = useLookupFinanceGstinMutation();
+  const { data: employeesData } = useGetEmployeesQuery({ status: 'active' });
+  const { data: officersData } = useGetFinanceOrgOfficersQuery(
+    profile?.id ? { orgGstProfileId: profile.id } : undefined,
+    { skip: !profile?.id },
+  );
 
   const [step, setStep] = useState(0);
   const [maxReached, setMaxReached] = useState(() => (profile ? STEPS.length - 1 : 0));
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingLookup, setPendingLookup] = useState<GstinLookupResult | null>(null);
+  const [lookupDismissed, setLookupDismissed] = useState(false);
 
   const [gstin, setGstin] = useState(profile?.gstin ?? '');
   const [registrationType, setRegistrationType] = useState<
@@ -136,11 +194,29 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
   const [email, setEmail] = useState(profile?.email ?? '');
   const [website, setWebsite] = useState(profile?.website ?? '');
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [pendingOfficers, setPendingOfficers] = useState<PendingOfficer[]>([]);
+  const [officerDraft, setOfficerDraft] = useState({
+    role: 'director' as PendingOfficer['role'],
+    employeeId: '',
+    fullName: '',
+    designation: '',
+    email: '',
+    phone: '',
+    din: '',
+  });
 
   const lastStep = STEPS.length - 1;
   const current = STEPS[step]!;
   const saving = creating || updating;
   const { stateName } = stateFromCode(stateCode);
+  const employees = employeesData?.data ?? [];
+  const existingOfficers = officersData?.data ?? [];
+
+  const employeeOptions = useMemo(
+    () =>
+      [...employees].sort((a, b) => a.fullName.localeCompare(b.fullName, undefined, { sensitivity: 'base' })),
+    [employees],
+  );
 
   useEffect(() => {
     if (!profile) return;
@@ -160,19 +236,39 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
     setEmail(profile.email ?? '');
     setWebsite(profile.website ?? '');
     setLogoFile(null);
+    setPendingOfficers([]);
+    setPendingLookup(null);
+    setLookupDismissed(false);
   }, [profile]);
 
-  function applyLookup(result: GstinLookupResult) {
+  function applyLookupAutoFill(result: GstinLookupResult) {
     if (result.stateCode) setStateCode(result.stateCode);
     if (result.pan) setPan(result.pan);
-    if (result.legalName && !legalName.trim()) setLegalName(result.legalName);
+    if (result.legalName) setLegalName(result.legalName);
+    if (result.billingAddress) {
+      const parsed = parseMultilineAddress(result.billingAddress);
+      if (parsed.line1) setAddressLine1(parsed.line1);
+      if (parsed.line2) setAddressLine2(parsed.line2);
+      if (parsed.city) setCity(parsed.city);
+      if (parsed.postalCode) setPostalCode(parsed.postalCode);
+    }
     setPendingLookup(null);
+    setLookupDismissed(true);
+  }
+
+  function dismissLookupManual() {
+    setPendingLookup(null);
+    setLookupDismissed(true);
   }
 
   async function runGstinLookup(raw?: string) {
     const value = (raw ?? gstin).trim().toUpperCase();
-    if (value.length < 15) return;
+    if (value.length < 15) {
+      setError('Enter a 15-character GSTIN before looking up.');
+      return;
+    }
     setError(null);
+    setLookupDismissed(false);
     try {
       const result = await lookupGstin({ gstin: value }).unwrap();
       if (result.data.validFormat) {
@@ -184,6 +280,53 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
     } catch (cause) {
       setError(apiErrorMessage(cause, 'Unable to look up GSTIN.'));
     }
+  }
+
+  function fillOfficerFromEmployee(employeeId: string) {
+    const employee = employees.find((item: Employee) => item.id === employeeId);
+    if (!employee) {
+      setOfficerDraft((prev) => ({ ...prev, employeeId }));
+      return;
+    }
+    setOfficerDraft((prev) => ({
+      ...prev,
+      employeeId,
+      fullName: employee.fullName,
+      designation: employee.designationName ?? prev.designation,
+      email: employee.email ?? '',
+      phone: employee.phone ?? '',
+    }));
+  }
+
+  function addPendingOfficer() {
+    const fullName = officerDraft.fullName.trim();
+    if (!fullName) {
+      setError('Officer full name is required.');
+      return;
+    }
+    setError(null);
+    setPendingOfficers((prev) => [
+      ...prev,
+      {
+        tempId: crypto.randomUUID(),
+        role: officerDraft.role,
+        fullName,
+        designation: officerDraft.designation.trim(),
+        email: optionalFormString(officerDraft.email),
+        phone: optionalFormString(officerDraft.phone),
+        din: optionalFormString(officerDraft.din),
+        employeeId: officerDraft.employeeId || null,
+      },
+    ]);
+    setOfficerDraft({
+      role: 'director',
+      employeeId: '',
+      fullName: '',
+      designation: '',
+      email: '',
+      phone: '',
+      din: '',
+    });
   }
 
   function validateStep(index: number): boolean {
@@ -209,6 +352,10 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
       }
       if (!city.trim()) {
         setError('City is required.');
+        return false;
+      }
+      if (!stateCode) {
+        setError('State is required.');
         return false;
       }
     }
@@ -259,8 +406,8 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
   async function handleConfirmSave() {
     setError(null);
     const body = collectBody();
-    if (!body.gstin || !body.legalName || !body.addressLine1 || !body.city) {
-      setError('GSTIN, legal name, address line 1, and city are required.');
+    if (!body.gstin || !body.legalName || !body.addressLine1 || !body.city || !body.stateCode) {
+      setError('GSTIN, legal name, address line 1, city, and state are required.');
       setConfirmOpen(false);
       return;
     }
@@ -268,9 +415,22 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
       const result = profile
         ? await updateProfile({ id: profile.id, body }).unwrap()
         : await createProfile(body).unwrap();
+      const savedId = result.data.id;
       if (logoFile) {
-        await uploadFinanceOrgLogo(createLogo, result.data.id, logoFile);
+        await uploadFinanceOrgLogo(createLogo, savedId, logoFile);
       }
+      for (const officer of pendingOfficers) {
+        await createOfficer({
+          orgGstProfileId: savedId,
+          role: officer.role,
+          fullName: officer.fullName,
+          designation: officer.designation,
+          email: officer.email,
+          phone: officer.phone,
+          din: officer.din,
+        }).unwrap();
+      }
+      setPendingOfficers([]);
       setConfirmOpen(false);
       onSaved(result.data);
     } catch (cause) {
@@ -285,17 +445,6 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (step !== lastStep) {
-      goNext();
-      return;
-    }
-    if (!validateStep(0) || !validateStep(1) || !validateStep(2)) {
-      if (!gstin.trim()) setStep(0);
-      else if (!legalName.trim()) setStep(1);
-      else setStep(2);
-      return;
-    }
-    setConfirmOpen(true);
   }
 
   function onFormKeyDown(event: KeyboardEvent<HTMLFormElement>) {
@@ -318,7 +467,7 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
   return (
     <form onSubmit={onSubmit} onKeyDown={onFormKeyDown} className="mt-4">
       <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
-        <nav aria-label="GST registration stages" className="shrink-0 lg:w-56">
+        <nav aria-label="GST registration stages" className="shrink-0 lg:w-52">
           <ol className="relative space-y-0">
             {STEPS.map((item, index) => {
               const active = index === step;
@@ -385,36 +534,74 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
 
           {pendingLookup ? (
             <div className="mt-4 rounded border border-[var(--accent-purple)]/40 bg-[var(--accent-purple)]/10 p-4">
-              <p className="text-sm">{pendingLookup.message}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button type="button" size="sm" onClick={() => applyLookup(pendingLookup)}>
-                  Apply suggested details
+              <p className="text-sm font-medium text-foreground">Lookup result</p>
+              <p className="mt-1 text-sm text-muted">{pendingLookup.message}</p>
+              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-muted">GSTIN</dt>
+                  <dd className="text-foreground">{pendingLookup.gstin}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-muted">State</dt>
+                  <dd className="text-foreground">
+                    {pendingLookup.stateName
+                      ? `${pendingLookup.stateName} (${pendingLookup.stateCode})`
+                      : pendingLookup.stateCode ?? '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-muted">PAN</dt>
+                  <dd className="text-foreground">{pendingLookup.pan ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-muted">Legal name</dt>
+                  <dd className="text-foreground">{pendingLookup.legalName ?? '—'}</dd>
+                </div>
+                {pendingLookup.billingAddress ? (
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs uppercase tracking-wide text-muted">Address hint</dt>
+                    <dd className="whitespace-pre-wrap text-foreground">{pendingLookup.billingAddress}</dd>
+                  </div>
+                ) : null}
+              </dl>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button type="button" size="sm" onClick={() => applyLookupAutoFill(pendingLookup)}>
+                  Auto-fill fields
                 </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => setPendingLookup(null)}>
-                  Cancel
+                <Button type="button" size="sm" variant="outline" onClick={dismissLookupManual}>
+                  Fill manually
                 </Button>
               </div>
+              <p className="mt-2 text-xs text-muted">
+                Auto-fill still lets you edit every field on later steps. Fill manually keeps the GSTIN and
+                leaves identity/address empty for you to complete.
+              </p>
             </div>
           ) : null}
 
           <div className={cn('mt-6 space-y-4', step !== 0 && 'hidden')} aria-hidden={step !== 0}>
             <div>
               <Label htmlFor="gstRegGstin">GSTIN</Label>
-              <div className="flex gap-2">
+              <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
                 <Input
                   id="gstRegGstin"
+                  className="min-w-0 flex-1 font-mono tracking-wide"
                   value={gstin}
-                  onChange={(event) => setGstin(event.target.value.toUpperCase())}
-                  onBlur={() => void runGstinLookup()}
+                  onChange={(event) => {
+                    setGstin(event.target.value.toUpperCase());
+                    setPendingLookup(null);
+                    setLookupDismissed(false);
+                  }}
                   maxLength={15}
-                  required
                   readOnly={isEdit}
                   tabIndex={step === 0 ? undefined : -1}
+                  autoComplete="off"
                 />
                 {!isEdit ? (
                   <Button
                     type="button"
                     variant="outline"
+                    className="shrink-0 sm:min-w-[6.5rem]"
                     loading={lookingUp}
                     onClick={() => void runGstinLookup()}
                     tabIndex={step === 0 ? undefined : -1}
@@ -427,6 +614,8 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
                 <p className="mt-1 text-xs text-muted">
                   GSTIN cannot be changed after registration. Register a new GSTIN to use a different number.
                 </p>
+              ) : lookupDismissed && !pendingLookup ? (
+                <p className="mt-1 text-xs text-muted">Continuing with manual entry. Fields remain editable.</p>
               ) : null}
             </div>
             <div>
@@ -464,7 +653,6 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
                 id="gstLegalName"
                 value={legalName}
                 onChange={(event) => setLegalName(event.target.value)}
-                required
                 tabIndex={step === 1 ? undefined : -1}
               />
             </div>
@@ -506,7 +694,6 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
                 id="gstAddressLine1"
                 value={addressLine1}
                 onChange={(event) => setAddressLine1(event.target.value)}
-                required
                 tabIndex={step === 2 ? undefined : -1}
               />
             </div>
@@ -526,7 +713,6 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
                   id="gstCity"
                   value={city}
                   onChange={(event) => setCity(event.target.value)}
-                  required
                   tabIndex={step === 2 ? undefined : -1}
                 />
               </div>
@@ -612,6 +798,164 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
           </div>
 
           <div className={cn('mt-6 space-y-4', step !== 4 && 'hidden')} aria-hidden={step !== 4}>
+            {existingOfficers.length ? (
+              <div className="rounded border border-border p-4">
+                <p className="text-sm font-medium text-foreground">Saved for this GSTIN</p>
+                <ul className="mt-3 space-y-2 text-sm">
+                  {existingOfficers.map((officer) => (
+                    <li key={officer.id} className="text-muted">
+                      <span className="text-foreground">{officer.fullName}</span>
+                      {' · '}
+                      {officerRoleLabel(officer.role)}
+                      {officer.designation ? ` · ${officer.designation}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div className="rounded border border-border p-4 space-y-4">
+              <p className="text-sm font-medium text-foreground">Add officer</p>
+              <div>
+                <Label htmlFor="gstOfficerEmployee">Employee (optional)</Label>
+                <select
+                  id="gstOfficerEmployee"
+                  className={SELECT_CLASS}
+                  value={officerDraft.employeeId}
+                  onChange={(event) => fillOfficerFromEmployee(event.target.value)}
+                  tabIndex={step === 4 ? undefined : -1}
+                >
+                  <option value="">Select employee or type manually</option>
+                  {employeeOptions.map((employee) => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.fullName}
+                      {employee.employeeCode ? ` (${employee.employeeCode})` : ''}
+                      {employee.designationName ? ` — ${employee.designationName}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="gstOfficerRole">Role</Label>
+                  <select
+                    id="gstOfficerRole"
+                    className={SELECT_CLASS}
+                    value={officerDraft.role}
+                    onChange={(event) =>
+                      setOfficerDraft((prev) => ({
+                        ...prev,
+                        role: event.target.value as PendingOfficer['role'],
+                      }))
+                    }
+                    tabIndex={step === 4 ? undefined : -1}
+                  >
+                    <option value="ceo">CEO</option>
+                    <option value="director">Director</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="gstOfficerName">Full name</Label>
+                  <Input
+                    id="gstOfficerName"
+                    value={officerDraft.fullName}
+                    onChange={(event) =>
+                      setOfficerDraft((prev) => ({ ...prev, fullName: event.target.value }))
+                    }
+                    tabIndex={step === 4 ? undefined : -1}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="gstOfficerDesignation">Designation</Label>
+                  <Input
+                    id="gstOfficerDesignation"
+                    value={officerDraft.designation}
+                    onChange={(event) =>
+                      setOfficerDraft((prev) => ({ ...prev, designation: event.target.value }))
+                    }
+                    tabIndex={step === 4 ? undefined : -1}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="gstOfficerDin">DIN</Label>
+                  <Input
+                    id="gstOfficerDin"
+                    value={officerDraft.din}
+                    onChange={(event) =>
+                      setOfficerDraft((prev) => ({ ...prev, din: event.target.value.toUpperCase() }))
+                    }
+                    tabIndex={step === 4 ? undefined : -1}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="gstOfficerEmail">Email</Label>
+                  <Input
+                    id="gstOfficerEmail"
+                    type="email"
+                    value={officerDraft.email}
+                    onChange={(event) =>
+                      setOfficerDraft((prev) => ({ ...prev, email: event.target.value }))
+                    }
+                    tabIndex={step === 4 ? undefined : -1}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="gstOfficerPhone">Phone</Label>
+                  <Input
+                    id="gstOfficerPhone"
+                    value={officerDraft.phone}
+                    onChange={(event) =>
+                      setOfficerDraft((prev) => ({ ...prev, phone: event.target.value }))
+                    }
+                    tabIndex={step === 4 ? undefined : -1}
+                  />
+                </div>
+              </div>
+              <Button type="button" variant="outline" onClick={addPendingOfficer} tabIndex={step === 4 ? undefined : -1}>
+                Add to list
+              </Button>
+            </div>
+
+            {pendingOfficers.length ? (
+              <ul className="space-y-2 text-sm">
+                {pendingOfficers.map((officer) => (
+                  <li
+                    key={officer.tempId}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded border border-border px-3 py-2"
+                  >
+                    <span>
+                      <span className="text-foreground">{officer.fullName}</span>
+                      {' · '}
+                      {officerRoleLabel(officer.role)}
+                      {officer.designation ? ` · ${officer.designation}` : ''}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setPendingOfficers((prev) => prev.filter((item) => item.tempId !== officer.tempId))
+                      }
+                      tabIndex={step === 4 ? undefined : -1}
+                    >
+                      Remove
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted">
+                Officers are optional. You can add them now or later when editing this GSTIN.
+              </p>
+            )}
+          </div>
+
+          <div className={cn('mt-6 space-y-4', step !== 5 && 'hidden')} aria-hidden={step !== 5}>
             <PreviewSection title="GSTIN">
               <PreviewRow label="GSTIN" value={gstin.trim().toUpperCase()} />
               <PreviewRow label="Registration type" value={registrationTypeLabel} />
@@ -636,6 +980,28 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
               <PreviewRow label="Website" value={website} />
               <PreviewRow label="Logo" value={logoFile?.name ?? (profile?.logoUrl ? 'Current logo' : null)} />
             </PreviewSection>
+            <PreviewSection title="Directors & CEO">
+              {existingOfficers.length === 0 && pendingOfficers.length === 0 ? (
+                <PreviewRow label="Officers" value="None added" />
+              ) : (
+                <>
+                  {existingOfficers.map((officer) => (
+                    <PreviewRow
+                      key={officer.id}
+                      label={officerRoleLabel(officer.role)}
+                      value={`${officer.fullName}${officer.designation ? ` (${officer.designation})` : ''}`}
+                    />
+                  ))}
+                  {pendingOfficers.map((officer) => (
+                    <PreviewRow
+                      key={officer.tempId}
+                      label={`${officerRoleLabel(officer.role)} (new)`}
+                      value={`${officer.fullName}${officer.designation ? ` (${officer.designation})` : ''}`}
+                    />
+                  ))}
+                </>
+              )}
+            </PreviewSection>
           </div>
 
           {error ? (
@@ -655,9 +1021,27 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
                 </Button>
               ) : null}
             </div>
-            <Button type="submit" loading={step === lastStep && saving}>
-              {step === lastStep ? 'Confirm & submit' : 'Next'}
-            </Button>
+            {step === lastStep ? (
+              <Button
+                type="button"
+                loading={saving}
+                onClick={() => {
+                  if (!validateStep(0) || !validateStep(1) || !validateStep(2)) {
+                    if (!gstin.trim() || gstin.trim().length !== 15) setStep(0);
+                    else if (!legalName.trim()) setStep(1);
+                    else setStep(2);
+                    return;
+                  }
+                  setConfirmOpen(true);
+                }}
+              >
+                Confirm & submit
+              </Button>
+            ) : (
+              <Button type="button" onClick={goNext}>
+                Next
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -668,7 +1052,7 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
         description={
           isEdit
             ? 'This will update the GST registration letterhead. Changes apply to new documents using this GSTIN.'
-            : `Register GSTIN ${gstin.trim().toUpperCase()} as a letterhead? You can register up to 3 active GST registrations.`
+            : `Register GSTIN ${gstin.trim().toUpperCase()} as a letterhead? You can register up to 4 active GST registrations.`
         }
         confirmLabel="OK, submit"
         pending={saving}
