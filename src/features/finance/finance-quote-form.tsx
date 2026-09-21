@@ -350,11 +350,6 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (step !== lastStep) {
-      goNext();
-      return;
-    }
-    setConfirmOpen(true);
   }
 
   function onFormKeyDown(event: KeyboardEvent<HTMLFormElement>) {
@@ -483,7 +478,6 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
                 className={SELECT_CLASS}
                 value={customerId}
                 onChange={(event) => onCustomerChange(event.target.value)}
-                required
                 tabIndex={step === 1 ? undefined : -1}
               >
                 <option value="">Select customer</option>
@@ -617,7 +611,7 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
                       prev.map((item, i) => (i === index ? { ...item, description: event.target.value } : item)),
                     )
                   }
-                  required
+                  tabIndex={step === 3 ? undefined : -1}
                 />
                 <Input
                   className="sm:col-span-2"
@@ -628,6 +622,7 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
                       prev.map((item, i) => (i === index ? { ...item, catalogNo: event.target.value } : item)),
                     )
                   }
+                  tabIndex={step === 3 ? undefined : -1}
                 />
                 <Input
                   className="sm:col-span-2"
@@ -638,6 +633,7 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
                       prev.map((item, i) => (i === index ? { ...item, hsnSac: event.target.value } : item)),
                     )
                   }
+                  tabIndex={step === 3 ? undefined : -1}
                 />
                 <Input
                   className="sm:col-span-1"
@@ -650,7 +646,7 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
                       prev.map((item, i) => (i === index ? { ...item, quantity: event.target.value } : item)),
                     )
                   }
-                  required
+                  tabIndex={step === 3 ? undefined : -1}
                 />
                 <Input
                   className="sm:col-span-1"
@@ -660,6 +656,7 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
                       prev.map((item, i) => (i === index ? { ...item, unit: event.target.value } : item)),
                     )
                   }
+                  tabIndex={step === 3 ? undefined : -1}
                 />
                 <Input
                   className="sm:col-span-1"
@@ -672,7 +669,7 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
                       prev.map((item, i) => (i === index ? { ...item, rate: event.target.value } : item)),
                     )
                   }
-                  required
+                  tabIndex={step === 3 ? undefined : -1}
                 />
                 <Input
                   className="sm:col-span-1"
@@ -685,7 +682,7 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
                       prev.map((item, i) => (i === index ? { ...item, taxPercent: event.target.value } : item)),
                     )
                   }
-                  required
+                  tabIndex={step === 3 ? undefined : -1}
                 />
                 <Button
                   type="button"
@@ -841,9 +838,26 @@ export function FinanceQuoteForm({ quote, onSaved, onCancel }: FinanceQuoteFormP
                 </Button>
               ) : null}
             </div>
-            <Button type="submit" loading={step === lastStep && saving}>
-              {step === lastStep ? 'Confirm & submit' : 'Next'}
-            </Button>
+            {step === lastStep ? (
+              <Button
+                type="button"
+                loading={saving}
+                onClick={() => {
+                  if (!validateStep(1) || !validateStep(3)) {
+                    if (!customerId) setStep(1);
+                    else setStep(3);
+                    return;
+                  }
+                  setConfirmOpen(true);
+                }}
+              >
+                Confirm & submit
+              </Button>
+            ) : (
+              <Button type="button" onClick={goNext}>
+                Next
+              </Button>
+            )}
           </div>
         </div>
       </div>

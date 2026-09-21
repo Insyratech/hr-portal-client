@@ -366,11 +366,6 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (step !== lastStep) {
-      goNext();
-      return;
-    }
-    setConfirmOpen(true);
   }
 
   function onFormKeyDown(event: KeyboardEvent<HTMLFormElement>) {
@@ -489,7 +484,6 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
                 id="displayName"
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
-                required
                 tabIndex={step === 0 ? undefined : -1}
               />
             </div>
@@ -822,9 +816,25 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
                 </Button>
               ) : null}
             </div>
-            <Button type="submit" loading={step === lastStep && saving}>
-              {step === lastStep ? 'Confirm & submit' : 'Next'}
-            </Button>
+            {step === lastStep ? (
+              <Button
+                type="button"
+                loading={saving}
+                onClick={() => {
+                  if (!validateStep(0)) {
+                    setStep(0);
+                    return;
+                  }
+                  setConfirmOpen(true);
+                }}
+              >
+                Confirm & submit
+              </Button>
+            ) : (
+              <Button type="button" onClick={goNext}>
+                Next
+              </Button>
+            )}
           </div>
         </div>
       </div>
