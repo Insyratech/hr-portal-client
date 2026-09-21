@@ -146,7 +146,7 @@ export function ResetPasswordForm() {
     return (
       <div className="space-y-6">
         <div>
-          <Meta className="mb-3">HR Portal</Meta>
+          <Meta className="mb-3">ERP Portal</Meta>
           <h1 className="text-3xl font-semibold tracking-tight">RESET LINK EXPIRED</h1>
         </div>
         <p className="text-sm text-muted">
@@ -167,7 +167,7 @@ export function ResetPasswordForm() {
   return (
     <form onSubmit={(event) => void onSubmit(event)} className="space-y-6">
       <div>
-        <Meta className="mb-3">HR Portal</Meta>
+        <Meta className="mb-3">ERP Portal</Meta>
         <h1 className="text-3xl font-semibold tracking-tight">SET NEW PASSWORD</h1>
         <p className="mt-2 text-sm text-muted">Choose a new password, then sign in with it.</p>
       </div>

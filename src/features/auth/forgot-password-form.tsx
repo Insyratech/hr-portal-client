@@ -34,7 +34,7 @@ export function ForgotPasswordForm() {
   return (
     <form onSubmit={(event) => void onSubmit(event)} className="space-y-6">
       <div>
-        <Meta className="mb-3">HR Portal</Meta>
+        <Meta className="mb-3">ERP Portal</Meta>
         <h1 className="text-3xl font-semibold tracking-tight">FORGOT PASSWORD</h1>
       </div>
       <div>

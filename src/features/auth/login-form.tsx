@@ -127,7 +127,7 @@ export function LoginForm() {
       <LoadingOverlay open={entering} message="We are almost there…" />
       <form onSubmit={onSubmit} className="space-y-6" autoComplete="off">
         <div>
-          <Meta className="mb-3">HR Portal</Meta>
+          <Meta className="mb-3">ERP Portal</Meta>
           <h1 className="text-3xl font-semibold tracking-tight">LOGIN</h1>
         </div>
         <div className="sr-only" aria-hidden="true">

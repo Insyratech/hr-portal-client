@@ -11,11 +11,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'HR Portal',
+  title: 'ERP Portal',
   description: 'Policy-driven HR operations',
   appleWebApp: {
     capable: true,
-    title: 'HR Portal',
+    title: 'ERP Portal',
     statusBarStyle: 'default',
   },
   formatDetection: {

@@ -3,7 +3,7 @@ self.addEventListener('push', (event) => {
     return;
   }
 
-  let payload = { title: 'HR Portal', body: 'You have a new notification.', deepLink: '/' };
+  let payload = { title: 'ERP Portal', body: 'You have a new notification.', deepLink: '/' };
   try {
     payload = { ...payload, ...event.data.json() };
   } catch {

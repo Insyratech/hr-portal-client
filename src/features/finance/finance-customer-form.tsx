@@ -15,6 +15,7 @@ import {
   stateFromCode,
 } from '@/features/finance/finance-constants';
 import { composeAddressLines } from '@/features/finance/finance-address-utils';
+import { GstinLookupResultCard } from '@/features/finance/gstin-lookup-result-card';
 import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import {
@@ -212,7 +213,19 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
   function applyLookup(result: GstinLookupResult) {
     if (result.stateCode) setStateCode(result.stateCode);
     if (result.pan) setPan(result.pan);
-    if (result.billingAddress) {
+    if (result.legalName) {
+      setCompanyName(result.legalName);
+      if (!displayName.trim()) setDisplayName(result.tradeName || result.legalName);
+    } else if (result.tradeName) {
+      setCompanyName(result.tradeName);
+      if (!displayName.trim()) setDisplayName(result.tradeName);
+    }
+    if (result.addressLine1) {
+      setBillingLine1(result.addressLine1);
+      setBillingLine2(result.addressLine2 ?? '');
+      setBillingCity(result.city ?? '');
+      setBillingPostalCode(result.postalCode ?? '');
+    } else if (result.billingAddress) {
       const parsed = parseMultilineAddress(result.billingAddress);
       setBillingLine1(parsed.line1);
       setBillingLine2(parsed.line2);
@@ -225,6 +238,12 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
       setShippingLine2(parsed.line2);
       setShippingCity(parsed.city);
       setShippingPostalCode(parsed.postalCode);
+      setShippingStateCode(result.stateCode ?? stateCode);
+    } else if (result.addressLine1) {
+      setShippingLine1(result.addressLine1);
+      setShippingLine2(result.addressLine2 ?? '');
+      setShippingCity(result.city ?? '');
+      setShippingPostalCode(result.postalCode ?? '');
       setShippingStateCode(result.stateCode ?? stateCode);
     }
     setPendingLookup(null);
@@ -453,17 +472,14 @@ export function FinanceCustomerForm({ customer, onSaved, onCancel }: CustomerFor
           <p className="mt-1 text-sm text-muted">{current.description}</p>
 
           {pendingLookup ? (
-            <div className="mt-4 rounded border border-[var(--accent-purple)]/40 bg-[var(--accent-purple)]/10 p-4">
-              <p className="text-sm">{pendingLookup.message}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button type="button" size="sm" onClick={() => applyLookup(pendingLookup)}>
-                  Apply suggested details
-                </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => setPendingLookup(null)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
+            <GstinLookupResultCard
+              result={pendingLookup}
+              onAutoFill={() => applyLookup(pendingLookup)}
+              onManual={() => setPendingLookup(null)}
+              autoFillLabel="Apply suggested details"
+              manualLabel="Cancel"
+              hint="Apply fills state, PAN, and addresses when available. You can still edit every field afterward."
+            />
           ) : null}
 
           <div className={cn('mt-6 space-y-4', step !== 0 && 'hidden')} aria-hidden={step !== 0}>

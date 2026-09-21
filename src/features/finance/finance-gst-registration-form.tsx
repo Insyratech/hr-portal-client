@@ -14,6 +14,7 @@ import {
   optionalFormString,
   stateFromCode,
 } from '@/features/finance/finance-constants';
+import { GstinLookupResultCard } from '@/features/finance/gstin-lookup-result-card';
 import { uploadFinanceOrgLogo } from '@/features/finance/finance-vendor-uploads';
 import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
@@ -245,7 +246,15 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
     if (result.stateCode) setStateCode(result.stateCode);
     if (result.pan) setPan(result.pan);
     if (result.legalName) setLegalName(result.legalName);
-    if (result.billingAddress) {
+    if (result.tradeName) setTradeName(result.tradeName);
+    if (result.cin) setCin(result.cin);
+    if (result.registrationType) setRegistrationType(result.registrationType);
+    if (result.addressLine1) {
+      setAddressLine1(result.addressLine1);
+      if (result.addressLine2) setAddressLine2(result.addressLine2);
+      if (result.city) setCity(result.city);
+      if (result.postalCode) setPostalCode(result.postalCode);
+    } else if (result.billingAddress) {
       const parsed = parseMultilineAddress(result.billingAddress);
       if (parsed.line1) setAddressLine1(parsed.line1);
       if (parsed.line2) setAddressLine2(parsed.line2);
@@ -533,50 +542,11 @@ export function FinanceGstRegistrationForm({ profile, onSaved, onCancel }: GstRe
           <p className="mt-1 text-sm text-muted">{current.description}</p>
 
           {pendingLookup ? (
-            <div className="mt-4 rounded border border-[var(--accent-purple)]/40 bg-[var(--accent-purple)]/10 p-4">
-              <p className="text-sm font-medium text-foreground">Lookup result</p>
-              <p className="mt-1 text-sm text-muted">{pendingLookup.message}</p>
-              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-muted">GSTIN</dt>
-                  <dd className="text-foreground">{pendingLookup.gstin}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-muted">State</dt>
-                  <dd className="text-foreground">
-                    {pendingLookup.stateName
-                      ? `${pendingLookup.stateName} (${pendingLookup.stateCode})`
-                      : pendingLookup.stateCode ?? '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-muted">PAN</dt>
-                  <dd className="text-foreground">{pendingLookup.pan ?? '—'}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-muted">Legal name</dt>
-                  <dd className="text-foreground">{pendingLookup.legalName ?? '—'}</dd>
-                </div>
-                {pendingLookup.billingAddress ? (
-                  <div className="sm:col-span-2">
-                    <dt className="text-xs uppercase tracking-wide text-muted">Address hint</dt>
-                    <dd className="whitespace-pre-wrap text-foreground">{pendingLookup.billingAddress}</dd>
-                  </div>
-                ) : null}
-              </dl>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button type="button" size="sm" onClick={() => applyLookupAutoFill(pendingLookup)}>
-                  Auto-fill fields
-                </Button>
-                <Button type="button" size="sm" variant="outline" onClick={dismissLookupManual}>
-                  Fill manually
-                </Button>
-              </div>
-              <p className="mt-2 text-xs text-muted">
-                Auto-fill still lets you edit every field on later steps. Fill manually keeps the GSTIN and
-                leaves identity/address empty for you to complete.
-              </p>
-            </div>
+            <GstinLookupResultCard
+              result={pendingLookup}
+              onAutoFill={() => applyLookupAutoFill(pendingLookup)}
+              onManual={dismissLookupManual}
+            />
           ) : null}
 
           <div className={cn('mt-6 space-y-4', step !== 0 && 'hidden')} aria-hidden={step !== 0}>

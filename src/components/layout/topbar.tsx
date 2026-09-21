@@ -363,7 +363,7 @@ export function Topbar({ variant }: { variant: ShellVariant }) {
         <div className="flex min-w-0 flex-1 items-center gap-8">
           {variant === 'employee' ? (
             <>
-              <Meta>HR Portal</Meta>
+              <Meta>ERP Portal</Meta>
               <div className="lg:hidden">
                 <MyProjectMenu />
               </div>

@@ -1727,9 +1727,22 @@ export type GstinLookupResult = {
   stateName: string | null;
   pan: string | null;
   legalName: string | null;
+  tradeName: string | null;
+  cin: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  postalCode: string | null;
   billingAddress: string | null;
   shippingAddress: string | null;
-  source: 'parsed' | 'customer_master';
+  registrationType: 'regular' | 'composition' | 'unregistered' | null;
+  source:
+    | 'parsed'
+    | 'customer_master'
+    | 'vendor_master'
+    | 'org_master'
+    | 'gst_profile'
+    | 'gst_network';
   message: string;
 };
 

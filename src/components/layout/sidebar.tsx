@@ -291,7 +291,7 @@ export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'
           collapsed ? 'justify-center' : 'justify-between gap-2',
         )}
       >
-        {collapsed ? null : <Meta>HR Portal</Meta>}
+        {collapsed ? null : <Meta>ERP Portal</Meta>}
         <Button
           type="button"
           variant="ghost"

@@ -10,7 +10,7 @@ import {
 function installInstructions(platform: PwaInstallPlatform): { title: string; body: ReactNode } {
   if (platform === 'ios') {
     return {
-      title: 'Install HR Portal on your iPhone',
+      title: 'Install ERP Portal on your iPhone',
       body: (
         <>
           Tap <span className="font-medium text-foreground">Share</span> →{' '}
@@ -22,7 +22,7 @@ function installInstructions(platform: PwaInstallPlatform): { title: string; bod
   }
 
   return {
-    title: 'Install HR Portal on your phone',
+    title: 'Install ERP Portal on your phone',
     body: (
       <>
         Tap the menu <span className="font-medium text-foreground">(⋮)</span> →{' '}

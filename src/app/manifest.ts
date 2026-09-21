@@ -3,8 +3,8 @@ import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/',
-    name: 'HR Portal',
-    short_name: 'HR Portal',
+    name: 'ERP Portal',
+    short_name: 'ERP Portal',
     description: 'Policy-driven HR operations',
     start_url: '/',
     scope: '/',
