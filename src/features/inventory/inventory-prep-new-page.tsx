@@ -7,7 +7,6 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { StatusMessage } from '@/components/ui/status-message';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import {
   SELECT_CLASS,
@@ -15,6 +14,7 @@ import {
   parseQtyChipsInput,
 } from '@/features/inventory/inventory-constants';
 import { apiErrorMessage } from '@/lib/api-error';
+import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
@@ -25,6 +25,7 @@ import {
 
 export function InventoryPrepNewPage() {
   const router = useRouter();
+  const toast = useToast();
   const permissions = useAppSelector((state) => state.permissions.permissions);
   const canManage =
     permissions.includes(PERMISSIONS.INVENTORY_PREP_MANAGE) ||
@@ -32,7 +33,6 @@ export function InventoryPrepNewPage() {
   const { data: catalogData } = useGetInventoryCatalogQuery(undefined, { skip: !canManage });
   const { data: locationsData } = useGetInventoryLocationsQuery(undefined, { skip: !canManage });
   const [createSession, { isLoading }] = useCreateInventoryPrepSessionMutation();
-  const [error, setError] = useState<string | null>(null);
   const [selectedCatalogId, setSelectedCatalogId] = useState('');
 
   const catalogItems = useMemo(
@@ -50,12 +50,11 @@ export function InventoryPrepNewPage() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
     const form = new FormData(event.currentTarget);
     const chipsRaw = String(form.get('qtyChips') ?? '').trim();
     const chips = chipsRaw ? parseQtyChipsInput(chipsRaw) : undefined;
     if (chips && chips.length > 15) {
-      setError('At most 15 qty chips are allowed.');
+      toast.error('At most 15 qty chips are allowed.');
       return;
     }
     try {
@@ -67,9 +66,10 @@ export function InventoryPrepNewPage() {
         qtyChips: chips,
         notes: String(form.get('notes') ?? '').trim(),
       }).unwrap();
+      toast.success('Prep session opened.');
       router.push(`/inventory/prep/${created.data.id}`);
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to open prep session.'));
+      toast.error(apiErrorMessage(cause, 'Unable to open prep session.'));
     }
   }
 
@@ -90,8 +90,6 @@ export function InventoryPrepNewPage() {
         Choose the reagent catalog item and how much you will make (for example 1000 ml). Next you
         will issue chemicals/solvents into this session.
       </p>
-      {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
-
       <form className="mt-4 max-w-2xl space-y-4" onSubmit={onSubmit}>
         <div>
           <Label htmlFor="catalogItemId">Reagent catalog item</Label>

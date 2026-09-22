@@ -3217,7 +3217,8 @@ export type InventoryAdminOverview = {
 };
 
 export type InventoryAlertMode = 'reorder' | 'velocity' | 'both';
-export type InventoryLocationType = 'stock_room' | 'store' | 'bench' | 'freezer' | 'other';
+export type InventoryLocationType = string;
+export type InventoryLocationTypePreset = 'stock_room' | 'store' | 'bench' | 'freezer' | 'other';
 export type InventoryStatus = 'active' | 'inactive';
 
 export type InventoryLocation = {

@@ -7,7 +7,6 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { StatusMessage } from '@/components/ui/status-message';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import {
   SELECT_CLASS,
@@ -15,6 +14,7 @@ import {
   parseQtyChipsInput,
 } from '@/features/inventory/inventory-constants';
 import { apiErrorMessage } from '@/lib/api-error';
+import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
@@ -29,6 +29,7 @@ function todayIso(): string {
 
 export function InventoryPlasticReceivePage() {
   const router = useRouter();
+  const toast = useToast();
   const permissions = useAppSelector((state) => state.permissions.permissions);
   const canManage =
     permissions.includes(PERMISSIONS.INVENTORY_PLASTIC_MANAGE) ||
@@ -36,7 +37,6 @@ export function InventoryPlasticReceivePage() {
   const { data: catalogData } = useGetInventoryCatalogQuery(undefined, { skip: !canManage });
   const { data: locationsData } = useGetInventoryLocationsQuery(undefined, { skip: !canManage });
   const [receiveStock, { isLoading }] = useReceiveInventoryPlasticStockMutation();
-  const [error, setError] = useState<string | null>(null);
   const [selectedCatalogId, setSelectedCatalogId] = useState('');
 
   const catalogItems = useMemo(
@@ -54,14 +54,13 @@ export function InventoryPlasticReceivePage() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
     const form = new FormData(event.currentTarget);
     const chipsRaw = String(form.get('qtyChips') ?? '').trim();
     let chips: number[] | undefined;
     if (chipsRaw) {
       const parsed = parseQtyChipsInput(chipsRaw);
       if (parsed.some((n) => !Number.isInteger(n))) {
-        setError('Box qty chips must be whole numbers.');
+        toast.error('Box qty chips must be whole numbers.');
         return;
       }
       chips = parsed.map((n) => Math.trunc(n));
@@ -80,9 +79,10 @@ export function InventoryPlasticReceivePage() {
         qtyChips: chips,
         notes: String(form.get('notes') ?? '').trim(),
       }).unwrap();
+      toast.success('Plastic stock received.');
       router.push(`/inventory/plastic/${created.data.id}`);
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to receive plastic stock.'));
+      toast.error(apiErrorMessage(cause, 'Unable to receive plastic stock.'));
     }
   }
 
@@ -103,8 +103,6 @@ export function InventoryPlasticReceivePage() {
         Enter boxes (not individual gloves/tips). Matching item + location + manufacturer + size
         adds to the same stock line. Issue happens from the station QR at that location.
       </p>
-      {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
-
       <form className="mt-4 max-w-2xl space-y-4" onSubmit={onSubmit}>
         <div>
           <Label htmlFor="catalogItemId">Catalog item</Label>

@@ -16,10 +16,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { StatusMessage } from '@/components/ui/status-message';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import { formatQtyChips } from '@/features/inventory/inventory-constants';
 import { apiErrorMessage } from '@/lib/api-error';
+import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
@@ -31,6 +31,7 @@ import {
 export function InventoryPlasticDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
+  const toast = useToast();
   const permissions = useAppSelector((state) => state.permissions.permissions);
   const canManage =
     permissions.includes(PERMISSIONS.INVENTORY_PLASTIC_MANAGE) ||
@@ -46,14 +47,12 @@ export function InventoryPlasticDetailPage() {
     { skip: !canManage || !id },
   );
   const [adjustStock, { isLoading: adjusting }] = useAdjustInventoryPlasticStockMutation();
-  const [error, setError] = useState<string | null>(null);
   const [adjustOpen, setAdjustOpen] = useState(false);
   const stock = data?.data;
 
   async function onAdjust(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!stock) return;
-    setError(null);
     const form = new FormData(event.currentTarget);
     try {
       await adjustStock({
@@ -64,8 +63,9 @@ export function InventoryPlasticDetailPage() {
         },
       }).unwrap();
       setAdjustOpen(false);
+      toast.success('Plastic stock adjusted.');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to adjust plastic stock.'));
+      toast.error(apiErrorMessage(cause, 'Unable to adjust plastic stock.'));
     }
   }
 
@@ -112,7 +112,6 @@ export function InventoryPlasticDetailPage() {
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  setError(null);
                   setAdjustOpen(true);
                 }}
               >
@@ -125,8 +124,6 @@ export function InventoryPlasticDetailPage() {
           </div>
         }
       />
-      {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
-
       <div className="mb-8 grid max-w-3xl gap-3 sm:grid-cols-2">
         <div className="rounded border border-border px-4 py-3">
           <Meta>Stock on hand</Meta>

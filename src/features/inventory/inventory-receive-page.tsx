@@ -7,7 +7,6 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { StatusMessage } from '@/components/ui/status-message';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import {
   SELECT_CLASS,
@@ -16,6 +15,7 @@ import {
 } from '@/features/inventory/inventory-constants';
 import { printInventoryLotLabel } from '@/features/inventory/inventory-lot-print';
 import { apiErrorMessage } from '@/lib/api-error';
+import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
@@ -33,13 +33,13 @@ function todayIso(): string {
 
 export function InventoryReceivePage() {
   const router = useRouter();
+  const toast = useToast();
   const permissions = useAppSelector((state) => state.permissions.permissions);
   const canManage = permissions.includes(PERMISSIONS.INVENTORY_LOTS_MANAGE);
   const { data: catalogData } = useGetInventoryCatalogQuery(undefined, { skip: !canManage });
   const { data: locationsData } = useGetInventoryLocationsQuery(undefined, { skip: !canManage });
   const [receiveLot, { isLoading }] = useReceiveInventoryLotMutation();
   const [fetchPrint] = useLazyGetInventoryLotPrintQuery();
-  const [error, setError] = useState<string | null>(null);
   const [selectedCatalogId, setSelectedCatalogId] = useState('');
 
   const catalogItems = useMemo(
@@ -57,12 +57,11 @@ export function InventoryReceivePage() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
     const form = new FormData(event.currentTarget);
     const chipsRaw = String(form.get('qtyChips') ?? '').trim();
     const chips = chipsRaw ? parseQtyChipsInput(chipsRaw) : undefined;
     if (chips && chips.length > 15) {
-      setError('At most 15 qty chips are allowed.');
+      toast.error('At most 15 qty chips are allowed.');
       return;
     }
     try {
@@ -87,9 +86,10 @@ export function InventoryReceivePage() {
       } catch {
         // Receipt succeeded even if print window failed (popup blocked).
       }
+      toast.success('Lot received.');
       router.push(`/inventory/lots/${lot.id}`);
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to receive lot.'));
+      toast.error(apiErrorMessage(cause, 'Unable to receive lot.'));
     }
   }
 
@@ -110,8 +110,6 @@ export function InventoryReceivePage() {
         Materials, Chemicals, Solvents, and bought Reagents. For lab-made reagents use Prep instead
         (component costs only). After save, a QR label print window opens for the bottle.
       </p>
-      {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
-
       <form className="mt-4 max-w-2xl space-y-4" onSubmit={onSubmit}>
         <div>
           <Label htmlFor="catalogItemId">Catalog item</Label>

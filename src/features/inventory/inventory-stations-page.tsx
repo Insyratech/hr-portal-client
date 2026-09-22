@@ -14,11 +14,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { StatusMessage } from '@/components/ui/status-message';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import { SELECT_CLASS } from '@/features/inventory/inventory-constants';
 import { printInventoryStationLabel } from '@/features/inventory/inventory-station-print';
 import { apiErrorMessage } from '@/lib/api-error';
+import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
@@ -29,6 +29,7 @@ import {
 } from '@/store/api/api';
 
 export function InventoryStationsPage() {
+  const toast = useToast();
   const permissions = useAppSelector((state) => state.permissions.permissions);
   const canManage =
     permissions.includes(PERMISSIONS.INVENTORY_PLASTIC_MANAGE) ||
@@ -38,7 +39,6 @@ export function InventoryStationsPage() {
   const [createStation, { isLoading: creating }] = useCreateInventoryStationMutation();
   const [fetchPrint, { isFetching: printing }] = useLazyGetInventoryStationPrintQuery();
   const [open, setOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const locations = useMemo(
     () => (locationsData?.data ?? []).filter((item) => item.status === 'active'),
@@ -47,7 +47,6 @@ export function InventoryStationsPage() {
 
   async function onCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
     const form = new FormData(event.currentTarget);
     try {
       const created = await createStation({
@@ -56,6 +55,7 @@ export function InventoryStationsPage() {
         notes: String(form.get('notes') ?? '').trim(),
       }).unwrap();
       setOpen(false);
+      toast.success('Station saved.');
       try {
         const print = await fetchPrint(created.data.id).unwrap();
         printInventoryStationLabel(print.data);
@@ -63,17 +63,16 @@ export function InventoryStationsPage() {
         // Station created even if print blocked.
       }
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to create station.'));
+      toast.error(apiErrorMessage(cause, 'Unable to create station.'));
     }
   }
 
   async function onPrint(id: string) {
-    setError(null);
     try {
       const print = await fetchPrint(id).unwrap();
       printInventoryStationLabel(print.data);
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to open station label.'));
+      toast.error(apiErrorMessage(cause, 'Unable to open station label.'));
     }
   }
 
@@ -96,7 +95,6 @@ export function InventoryStationsPage() {
           <Button
             type="button"
             onClick={() => {
-              setError(null);
               setOpen(true);
             }}
           >
@@ -107,7 +105,6 @@ export function InventoryStationsPage() {
       <p className="mb-6 max-w-2xl text-sm text-muted">
         One QR per stock location. Lab phones scan it, then pick plastic type, size, and box count.
       </p>
-      {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
       {isError ? <p className="mb-4 text-sm">Unable to load stations.</p> : null}
 
       <DataTable

@@ -1,7 +1,7 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { DataTable } from '@/components/dashboard/data-table';
@@ -10,11 +10,11 @@ import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { StatusMessage } from '@/components/ui/status-message';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import { SELECT_CLASS, formatQtyChips } from '@/features/inventory/inventory-constants';
 import { printInventoryLotLabel } from '@/features/inventory/inventory-lot-print';
 import { apiErrorMessage } from '@/lib/api-error';
+import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
@@ -32,6 +32,7 @@ export function InventoryPrepDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const router = useRouter();
+  const toast = useToast();
   const permissions = useAppSelector((state) => state.permissions.permissions);
   const canManage =
     permissions.includes(PERMISSIONS.INVENTORY_PREP_MANAGE) ||
@@ -44,7 +45,6 @@ export function InventoryPrepDetailPage() {
   const [completeSession, { isLoading: completing }] = useCompleteInventoryPrepSessionMutation();
   const [cancelSession, { isLoading: cancelling }] = useCancelInventoryPrepSessionMutation();
   const [fetchPrint] = useLazyGetInventoryLotPrintQuery();
-  const [error, setError] = useState<string | null>(null);
   const session = data?.data;
 
   const sourceLots = useMemo(
@@ -61,7 +61,6 @@ export function InventoryPrepDetailPage() {
   async function onAddInput(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!session) return;
-    setError(null);
     const form = new FormData(event.currentTarget);
     try {
       await addInput({
@@ -73,15 +72,15 @@ export function InventoryPrepDetailPage() {
         },
       }).unwrap();
       event.currentTarget.reset();
+      toast.success('Component issued to prep.');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to issue for prep.'));
+      toast.error(apiErrorMessage(cause, 'Unable to issue for prep.'));
     }
   }
 
   async function onComplete(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!session) return;
-    setError(null);
     const form = new FormData(event.currentTarget);
     try {
       const completed = await completeSession({
@@ -99,21 +98,22 @@ export function InventoryPrepDetailPage() {
         } catch {
           // Prep succeeded even if print window failed.
         }
+        toast.success('Prep completed.');
         router.push(`/inventory/lots/${lotId}`);
       }
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to complete prep.'));
+      toast.error(apiErrorMessage(cause, 'Unable to complete prep.'));
     }
   }
 
   async function onCancel() {
     if (!session) return;
-    setError(null);
     try {
       await cancelSession(session.id).unwrap();
+      toast.success('Prep cancelled.');
       router.push('/inventory/prep');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to cancel prep.'));
+      toast.error(apiErrorMessage(cause, 'Unable to cancel prep.'));
     }
   }
 
@@ -162,8 +162,7 @@ export function InventoryPrepDetailPage() {
           </Button>
         }
       />
-      {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
-
+      
       <div className="mb-8 grid max-w-3xl gap-3 sm:grid-cols-2">
         <div className="rounded border border-border px-4 py-3">
           <Meta>Target</Meta>

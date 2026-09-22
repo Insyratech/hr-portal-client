@@ -16,11 +16,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { StatusMessage } from '@/components/ui/status-message';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import { formatQtyChips } from '@/features/inventory/inventory-constants';
 import { printInventoryLotLabel } from '@/features/inventory/inventory-lot-print';
 import { apiErrorMessage } from '@/lib/api-error';
+import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
@@ -34,6 +34,7 @@ import {
 export function InventoryLotDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
+  const toast = useToast();
   const permissions = useAppSelector((state) => state.permissions.permissions);
   const canManage = permissions.includes(PERMISSIONS.INVENTORY_LOTS_MANAGE);
   const canAdjust = permissions.includes(PERMISSIONS.INVENTORY_LOTS_ADJUST);
@@ -44,26 +45,23 @@ export function InventoryLotDetailPage() {
   const { data: expenseData } = useGetInventoryLotExpenseQuery(id, { skip: !canManage || !id });
   const [fetchPrint, { isFetching: printing }] = useLazyGetInventoryLotPrintQuery();
   const [adjustLot, { isLoading: adjusting }] = useAdjustInventoryLotMutation();
-  const [error, setError] = useState<string | null>(null);
   const [adjustOpen, setAdjustOpen] = useState(false);
   const lot = data?.data;
   const expense = expenseData?.data;
 
   async function onPrint() {
     if (!lot) return;
-    setError(null);
     try {
       const print = await fetchPrint(lot.id).unwrap();
       printInventoryLotLabel(print.data);
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to open label print.'));
+      toast.error(apiErrorMessage(cause, 'Unable to open label print.'));
     }
   }
 
   async function onAdjust(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!lot) return;
-    setError(null);
     const form = new FormData(event.currentTarget);
     try {
       await adjustLot({
@@ -74,8 +72,9 @@ export function InventoryLotDetailPage() {
         },
       }).unwrap();
       setAdjustOpen(false);
+      toast.success('Lot stock adjusted.');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to adjust lot.'));
+      toast.error(apiErrorMessage(cause, 'Unable to adjust lot.'));
     }
   }
 
@@ -125,7 +124,6 @@ export function InventoryLotDetailPage() {
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  setError(null);
                   setAdjustOpen(true);
                 }}
               >
@@ -138,8 +136,6 @@ export function InventoryLotDetailPage() {
           </div>
         }
       />
-      {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
-
       <div className="mb-8 grid max-w-3xl gap-3 sm:grid-cols-2">
         <div className="rounded border border-border px-4 py-3">
           <Meta>Item</Meta>

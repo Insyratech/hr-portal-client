@@ -14,10 +14,10 @@ import {
 import { EditIconButton } from '@/components/ui/edit-icon-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { StatusMessage } from '@/components/ui/status-message';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import { SELECT_CLASS } from '@/features/inventory/inventory-constants';
 import { apiErrorMessage } from '@/lib/api-error';
+import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
@@ -37,6 +37,7 @@ function rightsLabel(row: InventoryAuthorization): string {
 }
 
 export function InventoryAuthorizationsPage() {
+  const toast = useToast();
   const permissions = useAppSelector((state) => state.permissions.permissions);
   const canManage = permissions.includes(PERMISSIONS.INVENTORY_AUTHORIZATIONS_MANAGE);
   const { data, isLoading, isError } = useGetInventoryAuthorizationsQuery(undefined, {
@@ -45,7 +46,6 @@ export function InventoryAuthorizationsPage() {
   const { data: employeesData } = useGetInventoryEmployeeOptionsQuery(undefined, { skip: !canManage });
   const [upsert, { isLoading: saving }] = useUpsertInventoryAuthorizationMutation();
   const [remove, { isLoading: removing }] = useDeleteInventoryAuthorizationMutation();
-  const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryAuthorization | null>(null);
 
@@ -60,14 +60,13 @@ export function InventoryAuthorizationsPage() {
 
   async function onSave(event: FormEvent<HTMLFormElement>, employeeIdFixed?: string) {
     event.preventDefault();
-    setError(null);
     const form = new FormData(event.currentTarget);
     const employeeId = employeeIdFixed ?? String(form.get('employeeId') ?? '');
     const canUsage = form.get('canUsage') === 'on';
     const canReceipt = form.get('canReceipt') === 'on';
     const canPrep = form.get('canPrep') === 'on';
     if (!canUsage && !canReceipt && !canPrep) {
-      setError('Grant at least one of usage, receipt, or prep.');
+      toast.error('Grant at least one of usage, receipt, or prep.');
       return;
     }
     try {
@@ -80,17 +79,18 @@ export function InventoryAuthorizationsPage() {
       }).unwrap();
       setCreateOpen(false);
       setEditing(null);
+      toast.success('Authorization saved.');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to save authorization.'));
+      toast.error(apiErrorMessage(cause, 'Unable to save authorization.'));
     }
   }
 
   async function onDelete(id: string) {
-    setError(null);
     try {
       await remove(id).unwrap();
+      toast.success('Authorization removed.');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to remove authorization.'));
+      toast.error(apiErrorMessage(cause, 'Unable to remove authorization.'));
     }
   }
 
@@ -113,7 +113,6 @@ export function InventoryAuthorizationsPage() {
           <Button
             type="button"
             onClick={() => {
-              setError(null);
               setCreateOpen(true);
             }}
           >
@@ -125,7 +124,6 @@ export function InventoryAuthorizationsPage() {
         Choose who may log usage via QR, enter receipts, or run reagent prep. Grant 2–3 people for a
         typical lab start.
       </p>
-      {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
       {isError ? <p className="mb-4 text-sm">Unable to load authorizations.</p> : null}
 
       <DataTable
@@ -150,8 +148,7 @@ export function InventoryAuthorizationsPage() {
                 <EditIconButton
                   label={`Edit ${row.employeeName}`}
                   onClick={() => {
-                    setError(null);
-                    setEditing(row);
+                                        setEditing(row);
                   }}
                 />
                 <Button type="button" variant="outline" size="sm" onClick={() => onDelete(row.id)}>

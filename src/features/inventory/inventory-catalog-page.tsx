@@ -14,7 +14,6 @@ import {
 import { EditIconButton } from '@/components/ui/edit-icon-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { StatusMessage } from '@/components/ui/status-message';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import {
   ALERT_MODES,
@@ -23,6 +22,7 @@ import {
   parseQtyChipsInput,
 } from '@/features/inventory/inventory-constants';
 import { apiErrorMessage } from '@/lib/api-error';
+import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
@@ -38,24 +38,23 @@ function alertLabel(value: string): string {
 }
 
 export function InventoryCatalogPage() {
+  const toast = useToast();
   const permissions = useAppSelector((state) => state.permissions.permissions);
   const canManage = permissions.includes(PERMISSIONS.INVENTORY_CATALOG_MANAGE);
   const { data, isLoading, isError } = useGetInventoryCatalogQuery(undefined, { skip: !canManage });
   const { data: categoriesData } = useGetInventoryCategoriesQuery(undefined, { skip: !canManage });
   const [createItem, { isLoading: creating }] = useCreateInventoryCatalogItemMutation();
   const [updateItem, { isLoading: updating }] = useUpdateInventoryCatalogItemMutation();
-  const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryCatalogItem | null>(null);
   const categories = categoriesData?.data ?? [];
 
   async function onCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
     const form = new FormData(event.currentTarget);
     const chips = parseQtyChipsInput(String(form.get('defaultQtyChips') ?? ''));
     if (chips.length > 15) {
-      setError('At most 15 default qty chips are allowed.');
+      toast.error('At most 15 default qty chips are allowed.');
       return;
     }
     const reorderRaw = String(form.get('reorderQty') ?? '').trim();
@@ -73,21 +72,20 @@ export function InventoryCatalogPage() {
         expiryLeadDays: expiryRaw === '' ? null : Number(expiryRaw),
         notes: String(form.get('notes') ?? '').trim(),
       }).unwrap();
-      event.currentTarget.reset();
       setCreateOpen(false);
+      toast.success('Catalog item saved.');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to create catalog item.'));
+      toast.error(apiErrorMessage(cause, 'Unable to create catalog item.'));
     }
   }
 
   async function onUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editing) return;
-    setError(null);
     const form = new FormData(event.currentTarget);
     const chips = parseQtyChipsInput(String(form.get('defaultQtyChips') ?? ''));
     if (chips.length > 15) {
-      setError('At most 15 default qty chips are allowed.');
+      toast.error('At most 15 default qty chips are allowed.');
       return;
     }
     const reorderRaw = String(form.get('reorderQty') ?? '').trim();
@@ -109,8 +107,9 @@ export function InventoryCatalogPage() {
         },
       }).unwrap();
       setEditing(null);
+      toast.success('Catalog item updated.');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to update catalog item.'));
+      toast.error(apiErrorMessage(cause, 'Unable to update catalog item.'));
     }
   }
 
@@ -133,7 +132,6 @@ export function InventoryCatalogPage() {
           <Button
             type="button"
             onClick={() => {
-              setError(null);
               setCreateOpen(true);
             }}
           >
@@ -145,7 +143,6 @@ export function InventoryCatalogPage() {
         Named lab materials with unit, up to 15 quick-qty chips for the future kiosk card, and alert
         mode.
       </p>
-      {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
       {isError ? <p className="mb-4 text-sm">Unable to load catalog.</p> : null}
 
       <DataTable
@@ -167,7 +164,6 @@ export function InventoryCatalogPage() {
               <EditIconButton
                 label={`Edit ${row.name}`}
                 onClick={() => {
-                  setError(null);
                   setEditing(row);
                 }}
               />

@@ -14,10 +14,10 @@ import {
 import { EditIconButton } from '@/components/ui/edit-icon-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { StatusMessage } from '@/components/ui/status-message';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import { ALERT_MODES, SELECT_CLASS } from '@/features/inventory/inventory-constants';
 import { apiErrorMessage } from '@/lib/api-error';
+import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
@@ -31,17 +31,16 @@ function alertLabel(value: string): string {
 }
 
 export function InventoryCategoriesPage() {
+  const toast = useToast();
   const permissions = useAppSelector((state) => state.permissions.permissions);
   const canManage = permissions.includes(PERMISSIONS.INVENTORY_CATEGORIES_MANAGE);
   const { data, isLoading, isError } = useGetInventoryCategoriesQuery(undefined, { skip: !canManage });
   const [updateCategory, { isLoading: updating }] = useUpdateInventoryCategoryMutation();
-  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<InventoryCategory | null>(null);
 
   async function onUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editing) return;
-    setError(null);
     const form = new FormData(event.currentTarget);
     const reorderRaw = String(form.get('defaultReorderQty') ?? '').trim();
     try {
@@ -55,8 +54,9 @@ export function InventoryCategoriesPage() {
         },
       }).unwrap();
       setEditing(null);
+      toast.success('Category defaults saved.');
     } catch (cause) {
-      setError(apiErrorMessage(cause, 'Unable to update category defaults.'));
+      toast.error(apiErrorMessage(cause, 'Unable to update category defaults.'));
     }
   }
 
@@ -77,7 +77,6 @@ export function InventoryCategoriesPage() {
         Fixed lab categories. Tune default alert mode, reorder qty, velocity days, and expiry lead days.
         Catalog items inherit these unless overridden.
       </p>
-      {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
       {isError ? <p className="mb-4 text-sm">Unable to load categories.</p> : null}
 
       <DataTable
@@ -99,8 +98,7 @@ export function InventoryCategoriesPage() {
               <EditIconButton
                 label={`Edit ${row.name} defaults`}
                 onClick={() => {
-                  setError(null);
-                  setEditing(row);
+                                    setEditing(row);
                 }}
               />
             ),
