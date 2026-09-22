@@ -24,6 +24,10 @@ import {
   HR_ORG_NAV,
   HR_OVERVIEW_NAV,
   HR_WORK_NAV,
+  INVENTORY_BOTTOM_NAV,
+  INVENTORY_MASTERS_NAV,
+  INVENTORY_OVERVIEW_NAV,
+  INVENTORY_STOCK_NAV,
   MY_PROJECT_NAV,
   MY_WORK_ACCOUNT_NAV,
   MY_WORK_DASHBOARD,
@@ -81,6 +85,7 @@ export function managerialSectionTitle(
   if (variant === 'hr') return 'HR Responsibility';
   if (variant === 'gm' || variant === 'admin') return 'GM Responsibility';
   if (variant === 'cso') return 'CSO Responsibility';
+  if (variant === 'inventory') return 'Inventory Responsibility';
   return 'Finance Responsibility';
 }
 
@@ -114,6 +119,16 @@ function managerialSection(variant: Exclude<ShellVariant, 'employee' | 'super-ad
     return {
       title,
       groups: [{ label: 'Work', items: CSO_WORK_NAV }],
+    };
+  }
+  if (variant === 'inventory') {
+    return {
+      title,
+      groups: [
+        { label: 'Overview', items: INVENTORY_OVERVIEW_NAV },
+        { label: 'Stock', items: INVENTORY_STOCK_NAV },
+        { label: 'Masters', items: INVENTORY_MASTERS_NAV },
+      ],
     };
   }
   return {
@@ -165,6 +180,7 @@ export function shellMobileNavTitle(variant: Exclude<ShellVariant, 'employee'>):
   if (variant === 'gm' || variant === 'admin') return 'General manager';
   if (variant === 'cso') return 'CSO';
   if (variant === 'finance') return 'Finance';
+  if (variant === 'inventory') return 'Inventory';
   return 'Navigation';
 }
 
@@ -180,5 +196,6 @@ export function shellBottomNavItems(variant: Exclude<ShellVariant, 'employee'>):
   if (variant === 'hr') return HR_BOTTOM_NAV;
   if (variant === 'gm' || variant === 'admin') return GM_BOTTOM_NAV;
   if (variant === 'cso') return CSO_BOTTOM_NAV;
+  if (variant === 'inventory') return INVENTORY_BOTTOM_NAV;
   return FINANCE_BOTTOM_NAV;
 }

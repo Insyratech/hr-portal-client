@@ -65,8 +65,8 @@ export function EmployeeAccessRoles({ employee }: { employee: Employee }) {
       <div>
         <Meta>Access roles</Meta>
         <p className="mt-1 text-sm text-muted">
-          Job title (designation) is separate from portal access. Assign HR / GM / CSO / Finance here — no directory
-          unlock needed. Queues stay with the role (a new HR sees existing leave and grievances).
+          Job title (designation) is separate from portal access. Assign HR / GM / CSO / Finance / Inventory here — no
+          directory unlock needed. Queues stay with the role (a new HR sees existing leave and grievances).
         </p>
       </div>
 

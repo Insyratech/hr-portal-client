@@ -62,6 +62,18 @@ export const PERMISSIONS = {
   FINANCE_INTEGRATIONS_VIEW: 'finance.integrations.view',
   FINANCE_INTEGRATIONS_MANAGE: 'finance.integrations.manage',
   FINANCE_REPORTS_VIEW: 'finance.reports.view',
+  INVENTORY_OVERVIEW_VIEW: 'inventory.overview.view',
+  INVENTORY_LOCATIONS_MANAGE: 'inventory.locations.manage',
+  INVENTORY_CATEGORIES_MANAGE: 'inventory.categories.manage',
+  INVENTORY_CATALOG_MANAGE: 'inventory.catalog.manage',
+  INVENTORY_AUTHORIZATIONS_MANAGE: 'inventory.authorizations.manage',
+  INVENTORY_LOTS_MANAGE: 'inventory.lots.manage',
+  INVENTORY_LOTS_ADJUST: 'inventory.lots.adjust',
+  INVENTORY_PREP_MANAGE: 'inventory.prep.manage',
+  INVENTORY_PLASTIC_MANAGE: 'inventory.plastic.manage',
+  INVENTORY_PLASTIC_ADJUST: 'inventory.plastic.adjust',
+  INVENTORY_ALERTS_VIEW: 'inventory.alerts.view',
+  INVENTORY_REPORTS_VIEW: 'inventory.reports.view',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

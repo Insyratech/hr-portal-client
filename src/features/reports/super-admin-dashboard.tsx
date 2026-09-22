@@ -418,6 +418,19 @@ export function SuperAdminDashboard() {
         </div>
       </section>
 
+      <section>
+        <Meta className="mb-3">Modules</Meta>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatCard
+            compact
+            value="→"
+            label="Inventory"
+            icon="grid"
+            onClick={() => router.push('/super-admin/inventory')}
+          />
+        </div>
+      </section>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <ChartCard title="Project status" description="Active vs inactive. Open a Projects card for the full table.">
           {projectStatusChart.length === 0 ? (

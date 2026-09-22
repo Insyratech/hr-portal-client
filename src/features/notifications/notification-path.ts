@@ -26,6 +26,7 @@ export function pathForNotification(item: NotificationItem, roles: string[]): st
   const gm = roles.includes('GENERAL_MANAGER') || roles.includes('ADMIN');
   const cso = roles.includes('CSO');
   const finance = roles.includes('FINANCE_MANAGER');
+  const inventory = roles.includes('INVENTORY_MANAGER');
 
   if (item.referenceType === 'leave_application' && id) {
     const handoverRequest = /handover requested/i.test(item.title) || /asked you to take handover/i.test(item.message);
@@ -162,10 +163,21 @@ export function pathForNotification(item: NotificationItem, roles: string[]): st
     if (hrManager) return '/hr/employees';
   }
 
+  if (item.referenceType === 'inventory_lot' && id) {
+    return `/inventory/lots/${encodeURIComponent(id)}`;
+  }
+  if (item.referenceType === 'inventory_plastic_stock' && id) {
+    return `/inventory/plastic/${encodeURIComponent(id)}`;
+  }
+  if (item.referenceType === 'inventory_alert') {
+    return '/inventory/alerts';
+  }
+
   if (superAdmin) return '/super-admin';
   if (hrManager) return '/hr';
   if (gm) return '/gm';
   if (cso) return '/cso/work';
   if (finance) return '/finance';
+  if (inventory) return '/inventory';
   return '/dashboard';
 }

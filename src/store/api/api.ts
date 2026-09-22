@@ -88,6 +88,30 @@ import type {
   FinanceDashboard,
   SalesOverview,
   PurchaseOverview,
+  InventoryOverview,
+  InventoryAdminOverview,
+  InventoryLocation,
+  InventoryCategory,
+  InventoryCatalogItem,
+  InventoryAuthorization,
+  InventoryEmployeeOption,
+  InventoryLot,
+  InventoryLotExpense,
+  InventoryLotPrint,
+  InventoryMovement,
+  InventoryPrepSession,
+  InventoryPlasticMovement,
+  InventoryPlasticStock,
+  InventoryPublicScanPayload,
+  InventoryPublicIssueResult,
+  InventoryPublicPlasticIssueResult,
+  InventoryStation,
+  InventoryStationPrint,
+  InventoryAlert,
+  InventoryAlertLogEntry,
+  InventoryAdminDashboard,
+  InventoryAuditExport,
+  InventoryReportsBundle,
   ReportCatalogItem,
   NamedAmountRow,
   AgingReport,
@@ -256,6 +280,16 @@ export const api = createApi({
     'FinanceGst',
     'FinanceIntegrations',
     'FinanceReports',
+    'InventoryOverview',
+    'InventoryLocations',
+    'InventoryCategories',
+    'InventoryCatalog',
+    'InventoryAuthorizations',
+    'InventoryLots',
+    'InventoryPrep',
+    'InventoryPlastic',
+    'InventoryStations',
+    'InventoryAlerts',
   ],
   endpoints: (builder) => ({
     getHealth: builder.query<ApiSuccess<HealthData>, void>({
@@ -3378,6 +3412,373 @@ export const api = createApi({
       }),
       providesTags: ['Reports'],
     }),
+    getInventoryOverview: builder.query<ApiSuccess<InventoryOverview>, void>({
+      query: () => '/api/v1/inventory/overview',
+      providesTags: ['InventoryOverview'],
+    }),
+    getInventoryAdminOverview: builder.query<ApiSuccess<InventoryAdminOverview>, void>({
+      query: () => '/api/v1/inventory/admin-overview',
+      providesTags: ['InventoryOverview'],
+    }),
+    getInventoryLocations: builder.query<ApiSuccess<InventoryLocation[]>, void>({
+      query: () => '/api/v1/inventory/locations',
+      providesTags: ['InventoryLocations'],
+    }),
+    createInventoryLocation: builder.mutation<
+      ApiSuccess<InventoryLocation>,
+      {
+        code: string;
+        name: string;
+        description?: string;
+        locationType?: InventoryLocation['locationType'];
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/inventory/locations', method: 'POST', body }),
+      invalidatesTags: ['InventoryLocations', 'InventoryOverview'],
+    }),
+    updateInventoryLocation: builder.mutation<
+      ApiSuccess<InventoryLocation>,
+      {
+        id: string;
+        body: Partial<{
+          name: string;
+          description: string;
+          locationType: InventoryLocation['locationType'];
+          status: InventoryLocation['status'];
+        }>;
+      }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/inventory/locations/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['InventoryLocations', 'InventoryOverview'],
+    }),
+    getInventoryCategories: builder.query<ApiSuccess<InventoryCategory[]>, void>({
+      query: () => '/api/v1/inventory/categories',
+      providesTags: ['InventoryCategories'],
+    }),
+    updateInventoryCategory: builder.mutation<
+      ApiSuccess<InventoryCategory>,
+      {
+        id: string;
+        body: Partial<{
+          defaultAlertMode: InventoryCategory['defaultAlertMode'];
+          defaultReorderQty: number | null;
+          defaultVelocityDays: number;
+          defaultExpiryLeadDays: number;
+        }>;
+      }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/inventory/categories/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['InventoryCategories', 'InventoryOverview'],
+    }),
+    getInventoryCatalog: builder.query<ApiSuccess<InventoryCatalogItem[]>, void>({
+      query: () => '/api/v1/inventory/catalog',
+      providesTags: ['InventoryCatalog'],
+    }),
+    createInventoryCatalogItem: builder.mutation<
+      ApiSuccess<InventoryCatalogItem>,
+      {
+        categoryId: string;
+        name: string;
+        unit: string;
+        defaultQtyChips?: number[];
+        alertMode?: InventoryCatalogItem['alertMode'];
+        reorderQty?: number | null;
+        velocityDays?: number | null;
+        expiryLeadDays?: number | null;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/inventory/catalog', method: 'POST', body }),
+      invalidatesTags: ['InventoryCatalog', 'InventoryOverview'],
+    }),
+    updateInventoryCatalogItem: builder.mutation<
+      ApiSuccess<InventoryCatalogItem>,
+      {
+        id: string;
+        body: Partial<{
+          name: string;
+          unit: string;
+          defaultQtyChips: number[];
+          alertMode: InventoryCatalogItem['alertMode'];
+          reorderQty: number | null;
+          velocityDays: number | null;
+          expiryLeadDays: number | null;
+          notes: string;
+          status: InventoryCatalogItem['status'];
+        }>;
+      }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/inventory/catalog/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['InventoryCatalog', 'InventoryOverview'],
+    }),
+    getInventoryEmployeeOptions: builder.query<ApiSuccess<InventoryEmployeeOption[]>, void>({
+      query: () => '/api/v1/inventory/employee-options',
+    }),
+    getInventoryAuthorizations: builder.query<ApiSuccess<InventoryAuthorization[]>, void>({
+      query: () => '/api/v1/inventory/authorizations',
+      providesTags: ['InventoryAuthorizations'],
+    }),
+    upsertInventoryAuthorization: builder.mutation<
+      ApiSuccess<InventoryAuthorization>,
+      {
+        employeeId: string;
+        canUsage: boolean;
+        canReceipt: boolean;
+        canPrep: boolean;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/inventory/authorizations', method: 'POST', body }),
+      invalidatesTags: ['InventoryAuthorizations', 'InventoryOverview'],
+    }),
+    deleteInventoryAuthorization: builder.mutation<ApiSuccess<{ id: string }>, string>({
+      query: (id) => ({ url: `/api/v1/inventory/authorizations/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['InventoryAuthorizations', 'InventoryOverview'],
+    }),
+    getInventoryLots: builder.query<ApiSuccess<InventoryLot[]>, void>({
+      query: () => '/api/v1/inventory/lots',
+      providesTags: ['InventoryLots'],
+    }),
+    getInventoryLot: builder.query<ApiSuccess<InventoryLot>, string>({
+      query: (id) => `/api/v1/inventory/lots/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'InventoryLots', id }],
+    }),
+    receiveInventoryLot: builder.mutation<
+      ApiSuccess<InventoryLot>,
+      {
+        catalogItemId: string;
+        locationId: string;
+        supplierName?: string;
+        supplierType?: InventoryLot['supplierType'];
+        purchaseDate: string;
+        qty: number;
+        unit?: string;
+        totalCost?: number;
+        expiryDate?: string | null;
+        qtyChips?: number[];
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/inventory/lots', method: 'POST', body }),
+      invalidatesTags: ['InventoryLots', 'InventoryOverview'],
+    }),
+    getInventoryLotPrint: builder.query<ApiSuccess<InventoryLotPrint>, string>({
+      query: (id) => `/api/v1/inventory/lots/${id}/print`,
+    }),
+    getInventoryLotMovements: builder.query<ApiSuccess<InventoryMovement[]>, string>({
+      query: (id) => `/api/v1/inventory/lots/${id}/movements`,
+      providesTags: (_r, _e, id) => [{ type: 'InventoryLots', id: `${id}-movements` }],
+    }),
+    adjustInventoryLot: builder.mutation<
+      ApiSuccess<InventoryLot>,
+      { id: string; body: { remainingQty: number; notes: string } }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/inventory/lots/${id}/adjust`, method: 'POST', body }),
+      invalidatesTags: ['InventoryLots', 'InventoryOverview'],
+    }),
+    getInventoryLotExpense: builder.query<ApiSuccess<InventoryLotExpense>, string>({
+      query: (id) => `/api/v1/inventory/lots/${id}/expense`,
+      providesTags: (_r, _e, id) => [{ type: 'InventoryLots', id: `${id}-expense` }],
+    }),
+    getInventoryPrepSessions: builder.query<ApiSuccess<InventoryPrepSession[]>, void>({
+      query: () => '/api/v1/inventory/prep-sessions',
+      providesTags: ['InventoryPrep'],
+    }),
+    getInventoryPrepSession: builder.query<ApiSuccess<InventoryPrepSession>, string>({
+      query: (id) => `/api/v1/inventory/prep-sessions/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'InventoryPrep', id }],
+    }),
+    createInventoryPrepSession: builder.mutation<
+      ApiSuccess<InventoryPrepSession>,
+      {
+        catalogItemId: string;
+        locationId: string;
+        targetQty: number;
+        unit?: string;
+        qtyChips?: number[];
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/inventory/prep-sessions', method: 'POST', body }),
+      invalidatesTags: ['InventoryPrep', 'InventoryOverview'],
+    }),
+    addInventoryPrepInput: builder.mutation<
+      ApiSuccess<InventoryPrepSession>,
+      { id: string; body: { sourceLotId: string; qty: number; notes?: string } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/inventory/prep-sessions/${id}/inputs`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['InventoryPrep', 'InventoryLots'],
+    }),
+    completeInventoryPrepSession: builder.mutation<
+      ApiSuccess<InventoryPrepSession>,
+      { id: string; body?: { expiryDate?: string | null; notes?: string } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/inventory/prep-sessions/${id}/complete`,
+        method: 'POST',
+        body: body ?? {},
+      }),
+      invalidatesTags: ['InventoryPrep', 'InventoryLots', 'InventoryOverview'],
+    }),
+    cancelInventoryPrepSession: builder.mutation<ApiSuccess<InventoryPrepSession>, string>({
+      query: (id) => ({
+        url: `/api/v1/inventory/prep-sessions/${id}/cancel`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['InventoryPrep', 'InventoryOverview'],
+    }),
+    getInventoryStations: builder.query<ApiSuccess<InventoryStation[]>, void>({
+      query: () => '/api/v1/inventory/stations',
+      providesTags: ['InventoryStations'],
+    }),
+    getInventoryStation: builder.query<ApiSuccess<InventoryStation>, string>({
+      query: (id) => `/api/v1/inventory/stations/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'InventoryStations', id }],
+    }),
+    createInventoryStation: builder.mutation<
+      ApiSuccess<InventoryStation>,
+      { locationId: string; name: string; notes?: string }
+    >({
+      query: (body) => ({ url: '/api/v1/inventory/stations', method: 'POST', body }),
+      invalidatesTags: ['InventoryStations', 'InventoryOverview'],
+    }),
+    updateInventoryStation: builder.mutation<
+      ApiSuccess<InventoryStation>,
+      { id: string; body: { name?: string; notes?: string; status?: 'active' | 'inactive' } }
+    >({
+      query: ({ id, body }) => ({ url: `/api/v1/inventory/stations/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['InventoryStations', 'InventoryOverview'],
+    }),
+    getInventoryStationPrint: builder.query<ApiSuccess<InventoryStationPrint>, string>({
+      query: (id) => `/api/v1/inventory/stations/${id}/print`,
+    }),
+    getInventoryPlasticStock: builder.query<ApiSuccess<InventoryPlasticStock[]>, void>({
+      query: () => '/api/v1/inventory/plastic-stock',
+      providesTags: ['InventoryPlastic'],
+    }),
+    getInventoryPlasticStockItem: builder.query<ApiSuccess<InventoryPlasticStock>, string>({
+      query: (id) => `/api/v1/inventory/plastic-stock/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'InventoryPlastic', id }],
+    }),
+    receiveInventoryPlasticStock: builder.mutation<
+      ApiSuccess<InventoryPlasticStock>,
+      {
+        catalogItemId: string;
+        locationId: string;
+        manufacturer?: string;
+        sizeLabel: string;
+        attributes?: Record<string, string>;
+        boxes: number;
+        totalCost?: number;
+        supplierName?: string;
+        supplierType?: InventoryPlasticStock['supplierType'];
+        purchaseDate: string;
+        qtyChips?: number[];
+        notes?: string;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/inventory/plastic-stock', method: 'POST', body }),
+      invalidatesTags: ['InventoryPlastic', 'InventoryOverview'],
+    }),
+    getInventoryPlasticMovements: builder.query<ApiSuccess<InventoryPlasticMovement[]>, string>({
+      query: (id) => `/api/v1/inventory/plastic-stock/${id}/movements`,
+      providesTags: (_r, _e, id) => [{ type: 'InventoryPlastic', id: `${id}-movements` }],
+    }),
+    adjustInventoryPlasticStock: builder.mutation<
+      ApiSuccess<InventoryPlasticStock>,
+      { id: string; body: { boxesOnHand: number; notes: string } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/inventory/plastic-stock/${id}/adjust`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['InventoryPlastic', 'InventoryOverview'],
+    }),
+    getInventoryPublicScan: builder.query<ApiSuccess<InventoryPublicScanPayload>, string>({
+      query: (token) => `/api/v1/inventory/public/scan/${encodeURIComponent(token)}`,
+    }),
+    issueInventoryPublicScan: builder.mutation<
+      ApiSuccess<InventoryPublicIssueResult>,
+      { token: string; body: { employeeId: string; qty: number; notes?: string } }
+    >({
+      query: ({ token, body }) => ({
+        url: `/api/v1/inventory/public/scan/${encodeURIComponent(token)}/issue`,
+        method: 'POST',
+        body,
+      }),
+    }),
+    issueInventoryPublicPlastic: builder.mutation<
+      ApiSuccess<InventoryPublicPlasticIssueResult>,
+      {
+        token: string;
+        body: { employeeId: string; plasticStockId: string; boxes: number; notes?: string };
+      }
+    >({
+      query: ({ token, body }) => ({
+        url: `/api/v1/inventory/public/scan/${encodeURIComponent(token)}/plastic-issue`,
+        method: 'POST',
+        body,
+      }),
+    }),
+    getInventoryAlerts: builder.query<ApiSuccess<InventoryAlert[]>, void>({
+      query: () => '/api/v1/inventory/alerts',
+      providesTags: ['InventoryAlerts'],
+    }),
+    getInventoryAlertLog: builder.query<ApiSuccess<InventoryAlertLogEntry[]>, number | void>({
+      query: (days) =>
+        days ? `/api/v1/inventory/alerts/log?days=${encodeURIComponent(String(days))}` : '/api/v1/inventory/alerts/log',
+      providesTags: ['InventoryAlerts'],
+    }),
+    getInventoryReports: builder.query<
+      ApiSuccess<InventoryReportsBundle>,
+      { period?: string; from?: string; to?: string } | void
+    >({
+      query: (args) => {
+        const params = new URLSearchParams();
+        if (args?.from && args?.to) {
+          params.set('from', args.from);
+          params.set('to', args.to);
+        } else if (args?.period) {
+          params.set('period', args.period);
+        } else {
+          params.set('period', 'month');
+        }
+        const qs = params.toString();
+        return `/api/v1/inventory/reports${qs ? `?${qs}` : ''}`;
+      },
+    }),
+    getInventoryAdminDashboard: builder.query<
+      ApiSuccess<InventoryAdminDashboard>,
+      { period?: string; from?: string; to?: string } | void
+    >({
+      query: (args) => {
+        const params = new URLSearchParams();
+        if (args?.from && args?.to) {
+          params.set('from', args.from);
+          params.set('to', args.to);
+        } else if (args?.period) {
+          params.set('period', args.period);
+        } else {
+          params.set('period', 'month');
+        }
+        const qs = params.toString();
+        return `/api/v1/inventory/admin-dashboard${qs ? `?${qs}` : ''}`;
+      },
+    }),
+    exportInventoryAudit: builder.query<
+      ApiSuccess<InventoryAuditExport>,
+      { from: string; to: string }
+    >({
+      query: ({ from, to }) => {
+        const params = new URLSearchParams({ from, to });
+        return `/api/v1/inventory/audit-export?${params.toString()}`;
+      },
+    }),
   }),
 });
 
@@ -3795,4 +4196,49 @@ export const {
   useGetFaqContactTargetsQuery,
   useSendFaqContactMutation,
   useGetReportsOverviewQuery,
+  useGetInventoryOverviewQuery,
+  useGetInventoryAdminOverviewQuery,
+  useGetInventoryLocationsQuery,
+  useCreateInventoryLocationMutation,
+  useUpdateInventoryLocationMutation,
+  useGetInventoryCategoriesQuery,
+  useUpdateInventoryCategoryMutation,
+  useGetInventoryCatalogQuery,
+  useCreateInventoryCatalogItemMutation,
+  useUpdateInventoryCatalogItemMutation,
+  useGetInventoryEmployeeOptionsQuery,
+  useGetInventoryAuthorizationsQuery,
+  useUpsertInventoryAuthorizationMutation,
+  useDeleteInventoryAuthorizationMutation,
+  useGetInventoryLotsQuery,
+  useGetInventoryLotQuery,
+  useReceiveInventoryLotMutation,
+  useLazyGetInventoryLotPrintQuery,
+  useGetInventoryLotMovementsQuery,
+  useAdjustInventoryLotMutation,
+  useGetInventoryLotExpenseQuery,
+  useGetInventoryPrepSessionsQuery,
+  useGetInventoryPrepSessionQuery,
+  useCreateInventoryPrepSessionMutation,
+  useAddInventoryPrepInputMutation,
+  useCompleteInventoryPrepSessionMutation,
+  useCancelInventoryPrepSessionMutation,
+  useGetInventoryStationsQuery,
+  useGetInventoryStationQuery,
+  useCreateInventoryStationMutation,
+  useUpdateInventoryStationMutation,
+  useLazyGetInventoryStationPrintQuery,
+  useGetInventoryPlasticStockQuery,
+  useGetInventoryPlasticStockItemQuery,
+  useReceiveInventoryPlasticStockMutation,
+  useGetInventoryPlasticMovementsQuery,
+  useAdjustInventoryPlasticStockMutation,
+  useGetInventoryPublicScanQuery,
+  useIssueInventoryPublicScanMutation,
+  useIssueInventoryPublicPlasticMutation,
+  useGetInventoryAlertsQuery,
+  useGetInventoryAlertLogQuery,
+  useGetInventoryReportsQuery,
+  useGetInventoryAdminDashboardQuery,
+  useLazyExportInventoryAuditQuery,
 } = api;

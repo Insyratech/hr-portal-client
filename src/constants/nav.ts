@@ -106,6 +106,7 @@ export const SUPER_ADMIN_POLICIES_NAV: readonly NavItem[] = [
 ];
 
 export const SUPER_ADMIN_SYSTEM_NAV: readonly NavItem[] = [
+  { href: '/super-admin/inventory', label: 'Inventory', icon: 'grid' },
   { href: '/super-admin/settings', label: 'Settings', icon: 'settings' },
   { href: '/super-admin/audit', label: 'Audit', icon: 'audit' },
   { href: '/super-admin/profile', label: 'Profile', icon: 'users' },
@@ -325,8 +326,44 @@ export const FINANCE_BOTTOM_NAV: readonly NavItem[] = [
   { href: '/finance/settings', label: 'Settings', icon: 'settings' },
 ];
 
+export const INVENTORY_OVERVIEW_NAV: readonly NavItem[] = [
+  { href: '/inventory', label: 'Overview', icon: 'overview' },
+  { href: '/inventory/scan', label: 'Scan', icon: 'grid' },
+  { href: '/inventory/alerts', label: 'Alerts', icon: 'bell' },
+  { href: '/inventory/reports', label: 'Reports', icon: 'file' },
+];
+
+export const INVENTORY_STOCK_NAV: readonly NavItem[] = [
+  { href: '/inventory/receive', label: 'Receive', icon: 'file' },
+  { href: '/inventory/lots', label: 'Lots', icon: 'grid' },
+  { href: '/inventory/prep', label: 'Prep', icon: 'file' },
+  { href: '/inventory/plastic', label: 'Plastic', icon: 'grid' },
+  { href: '/inventory/stations', label: 'Stations', icon: 'building' },
+];
+
+export const INVENTORY_MASTERS_NAV: readonly NavItem[] = [
+  { href: '/inventory/locations', label: 'Locations', icon: 'building' },
+  { href: '/inventory/categories', label: 'Categories', icon: 'grid' },
+  { href: '/inventory/catalog', label: 'Catalog', icon: 'file' },
+  { href: '/inventory/authorizations', label: 'Authorizations', icon: 'users' },
+];
+
+export const INVENTORY_NAV: readonly NavItem[] = [
+  ...INVENTORY_OVERVIEW_NAV,
+  ...INVENTORY_STOCK_NAV,
+  ...INVENTORY_MASTERS_NAV,
+];
+
+export const INVENTORY_BOTTOM_NAV: readonly NavItem[] = [
+  { href: '/inventory', label: 'Overview', icon: 'overview' },
+  { href: '/inventory/receive', label: 'Receive', icon: 'file' },
+  { href: '/inventory/lots', label: 'Lots', icon: 'grid' },
+  { href: '/inventory/plastic', label: 'Plastic', icon: 'grid' },
+  { href: '/inventory/catalog', label: 'Catalog', icon: 'file' },
+];
+
 export function isNavActive(pathname: string, href: string): boolean {
-  const roots = ['/super-admin', '/hr', '/gm', '/cso', '/finance', '/dashboard'];
+  const roots = ['/super-admin', '/hr', '/gm', '/cso', '/finance', '/inventory', '/dashboard'];
   if (roots.includes(href)) {
     return pathname === href;
   }

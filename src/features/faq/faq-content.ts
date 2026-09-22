@@ -344,7 +344,7 @@ const SA_CATEGORIES: FaqCategory[] = [
         id: 'sa-roles',
         question: 'Who can assign roles?',
         answer:
-          'Super Admin assigns operational roles (Employee, HR, GM, CSO, Finance). Super Admin itself is not assignable through normal profile flows. Prefer least privilege.',
+          'Super Admin assigns operational roles (Employee, HR, GM, CSO, Finance, Inventory). Super Admin itself is not assignable through normal profile flows. Prefer least privilege.',
       },
       {
         id: 'sa-directory-edit',
@@ -387,12 +387,78 @@ const SA_CATEGORIES: FaqCategory[] = [
   },
 ];
 
+const INVENTORY_CATEGORIES: FaqCategory[] = [
+  SHARED_BASICS,
+  {
+    id: 'inv-workspace',
+    label: 'Inventory workspace',
+    description: 'Overview and what comes next',
+    questions: [
+      {
+        id: 'inv-home',
+        question: 'Where do I land after login?',
+        answer:
+          'As Inventory Manager you open the Inventory workspace at /inventory. Receive measured lots and bought reagents, run Prep for lab-made reagents, receive plastic boxes and print station QR labels, and manage Locations / Catalog / Authorizations. Scan URLs are public kiosk cards — lot aliquots use the parent QR; plastics use the station picker.',
+      },
+      {
+        id: 'inv-prep',
+        question: 'How do lab-made reagents work?',
+        answer:
+          'Open Prep, choose a Reagents catalog item and target volume, issue Chemicals/Solvents into the session, then Complete to create one parent QR lot. Expense reports use the component costs, not a second reagent purchase. Bought reagents still use Receive with purchase cost.',
+      },
+      {
+        id: 'inv-plastic',
+        question: 'How do plastic wares (gloves, tips) work?',
+        answer:
+          'Receive boxes under Plastic (type, manufacturer, size). Create a Station QR for the stock-room location and print it. Anyone scanning that QR picks item + size + box count. Stock deducts whole boxes only — no per-glove counting.',
+      },
+      {
+        id: 'inv-alerts',
+        question: 'How do stock and expiry alerts work?',
+        answer:
+          'Set reorder qty, velocity days, and expiry lead days on Categories (defaults) or Catalog items. Open Alerts to see what is firing now. A daily job emails Inventory Managers and creates in-app notifications with links to the lot or plastic SKU. The same lot/kind is notified at most once per day.',
+      },
+      {
+        id: 'inv-scan-camera',
+        question: 'How do I scan a label without a separate QR app?',
+        answer:
+          'On a lab phone open /scan (or Inventory → Scan while signed in). Tap Scan with camera, allow camera access, and point at a printed lot or station label. The portal opens the public usage card. Labels also work if the phone camera opens the URL directly.',
+      },
+      {
+        id: 'inv-scan-offline',
+        question: 'What if the phone is offline when I submit usage?',
+        answer:
+          'Usage is not recorded offline. The kiosk shows a clear offline banner and disables Submit. Reconnect to lab Wi‑Fi, refresh the card, and submit again. Do not assume stock was deducted until you see a success message.',
+      },
+      {
+        id: 'inv-reports',
+        question: 'Where do I see spend and usage for last month?',
+        answer:
+          'Open Reports. Choose Last month (or another period) and Run report. You get purchase spend by category/location/item, usage leaderboards, and adjustments. Super Admin has the same figures on System → Inventory. Export Audit CSV from Reports for inventory audit_log rows in a date range.',
+      },
+      {
+        id: 'inv-employee',
+        question: 'Can I still use employee self-service?',
+        answer:
+          'Yes. Use Employee Features in the sidebar for leave, attendance, payslips, and your own work loop. Inventory modules stay under Inventory Responsibility.',
+      },
+      {
+        id: 'inv-contact',
+        question: 'Who do I contact for access issues?',
+        answer:
+          'Ask Super Admin to confirm your Inventory Manager role on your profile. Use Help → Contact to reach HR or Super Admin if login or permissions look wrong.',
+      },
+    ],
+  },
+];
+
 const BY_ROLE: Record<string, FaqCategory[]> = {
   EMPLOYEE: EMPLOYEE_CATEGORIES,
   HR_MANAGER: HR_CATEGORIES,
   GENERAL_MANAGER: GM_CATEGORIES,
   CSO: CSO_CATEGORIES,
   FINANCE_MANAGER: FINANCE_CATEGORIES,
+  INVENTORY_MANAGER: INVENTORY_CATEGORIES,
   SUPER_ADMIN: SA_CATEGORIES,
 };
 
@@ -414,6 +480,8 @@ export function faqRoleLabel(roles: string[]): string {
       return 'CSO';
     case 'FINANCE_MANAGER':
       return 'Finance Manager';
+    case 'INVENTORY_MANAGER':
+      return 'Inventory Manager';
     default:
       return 'Employee';
   }

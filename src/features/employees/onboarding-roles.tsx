@@ -8,6 +8,7 @@ export const SA_ASSIGNABLE_ROLE_CODES = new Set([
   'GENERAL_MANAGER',
   'CSO',
   'FINANCE_MANAGER',
+  'INVENTORY_MANAGER',
 ]);
 
 /** Managerial hats shown as checkboxes (Employee is always kept server-side). */
@@ -16,6 +17,7 @@ export const MANAGERIAL_ROLE_CODES = new Set([
   'GENERAL_MANAGER',
   'CSO',
   'FINANCE_MANAGER',
+  'INVENTORY_MANAGER',
 ]);
 
 /** @deprecated Use SA_ASSIGNABLE_ROLE_CODES. */
@@ -33,6 +35,8 @@ export function roleLabel(code: string): string {
       return 'Chief Scientific Officer';
     case 'FINANCE_MANAGER':
       return 'Finance Manager';
+    case 'INVENTORY_MANAGER':
+      return 'Inventory Manager';
     case 'EMPLOYEE':
       return 'Employee';
     case 'ADMIN':
@@ -73,7 +77,7 @@ export function AssignableRoleChecks({
           {roleLabel(item.code)}
         </label>
       ))}
-      <Meta>Keep Employee. Add HR / GM / CSO / Finance as needed. Super Admin cannot be assigned here.</Meta>
+      <Meta>Keep Employee. Add HR / GM / CSO / Finance / Inventory as needed. Super Admin cannot be assigned here.</Meta>
     </fieldset>
   );
 }

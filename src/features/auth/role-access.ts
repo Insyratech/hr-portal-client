@@ -1,4 +1,12 @@
-export type ShellVariant = 'employee' | 'admin' | 'hr' | 'gm' | 'cso' | 'finance' | 'super-admin';
+export type ShellVariant =
+  | 'employee'
+  | 'admin'
+  | 'hr'
+  | 'gm'
+  | 'cso'
+  | 'finance'
+  | 'inventory'
+  | 'super-admin';
 
 export function isSuperAdmin(roles: string[]): boolean {
   return roles.includes('SUPER_ADMIN');
@@ -18,6 +26,10 @@ export function isCso(roles: string[]): boolean {
 
 export function isFinanceManager(roles: string[]): boolean {
   return roles.includes('FINANCE_MANAGER') && !isSuperAdmin(roles);
+}
+
+export function isInventoryManager(roles: string[]): boolean {
+  return roles.includes('INVENTORY_MANAGER') && !isSuperAdmin(roles);
 }
 
 /** @deprecated Use isGeneralManager. */
@@ -64,6 +76,7 @@ export function homePathForRoles(roles: string[]): string {
   if (isGeneralManager(roles)) return '/gm';
   if (isCso(roles)) return '/cso/work';
   if (isFinanceManager(roles)) return '/finance';
+  if (isInventoryManager(roles)) return '/inventory';
   return '/dashboard';
 }
 
@@ -74,6 +87,7 @@ export function primaryRoleCode(roles: string[]): string {
   if (isGeneralManager(roles)) return 'GENERAL_MANAGER';
   if (isCso(roles)) return 'CSO';
   if (isFinanceManager(roles)) return 'FINANCE_MANAGER';
+  if (isInventoryManager(roles)) return 'INVENTORY_MANAGER';
   if (roles.includes('EMPLOYEE')) return 'EMPLOYEE';
   return roles[0] ?? 'EMPLOYEE';
 }
@@ -84,6 +98,7 @@ export function shellVariantForRoles(roles: string[]): ShellVariant {
   if (isGeneralManager(roles)) return 'gm';
   if (isCso(roles)) return 'cso';
   if (isFinanceManager(roles)) return 'finance';
+  if (isInventoryManager(roles)) return 'inventory';
   return 'employee';
 }
 
@@ -126,7 +141,8 @@ function isPrivileged(roles: string[]): boolean {
     isHrManager(roles) ||
     isGeneralManager(roles) ||
     isCso(roles) ||
-    isFinanceManager(roles)
+    isFinanceManager(roles) ||
+    isInventoryManager(roles)
   );
 }
 
@@ -145,12 +161,14 @@ export function isPathAllowed(roles: string[], pathname: string): boolean {
   }
   if (pathname.startsWith('/cso')) return isCso(roles);
   if (pathname.startsWith('/finance')) return isFinanceManager(roles);
+  if (pathname.startsWith('/inventory')) return isInventoryManager(roles);
   return (
     roles.includes('EMPLOYEE') ||
     isHrManager(roles) ||
     isGeneralManager(roles) ||
     isCso(roles) ||
-    isFinanceManager(roles)
+    isFinanceManager(roles) ||
+    isInventoryManager(roles)
   );
 }
 
