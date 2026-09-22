@@ -39,8 +39,8 @@ export function InventoryLotsPage() {
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Measured stock on hand, including bought and lab-made reagents. Open a lot to print its QR
-        label or review the movement ledger. Aliquots always use the parent QR.
+        Each row is one bottle (QR). Remaining is stock still on that bottle, in the lot unit from
+        receive. Open a lot to print its label or review the ledger.
       </p>
       {isError ? <p className="mb-4 text-sm">Unable to load lots.</p> : null}
 
@@ -69,6 +69,15 @@ export function InventoryLotsPage() {
             cell: (row) => `${row.remainingQty} / ${row.receivedQty} ${row.unit}`,
           },
           { id: 'status', header: 'Status', cell: (row) => row.status },
+          {
+            id: 'actions',
+            header: '',
+            cell: (row) => (
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/inventory/lots/${row.id}`}>View</Link>
+              </Button>
+            ),
+          },
         ]}
         rows={data?.data ?? []}
         loading={isLoading}

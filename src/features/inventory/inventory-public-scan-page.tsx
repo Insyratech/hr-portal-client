@@ -47,8 +47,8 @@ function OfflineBanner({ online }: { online: boolean }) {
 }
 
 /**
- * Public 3-click usage card: lot (measured) or station (plastic picker).
- * No ERP login required; authorization checked for the selected employee.
+ * Public usage card: lot (measured) or station (plastic picker).
+ * No ERP login and no IM usage grant required — pick an active employee and submit.
  */
 export function InventoryPublicScanPage() {
   const params = useParams<{ token: string }>();
@@ -268,8 +268,7 @@ function LotScanCard({
             {submitting ? 'Submitting…' : '3. Submit'}
           </Button>
           <p className="text-xs text-muted">
-            Only employees authorized by Inventory Manager can submit. Ask IM if you see an
-            authorization error.
+            No login needed. Pick your name and quantity — usage is recorded against that employee.
           </p>
           <p className="text-xs text-muted">
             <Link href="/scan" className="underline-offset-2 hover:underline">
@@ -455,8 +454,8 @@ function StationScanCard({
             {submitting ? 'Submitting…' : '4. Submit'}
           </Button>
           <p className="text-xs text-muted">
-            Only employees authorized by Inventory Manager can submit. Ask IM if you see an
-            authorization error.
+            No login needed. Pick your name, item, and boxes — usage is recorded against that
+            employee.
           </p>
           <p className="text-xs text-muted">
             <Link href="/scan" className="underline-offset-2 hover:underline">

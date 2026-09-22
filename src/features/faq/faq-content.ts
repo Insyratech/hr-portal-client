@@ -398,7 +398,7 @@ const INVENTORY_CATEGORIES: FaqCategory[] = [
         id: 'inv-home',
         question: 'Where do I land after login?',
         answer:
-          'As Inventory Manager you open the Inventory workspace at /inventory. Receive measured lots and bought reagents, run Prep for lab-made reagents, receive plastic boxes and print station QR labels, and manage Locations / Catalog / Authorizations. Scan URLs are public kiosk cards — lot aliquots use the parent QR; plastics use the station picker.',
+          'As Inventory Manager you open the Inventory workspace at /inventory. Receive measured lots and bought reagents, run Prep for lab-made reagents, receive plastic boxes and print station QR labels, and manage Locations / Catalog / Authorizations (receipt and prep). Scan URLs are public kiosk cards — no login; pick your name and submit. Lot aliquots use the parent QR; plastics use the station picker.',
       },
       {
         id: 'inv-prep',
@@ -422,7 +422,7 @@ const INVENTORY_CATEGORIES: FaqCategory[] = [
         id: 'inv-scan-camera',
         question: 'How do I scan a label without a separate QR app?',
         answer:
-          'On a lab phone open /scan (or Inventory → Scan while signed in). Tap Scan with camera, allow camera access, and point at a printed lot or station label. The portal opens the public usage card. Labels also work if the phone camera opens the URL directly.',
+          'On a lab phone open /scan (or Inventory → Scan while signed in). Tap Scan with camera, allow camera access, and point at a printed lot or station label. The portal opens the public usage card. No login and no IM usage grant — pick your name and quantity, then submit. Labels also work if the phone camera opens the URL directly.',
       },
       {
         id: 'inv-scan-offline',

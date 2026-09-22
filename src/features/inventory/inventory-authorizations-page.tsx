@@ -121,8 +121,8 @@ export function InventoryAuthorizationsPage() {
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Choose who may log usage via QR, enter receipts, or run reagent prep. Grant 2–3 people for a
-        typical lab start.
+        Grant who may enter receipts or run reagent prep in the portal. QR kiosk usage does not need
+        a grant — anyone can pick their name on the scan card and submit.
       </p>
       {isError ? <p className="mb-4 text-sm">Unable to load authorizations.</p> : null}
 
@@ -161,7 +161,7 @@ export function InventoryAuthorizationsPage() {
         rows={data?.data ?? []}
         loading={isLoading}
         emptyTitle="No authorizations yet"
-        emptyDescription="Grant usage and receipt to a few lab members to start."
+        emptyDescription="Grant receipt or prep rights for staff who help IM in the portal."
       />
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -186,7 +186,7 @@ export function InventoryAuthorizationsPage() {
               <legend className="text-sm font-medium">Rights</legend>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="canUsage" defaultChecked />
-                Usage (QR issue / aliquot)
+                Usage (optional — QR kiosk does not require this)
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="canReceipt" />
@@ -225,7 +225,7 @@ export function InventoryAuthorizationsPage() {
                 <legend className="text-sm font-medium">Rights</legend>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" name="canUsage" defaultChecked={editing.canUsage} />
-                  Usage (QR issue / aliquot)
+                  Usage (optional — QR kiosk does not require this)
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" name="canReceipt" defaultChecked={editing.canReceipt} />

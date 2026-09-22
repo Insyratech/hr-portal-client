@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { DataTable } from '@/components/dashboard/data-table';
 import { PageHeader } from '@/components/layout/page-header';
+import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -129,19 +130,15 @@ export function InventoryCatalogPage() {
         kicker="Inventory"
         title="Catalog"
         actions={
-          <Button
-            type="button"
-            onClick={() => {
-              setCreateOpen(true);
-            }}
-          >
+          <Button type="button" onClick={() => setCreateOpen(true)}>
             Add item
           </Button>
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Named lab materials with unit, up to 15 quick-qty chips for the future kiosk card, and alert
-        mode.
+        Master list of what you stock. <span className="text-foreground">Unit</span> is how this item
+        is measured (g, ml, …). Stock amounts live on each received lot — not here. Qty chips and
+        reorder qty use that same unit on the kiosk and alerts.
       </p>
       {isError ? <p className="mb-4 text-sm">Unable to load catalog.</p> : null}
 
@@ -152,7 +149,7 @@ export function InventoryCatalogPage() {
           { id: 'unit', header: 'Unit', cell: (row) => row.unit },
           {
             id: 'chips',
-            header: 'Qty chips',
+            header: 'Kiosk chips',
             cell: (row) => (row.defaultQtyChips.length ? formatQtyChips(row.defaultQtyChips) : '—'),
           },
           { id: 'alert', header: 'Alert', cell: (row) => alertLabel(row.alertMode) },
@@ -161,12 +158,7 @@ export function InventoryCatalogPage() {
             id: 'actions',
             header: '',
             cell: (row) => (
-              <EditIconButton
-                label={`Edit ${row.name}`}
-                onClick={() => {
-                  setEditing(row);
-                }}
-              />
+              <EditIconButton label={`Edit ${row.name}`} onClick={() => setEditing(row)} />
             ),
           },
         ]}
@@ -177,61 +169,88 @@ export function InventoryCatalogPage() {
       />
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
           <DialogTitle>Add catalog item</DialogTitle>
-          <DialogDescription>Qty chips are comma-separated (max 15).</DialogDescription>
-          <form className="mt-4 space-y-4" onSubmit={onCreate}>
-            <div>
-              <Label htmlFor="categoryId">Category</Label>
-              <select id="categoryId" name="categoryId" className={SELECT_CLASS} required defaultValue="">
-                <option value="" disabled>
-                  Select category
-                </option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
+          <DialogDescription>
+            Define the item and its measuring unit. Receive creates the actual stock bottle.
+          </DialogDescription>
+          <form className="mt-4 space-y-5" onSubmit={onCreate}>
+            <section className="space-y-3">
+              <Meta>Identity</Meta>
+              <div>
+                <Label htmlFor="categoryId">Category</Label>
+                <select
+                  id="categoryId"
+                  name="categoryId"
+                  className={SELECT_CLASS}
+                  required
+                  defaultValue=""
+                >
+                  <option value="" disabled>
+                    Select category
                   </option>
-                ))}
-              </select>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" name="name" required placeholder="Agarose" />
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div>
-                <Label htmlFor="unit">Unit</Label>
-                <Input id="unit" name="unit" required placeholder="g / ml / box" />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="name">Name</Label>
+                  <Input id="name" name="name" required placeholder="Agarose" />
+                </div>
+                <div>
+                  <Label htmlFor="unit">Measuring unit</Label>
+                  <Input id="unit" name="unit" required placeholder="g / ml / box" />
+                  <p className="mt-1 text-xs text-muted">Used for stock, chips, and alerts.</p>
+                </div>
               </div>
-            </div>
-            <div>
-              <Label htmlFor="defaultQtyChips">Default qty chips</Label>
-              <Input id="defaultQtyChips" name="defaultQtyChips" placeholder="1, 2, 5, 10" />
-            </div>
-            <div>
-              <Label htmlFor="alertMode">Alert mode</Label>
-              <select id="alertMode" name="alertMode" className={SELECT_CLASS} defaultValue="both">
-                {ALERT_MODES.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
+            </section>
+
+            <section className="space-y-3">
+              <Meta>Kiosk quick amounts</Meta>
               <div>
-                <Label htmlFor="reorderQty">Reorder qty</Label>
-                <Input id="reorderQty" name="reorderQty" type="number" min={0} step="any" />
+                <Label htmlFor="defaultQtyChips">Default qty chips</Label>
+                <Input id="defaultQtyChips" name="defaultQtyChips" placeholder="0.1, 0.5, 1, 1.25" />
+                <p className="mt-1 text-xs text-muted">
+                  Comma-separated buttons on the scan card (same unit as above). Max 15.
+                </p>
               </div>
+            </section>
+
+            <section className="space-y-3">
+              <Meta>Alerts</Meta>
               <div>
-                <Label htmlFor="velocityDays">Velocity days</Label>
-                <Input id="velocityDays" name="velocityDays" type="number" min={1} max={365} />
+                <Label htmlFor="alertMode">Alert mode</Label>
+                <select id="alertMode" name="alertMode" className={SELECT_CLASS} defaultValue="both">
+                  {ALERT_MODES.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div>
-                <Label htmlFor="expiryLeadDays">Expiry lead days</Label>
-                <Input id="expiryLeadDays" name="expiryLeadDays" type="number" min={0} max={365} />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="reorderQty">Reorder qty</Label>
+                  <Input id="reorderQty" name="reorderQty" type="number" min={0} step="any" />
+                  <p className="mt-1 text-xs text-muted">Alert when remaining ≤ this (same unit).</p>
+                </div>
+                <div>
+                  <Label htmlFor="velocityDays">Velocity days</Label>
+                  <Input id="velocityDays" name="velocityDays" type="number" min={1} max={365} />
+                  <p className="mt-1 text-xs text-muted">Alert when projected days left ≤ this.</p>
+                </div>
+                <div className="sm:col-span-2">
+                  <Label htmlFor="expiryLeadDays">Expiry lead days</Label>
+                  <Input id="expiryLeadDays" name="expiryLeadDays" type="number" min={0} max={365} />
+                  <p className="mt-1 text-xs text-muted">Alert this many days before lot expiry.</p>
+                </div>
               </div>
-            </div>
+            </section>
+
             <div>
               <Label htmlFor="notes">Notes</Label>
               <Input id="notes" name="notes" />
@@ -249,91 +268,118 @@ export function InventoryCatalogPage() {
       </Dialog>
 
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
           <DialogTitle>Edit catalog item</DialogTitle>
           <DialogDescription>
             {editing?.categoryName} · category is fixed after create
           </DialogDescription>
           {editing ? (
-            <form className="mt-4 space-y-4" onSubmit={onUpdate}>
+            <form key={editing.id} className="mt-4 space-y-5" onSubmit={onUpdate}>
+              <section className="space-y-3">
+                <Meta>Identity</Meta>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="edit-name">Name</Label>
+                    <Input id="edit-name" name="name" defaultValue={editing.name} required />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-unit">Measuring unit</Label>
+                    <Input id="edit-unit" name="unit" defaultValue={editing.unit} required />
+                    <p className="mt-1 text-xs text-muted">Used for stock, chips, and alerts.</p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-3">
+                <Meta>Kiosk quick amounts</Meta>
+                <div>
+                  <Label htmlFor="edit-chips">Default qty chips</Label>
+                  <Input
+                    id="edit-chips"
+                    name="defaultQtyChips"
+                    defaultValue={formatQtyChips(editing.defaultQtyChips)}
+                    placeholder="0.1, 0.5, 1, 1.25"
+                  />
+                  <p className="mt-1 text-xs text-muted">
+                    Comma-separated scan-card buttons (same unit). Max 15.
+                  </p>
+                </div>
+              </section>
+
+              <section className="space-y-3">
+                <Meta>Alerts</Meta>
+                <div>
+                  <Label htmlFor="edit-alertMode">Alert mode</Label>
+                  <select
+                    id="edit-alertMode"
+                    name="alertMode"
+                    className={SELECT_CLASS}
+                    defaultValue={editing.alertMode}
+                  >
+                    {ALERT_MODES.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="edit-reorderQty">Reorder qty</Label>
+                    <Input
+                      id="edit-reorderQty"
+                      name="reorderQty"
+                      type="number"
+                      min={0}
+                      step="any"
+                      defaultValue={editing.reorderQty ?? ''}
+                    />
+                    <p className="mt-1 text-xs text-muted">Alert when remaining ≤ this (same unit).</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-velocityDays">Velocity days</Label>
+                    <Input
+                      id="edit-velocityDays"
+                      name="velocityDays"
+                      type="number"
+                      min={1}
+                      max={365}
+                      defaultValue={editing.velocityDays ?? ''}
+                    />
+                    <p className="mt-1 text-xs text-muted">Alert when projected days left ≤ this.</p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label htmlFor="edit-expiryLeadDays">Expiry lead days</Label>
+                    <Input
+                      id="edit-expiryLeadDays"
+                      name="expiryLeadDays"
+                      type="number"
+                      min={0}
+                      max={365}
+                      defaultValue={editing.expiryLeadDays ?? ''}
+                    />
+                    <p className="mt-1 text-xs text-muted">Alert this many days before lot expiry.</p>
+                  </div>
+                </div>
+              </section>
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label htmlFor="edit-name">Name</Label>
-                  <Input id="edit-name" name="name" defaultValue={editing.name} required />
+                  <Label htmlFor="edit-notes">Notes</Label>
+                  <Input id="edit-notes" name="notes" defaultValue={editing.notes} />
                 </div>
                 <div>
-                  <Label htmlFor="edit-unit">Unit</Label>
-                  <Input id="edit-unit" name="unit" defaultValue={editing.unit} required />
+                  <Label htmlFor="edit-status">Status</Label>
+                  <select
+                    id="edit-status"
+                    name="status"
+                    className={SELECT_CLASS}
+                    defaultValue={editing.status}
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="edit-chips">Default qty chips</Label>
-                <Input
-                  id="edit-chips"
-                  name="defaultQtyChips"
-                  defaultValue={formatQtyChips(editing.defaultQtyChips)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-alertMode">Alert mode</Label>
-                <select
-                  id="edit-alertMode"
-                  name="alertMode"
-                  className={SELECT_CLASS}
-                  defaultValue={editing.alertMode}
-                >
-                  {ALERT_MODES.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div>
-                  <Label htmlFor="edit-reorderQty">Reorder qty</Label>
-                  <Input
-                    id="edit-reorderQty"
-                    name="reorderQty"
-                    type="number"
-                    min={0}
-                    step="any"
-                    defaultValue={editing.reorderQty ?? ''}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-velocityDays">Velocity days</Label>
-                  <Input
-                    id="edit-velocityDays"
-                    name="velocityDays"
-                    type="number"
-                    min={1}
-                    max={365}
-                    defaultValue={editing.velocityDays ?? ''}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-expiryLeadDays">Expiry lead days</Label>
-                  <Input
-                    id="edit-expiryLeadDays"
-                    name="expiryLeadDays"
-                    type="number"
-                    min={0}
-                    max={365}
-                    defaultValue={editing.expiryLeadDays ?? ''}
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="edit-notes">Notes</Label>
-                <Input id="edit-notes" name="notes" defaultValue={editing.notes} />
-              </div>
-              <div>
-                <Label htmlFor="edit-status">Status</Label>
-                <select id="edit-status" name="status" className={SELECT_CLASS} defaultValue={editing.status}>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setEditing(null)}>

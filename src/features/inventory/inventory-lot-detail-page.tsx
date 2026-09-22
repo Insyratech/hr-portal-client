@@ -108,6 +108,8 @@ export function InventoryLotDetailPage() {
     );
   }
 
+  const usedQty = Math.max(0, lot.receivedQty - lot.remainingQty);
+
   return (
     <>
       <DelayedLoadingOverlay active={printing || adjusting} />
@@ -120,13 +122,7 @@ export function InventoryLotDetailPage() {
               Print QR label
             </Button>
             {canAdjust ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setAdjustOpen(true);
-                }}
-              >
+              <Button type="button" variant="outline" onClick={() => setAdjustOpen(true)}>
                 Adjust stock
               </Button>
             ) : null}
@@ -136,21 +132,49 @@ export function InventoryLotDetailPage() {
           </div>
         }
       />
-      <div className="mb-8 grid max-w-3xl gap-3 sm:grid-cols-2">
+
+      <p className="mb-6 max-w-2xl text-sm text-muted">
+        One physical bottle with its own QR. Aliquots always scan this same parent label.
+      </p>
+
+      <section className="mb-8 max-w-3xl">
+        <Meta>Stock on hand</Meta>
+        <div className="mt-3 rounded border border-border px-5 py-5">
+          <p className="text-3xl font-medium tabular-nums tracking-tight">
+            {lot.remainingQty}{' '}
+            <span className="text-base font-normal text-muted">{lot.unit}</span>
+          </p>
+          <p className="mt-2 text-sm text-muted">
+            Remaining of this bottle. Unit is the catalog measuring unit used when the lot was
+            received.
+          </p>
+          <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted">Received</dt>
+              <dd className="mt-0.5 text-sm tabular-nums">
+                {lot.receivedQty} {lot.unit}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted">Used / adjusted out</dt>
+              <dd className="mt-0.5 text-sm tabular-nums">
+                {usedQty} {lot.unit}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted">Status</dt>
+              <dd className="mt-0.5 text-sm capitalize">{lot.status}</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section className="mb-8 grid max-w-3xl gap-3 sm:grid-cols-2">
         <div className="rounded border border-border px-4 py-3">
           <Meta>Item</Meta>
           <p className="mt-1 text-sm font-medium">{lot.catalogItemName}</p>
           <p className="text-xs text-muted">
-            {lot.categoryName} · {lot.locationName}
-          </p>
-        </div>
-        <div className="rounded border border-border px-4 py-3">
-          <Meta>Stock on hand</Meta>
-          <p className="mt-1 text-2xl font-medium tabular-nums">
-            {lot.remainingQty} <span className="text-sm font-normal text-muted">{lot.unit}</span>
-          </p>
-          <p className="text-xs text-muted">
-            Received {lot.receivedQty} · {lot.status}
+            {lot.categoryName} · {lot.locationName} ({lot.locationCode})
           </p>
         </div>
         <div className="rounded border border-border px-4 py-3">
@@ -158,39 +182,49 @@ export function InventoryLotDetailPage() {
           <p className="mt-1 text-sm">
             {lot.supplierName || '—'} ({lot.supplierType})
           </p>
-          <p className="text-xs text-muted">Purchased {lot.purchaseDate}</p>
+          <p className="text-xs text-muted">
+            {lot.origin === 'prep' ? 'Prep completed' : 'Purchased'} {lot.purchaseDate}
+          </p>
         </div>
         <div className="rounded border border-border px-4 py-3">
-          <Meta>Defaults</Meta>
+          <Meta>Kiosk chips</Meta>
           <p className="mt-1 text-sm">
-            Chips: {lot.qtyChips.length ? formatQtyChips(lot.qtyChips) : '—'}
+            {lot.qtyChips.length ? formatQtyChips(lot.qtyChips) : '—'}{' '}
+            <span className="text-muted">{lot.unit}</span>
           </p>
-          <p className="text-xs text-muted">
-            Expiry {lot.expiryDate ?? '—'} · Origin {lot.origin}
-          </p>
+          <p className="text-xs text-muted">Quick amounts on the public scan card for this lot.</p>
+        </div>
+        <div className="rounded border border-border px-4 py-3">
+          <Meta>Expiry & origin</Meta>
+          <p className="mt-1 text-sm">{lot.expiryDate ?? 'No expiry set'}</p>
+          <p className="text-xs text-muted capitalize">Origin: {lot.origin}</p>
         </div>
         <div className="rounded border border-border px-4 py-3 sm:col-span-2">
           <Meta>Expense</Meta>
-          <p className="mt-1 text-sm">
+          <p className="mt-1 text-sm tabular-nums">
             Purchase {lot.totalCost.toFixed(2)} · Components {(lot.componentCostTotal ?? 0).toFixed(2)}
             {expense ? (
               <>
                 {' '}
-                · Reportable <span className="font-medium">{expense.reportableExpense.toFixed(2)}</span>
+                · Reportable{' '}
+                <span className="font-medium">{expense.reportableExpense.toFixed(2)}</span>
               </>
             ) : null}
           </p>
-          <p className="text-xs text-muted">
+          <p className="mt-1 text-xs text-muted">
             {expense?.note ??
               (lot.origin === 'prep'
                 ? 'Lab-made: reportable spend is component cost only.'
-                : 'Purchased: reportable spend is purchase cost.')}
+                : 'Purchased lot: reportable spend is the entered purchase cost.')}
           </p>
         </div>
-      </div>
+      </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-medium">Movement ledger</h2>
+        <h2 className="mb-1 text-sm font-medium">Movement ledger</h2>
+        <p className="mb-3 text-xs text-muted">
+          Every receive, issue (kiosk), and adjustment for this bottle.
+        </p>
         <DataTable
           columns={[
             {
@@ -218,8 +252,8 @@ export function InventoryLotDetailPage() {
           ]}
           rows={movementsData?.data ?? []}
           loading={movementsLoading}
-          emptyTitle="No movements"
-          emptyDescription="Receipt and issues will appear here."
+          emptyTitle="No movements yet"
+          emptyDescription="After receive, the first ledger row appears here. Issues from the scan card show next."
         />
       </section>
 
