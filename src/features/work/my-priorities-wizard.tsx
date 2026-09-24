@@ -258,8 +258,8 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
       if (allApproved) {
         toast.success(
           count === 1
-            ? 'Priority approved. You can start daily updates once every line for the week is approved.'
-            : `${count} priorities approved. You can start daily updates once every line for the week is approved.`,
+            ? 'Priority approved. You can log today’s update against it now.'
+            : `${count} priorities approved. You can log today’s update against them now.`,
         );
       } else {
         toast.success(
@@ -309,8 +309,8 @@ export function MyPrioritiesWizard({ board }: { board: WeeklyWorkBoard }) {
         </p>
         <p className="mt-2 text-sm text-muted">
           {hasProjects
-            ? 'Add work goals first, then an optional skill plan, then submit everything once for project lead approval. A reminder goes out Monday at 4:00 pm IST — please submit before end of Monday. If you are on leave Monday, submit when you are back. Daily updates unlock after every line is approved.'
-            : 'You are not on an active project yet, so regular work and skill plans do not need project lead approval — they approve automatically when you submit. Add work goals first, then an optional skill plan. A reminder goes out Monday at 4:00 pm IST. Daily updates unlock after every line is approved.'}
+            ? 'Add work goals first, then an optional skill plan, then submit everything once for project lead approval. A reminder goes out Monday at 4:00 pm IST — please submit before end of Monday. If you are on leave Monday, submit when you are back. Daily updates unlock for each approved priority.'
+            : 'You are not on an active project yet, so regular work and skill plans do not need project lead approval — they approve automatically when you submit. Add work goals first, then an optional skill plan. A reminder goes out Monday at 4:00 pm IST. Daily updates unlock for each approved priority.'}
         </p>
         {board.overCap ? (
           <p className="mt-3 text-sm">You have {active.length} items. Aim for a focused week (about 3–5).</p>

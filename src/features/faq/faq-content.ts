@@ -87,7 +87,7 @@ const EMPLOYEE_CATEGORIES: FaqCategory[] = [
         id: 'work-priorities',
         question: 'How do weekly priorities work?',
         answer:
-          'Under Work, set weekly priorities, then add daily updates against them. Submit when ready so leads and admins can review. Approved leave can pause reminder expectations for those days.',
+          'Under Work, set weekly priorities and submit them for project lead review. Once a priority is approved, add daily updates against that line — you do not need every priority approved first. Approved leave can pause reminder expectations for those days.',
       },
       {
         id: 'work-projects',

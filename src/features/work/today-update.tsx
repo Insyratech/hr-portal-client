@@ -34,6 +34,26 @@ function blockerLabel(category: string): string {
   return BLOCKERS.find((row) => row.value === category)?.label ?? category;
 }
 
+function canLogPriority(item: WorkDayBoard['priorities'][number]): boolean {
+  if (typeof item.canLogDaily === 'boolean') return item.canLogDaily;
+  return !item.approvalStatus || item.approvalStatus === 'APPROVED';
+}
+
+function approvalStatusLabel(status: string | undefined): string {
+  switch (status) {
+    case 'APPROVED':
+      return 'Approved';
+    case 'SUBMITTED':
+      return 'Awaiting project lead';
+    case 'RESUBMIT_REQUESTED':
+      return 'Needs resubmit';
+    case 'DRAFT':
+      return 'Draft';
+    default:
+      return status ?? '';
+  }
+}
+
 function DailyUpdateForm({
   board,
   date,
@@ -97,7 +117,7 @@ function DailyUpdateForm({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const planned = (board.priorities ?? [])
-      .filter((item) => checked[item.id])
+      .filter((item) => canLogPriority(item) && checked[item.id])
       .map((item) => ({ priorityId: item.id, description: (notes[item.id] ?? '').trim() }))
       .filter((item) => item.description);
     const extra = unplanned.map((text) => ({ description: text.trim() })).filter((item) => item.description);
@@ -112,40 +132,48 @@ function DailyUpdateForm({
   return (
     <form onSubmit={(event) => void handleSubmit(event)} className="space-y-4">
       <p className="text-sm text-muted">
-        Tick what you worked on and add a short note. One line is enough. Reminders go out at 8:00 pm and 10:00 pm
-        IST on working days if today is still missing.
+        Tick approved priorities you worked on and add a short note. One line is enough. Lines still with your
+        project lead stay locked. Reminders go out at 8:00 pm and 10:00 pm IST on working days if today is still
+        missing.
       </p>
 
       {board.priorities.length === 0 ? (
         <p className="text-sm text-muted">No weekly priorities yet. You can still log unplanned work below.</p>
       ) : (
         <ul className="space-y-3">
-          {board.priorities.map((item) => (
-            <li key={item.id}>
-              <label className="flex items-start gap-3 text-sm">
-                <input
-                  type="checkbox"
-                  className="mt-1"
-                  checked={Boolean(checked[item.id])}
-                  onChange={(event) => setChecked((prev) => ({ ...prev, [item.id]: event.target.checked }))}
-                />
-                <span>
-                  <span className="font-medium">{item.title}</span>
-                  {item.projectName ? <span className="text-muted"> · {item.projectName}</span> : null}
-                  {item.milestoneName ? <span className="text-muted"> · {item.milestoneName}</span> : null}
-                  {item.isAdditional ? <span className="text-muted"> · Added mid-week</span> : null}
-                </span>
-              </label>
-              {checked[item.id] ? (
-                <Input
-                  className="mt-2"
-                  value={notes[item.id] ?? ''}
-                  onChange={(event) => setNotes((prev) => ({ ...prev, [item.id]: event.target.value }))}
-                  placeholder="What did you do?"
-                />
-              ) : null}
-            </li>
-          ))}
+          {board.priorities.map((item) => {
+            const unlocked = canLogPriority(item);
+            return (
+              <li key={item.id}>
+                <label className={`flex items-start gap-3 text-sm ${unlocked ? '' : 'text-muted'}`}>
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    disabled={!unlocked}
+                    checked={Boolean(checked[item.id])}
+                    onChange={(event) => setChecked((prev) => ({ ...prev, [item.id]: event.target.checked }))}
+                  />
+                  <span>
+                    <span className={unlocked ? 'font-medium' : ''}>{item.title}</span>
+                    {item.projectName ? <span className="text-muted"> · {item.projectName}</span> : null}
+                    {item.milestoneName ? <span className="text-muted"> · {item.milestoneName}</span> : null}
+                    {item.isAdditional ? <span className="text-muted"> · Added mid-week</span> : null}
+                    {!unlocked && item.approvalStatus ? (
+                      <span className="text-muted"> · {approvalStatusLabel(item.approvalStatus)}</span>
+                    ) : null}
+                  </span>
+                </label>
+                {unlocked && checked[item.id] ? (
+                  <Input
+                    className="mt-2"
+                    value={notes[item.id] ?? ''}
+                    onChange={(event) => setNotes((prev) => ({ ...prev, [item.id]: event.target.value }))}
+                    placeholder="What did you do?"
+                  />
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -328,8 +356,8 @@ export function TodayUpdate() {
           <>
             <p className="mt-2 text-sm font-medium">Daily work update</p>
             <p className="mt-2 text-sm text-muted">
-              Log what you did against this week’s plan. Open the card when you are ready — it only takes a
-              minute.
+              Log what you did against approved priorities. Lines still waiting for your project lead stay
+              locked. Open the card when you are ready — it only takes a minute.
             </p>
             <div className="mt-5">
               <Button type="button" onClick={() => setOpen(true)}>

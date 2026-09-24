@@ -154,6 +154,7 @@ export type WorkDayPriority = {
   isAdditional: boolean;
   status: string;
   approvalStatus?: WorkPriorityApprovalStatus;
+  canLogDaily?: boolean;
 };
 
 export type WorkDayBoard = {

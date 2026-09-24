@@ -343,7 +343,7 @@ export function MyWeekBoard({
               </p>
               <p className="mt-2 text-sm text-muted">
                 {canApprove
-                  ? 'Approve each priority line, or ask for a resubmit with a short comment. Daily updates unlock only when every line is approved.'
+                  ? 'Approve each priority line, or ask for a resubmit with a short comment. The employee can log daily updates against approved lines even if others are still pending.'
                   : 'Employees set their own week goals. This view is read-only.'}
               </p>
             </section>
