@@ -11,17 +11,20 @@ function LeavePeopleTable({
   rows,
   reviewBase,
   linkReviews,
+  loading = false,
   emptyTitle,
   emptyDescription,
 }: {
   rows: LeaveApplication[];
   reviewBase: string;
   linkReviews: boolean;
+  loading?: boolean;
   emptyTitle: string;
   emptyDescription: string;
 }) {
   return (
     <DataTable
+      loading={loading}
       columns={[
         {
           id: 'employee',
@@ -59,32 +62,42 @@ export function LeavePresenceBoard({
   items,
   reviewBase,
   linkReviews = true,
+  loading = false,
+  error = false,
 }: {
   items: LeaveApplication[];
   reviewBase: string;
   /** When false, names are plain text (e.g. GM who’s-out view). */
   linkReviews?: boolean;
+  loading?: boolean;
+  error?: boolean;
 }) {
   const { onLeave, upcoming } = splitLeavePresence(items);
+
+  if (error) {
+    return <p className="mt-10 text-sm">Unable to load who is out.</p>;
+  }
 
   return (
     <div className="mt-10 space-y-10">
       <div>
-        <Meta className="mb-4">On leave today · {onLeave.length}</Meta>
+        <Meta className="mb-4">On leave today · {loading ? '…' : onLeave.length}</Meta>
         <LeavePeopleTable
           rows={onLeave}
           reviewBase={reviewBase}
           linkReviews={linkReviews}
+          loading={loading}
           emptyTitle="Nobody on leave today"
           emptyDescription="Approved leave that covers today appears here."
         />
       </div>
       <div>
-        <Meta className="mb-4">Upcoming leave · {upcoming.length}</Meta>
+        <Meta className="mb-4">Upcoming leave · {loading ? '…' : upcoming.length}</Meta>
         <LeavePeopleTable
           rows={upcoming}
           reviewBase={reviewBase}
           linkReviews={linkReviews}
+          loading={loading}
           emptyTitle="No upcoming leave"
           emptyDescription="Pending and approved leave that starts after today appears here."
         />

@@ -7,7 +7,7 @@ import { LeavePresenceBoard } from '@/features/leave/leave-presence-board';
 import {
   useGetAttendanceImportsQuery,
   useGetEmployeesQuery,
-  useGetLeaveApplicationsQuery,
+  useGetLeavePresenceQuery,
   useGetPayrollRunsQuery,
   useGetReportsOverviewQuery,
 } from '@/store/api/api';
@@ -18,7 +18,7 @@ export default function GmOverviewPage() {
   const { data: payrollRuns } = useGetPayrollRunsQuery();
   const { data: reports } = useGetReportsOverviewQuery();
   const { data: employees } = useGetEmployeesQuery();
-  const { data: applications } = useGetLeaveApplicationsQuery();
+  const { data: presence, isLoading: presenceLoading, isError: presenceError } = useGetLeavePresenceQuery();
 
   return (
     <>
@@ -71,7 +71,13 @@ export default function GmOverviewPage() {
           onClick={() => router.push('/gm/weekly-updates')}
         />
       </div>
-      <LeavePresenceBoard items={applications?.data ?? []} reviewBase="/gm/leave-status" linkReviews={false} />
+      <LeavePresenceBoard
+        items={presence?.data ?? []}
+        reviewBase="/gm/leave-status"
+        linkReviews={false}
+        loading={presenceLoading}
+        error={presenceError}
+      />
     </>
   );
 }

@@ -2296,6 +2296,10 @@ export const api = createApi({
       }),
       providesTags: ['LeaveApplications'],
     }),
+    getLeavePresence: builder.query<ApiSuccess<LeaveApplication[]>, void>({
+      query: () => '/api/v1/leaves/presence',
+      providesTags: ['LeaveApplications'],
+    }),
     getLeaveApplication: builder.query<ApiSuccess<LeaveApplication>, string>({
       query: (id) => `/api/v1/leaves/applications/${id}`,
       providesTags: ['LeaveApplications'],
@@ -4045,6 +4049,7 @@ export const {
   useSetLeaveAllocationMutation,
   useDeleteLeaveAllocationMutation,
   useGetLeaveApplicationsQuery,
+  useGetLeavePresenceQuery,
   useGetLeaveApplicationQuery,
   useApplyLeaveMutation,
   useUpdateLeaveMutation,

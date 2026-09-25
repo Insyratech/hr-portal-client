@@ -199,9 +199,9 @@ const GM_CATEGORIES: FaqCategory[] = [
     questions: [
       {
         id: 'gm-leave',
-        question: 'What leave actions can GM take?',
+        question: 'How do I see who is out?',
         answer:
-          'Use GM leave / review screens for applications that reach General Manager. Decisions should consider team coverage and project impact.',
+          'Open Who’s out (also on the GM overview) to see approved leave covering today and upcoming pending or approved leave. HR Manager approves requests; this view is for coverage only.',
       },
       {
         id: 'gm-work',
