@@ -16,12 +16,15 @@ export function WorkEmailOtpField({
   verificationToken,
   onVerified,
   onReset,
+  mode = 'create',
 }: {
   email: string;
   onEmailChange: (value: string) => void;
   verificationToken: string | null;
   onVerified: (token: string) => void;
   onReset: () => void;
+  /** create = new account; change = updating an existing login email. */
+  mode?: 'create' | 'change';
 }) {
   const toast = useToast();
   const [code, setCode] = useState('');
@@ -51,7 +54,7 @@ export function WorkEmailOtpField({
     try {
       const result = await verifyOtp({ email, code }).unwrap();
       onVerified(result.data.emailVerificationToken);
-      toast.success('Work email confirmed.');
+      toast.success(mode === 'change' ? 'New login email confirmed.' : 'Work email confirmed.');
     } catch (cause) {
       toast.error(apiErrorMessage(cause, 'Unable to confirm this email.'));
     }
@@ -80,7 +83,11 @@ export function WorkEmailOtpField({
         <p className="text-sm text-danger">Use a valid email (for example name@company.com or name@gmail.com).</p>
       ) : null}
       {confirmed ? (
-        <p className="text-sm text-muted">This email is confirmed. Updates will go here.</p>
+        <p className="text-sm text-muted">
+          {mode === 'change'
+            ? 'New email confirmed. Save details to update the login.'
+            : 'This email is confirmed. Updates will go here.'}
+        </p>
       ) : (
         <>
           <Button type="button" size="sm" variant="outline" loading={sending} disabled={!emailOk} onClick={() => void send()}>
@@ -105,7 +112,11 @@ export function WorkEmailOtpField({
               <Meta className="mt-1">Ask the person to open their inbox and read the 4-digit code to you.</Meta>
             </div>
           ) : (
-            <Meta>Enter a valid email, then send a short code so this address is real before you create the login.</Meta>
+            <Meta>
+              {mode === 'change'
+                ? 'Change the address, then send a short code to the new inbox before saving.'
+                : 'Enter a valid email, then send a short code so this address is real before you create the login.'}
+            </Meta>
           )}
         </>
       )}

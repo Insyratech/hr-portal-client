@@ -1,13 +1,16 @@
 'use client';
 
 import type { FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Meta } from '@/components/layout/meta';
 import { DesignationField, resolveDesignationId } from '@/features/employees/designation-field';
+import { WorkEmailOtpField } from '@/features/employees/work-email-otp';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
+import { normalizeEmail } from '@/lib/email';
 import { useAppSelector } from '@/store/hooks';
 import type { Employee } from '@/types/api';
 import { PERMISSIONS } from '@/types/permissions';
@@ -35,6 +38,15 @@ export function EmployeeOverviewEditor({ employee }: { employee: Employee }) {
   const [updateEmployee, { isLoading }] = useUpdateEmployeeMutation();
   const [createDesignation] = useCreateDesignationMutation();
   const toast = useToast();
+  const [email, setEmail] = useState(employee.email);
+  const [emailVerificationToken, setEmailVerificationToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    setEmail(employee.email);
+    setEmailVerificationToken(null);
+  }, [employee.id, employee.email, employee.updatedAt]);
+
+  const emailChanged = normalizeEmail(email) !== normalizeEmail(employee.email);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -42,21 +54,29 @@ export function EmployeeOverviewEditor({ employee }: { employee: Employee }) {
     const departmentId = String(form.get('departmentId') ?? '');
     const phone = String(form.get('phone') ?? '');
 
+    if (emailChanged && !emailVerificationToken) {
+      toast.error('Confirm the new work email with the 4-digit code before saving.');
+      return;
+    }
+
     try {
       const designationId = (await resolveDesignationId(form, (input) => createDesignation(input).unwrap())) ?? null;
-      await updateEmployee({
-        id: employee.id,
-        body: {
-          employeeCode: String(form.get('employeeCode') ?? ''),
-          fullName: String(form.get('fullName') ?? ''),
-          phone: phone || null,
-          departmentId: departmentId || null,
-          designationId,
-          joiningDate: dateInputValue(String(form.get('joiningDate') ?? '')),
-          employmentType: String(form.get('employmentType') ?? 'full_time'),
-        },
-      }).unwrap();
-      toast.success('Employee details saved.');
+      const body: Record<string, unknown> = {
+        employeeCode: String(form.get('employeeCode') ?? ''),
+        fullName: String(form.get('fullName') ?? ''),
+        phone: phone || null,
+        departmentId: departmentId || null,
+        designationId,
+        joiningDate: dateInputValue(String(form.get('joiningDate') ?? '')),
+        employmentType: String(form.get('employmentType') ?? 'full_time'),
+      };
+      if (emailChanged) {
+        body.email = email.trim();
+        body.emailVerificationToken = emailVerificationToken;
+      }
+      await updateEmployee({ id: employee.id, body }).unwrap();
+      setEmailVerificationToken(null);
+      toast.success(emailChanged ? 'Login email and details saved.' : 'Employee details saved.');
     } catch (cause) {
       toast.error(apiErrorMessage(cause, 'Unable to save employee.'));
     }
@@ -66,7 +86,8 @@ export function EmployeeOverviewEditor({ employee }: { employee: Employee }) {
     <form key={employee.updatedAt} onSubmit={onSubmit} className="max-w-2xl space-y-5">
       <Meta>Edit personal details</Meta>
       <p className="text-sm text-muted">
-        Company, shift, leave, and pay are set by HR Manager — not here. Login email cannot be changed.
+        Company, shift, leave, and pay are set by HR Manager — not here. To change the login email, send a
+        4-digit code to the new inbox and confirm it before saving.
       </p>
       <p className="text-sm">
         <span className="text-muted">Company: </span>
@@ -81,9 +102,34 @@ export function EmployeeOverviewEditor({ employee }: { employee: Employee }) {
           <Label htmlFor="employeeCode">Staff ID</Label>
           <Input id="employeeCode" name="employeeCode" defaultValue={employee.employeeCode} required />
         </div>
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" value={employee.email} disabled readOnly />
+        <div className="sm:col-span-2">
+          {emailChanged ? (
+            <WorkEmailOtpField
+              mode="change"
+              email={email}
+              onEmailChange={setEmail}
+              verificationToken={emailVerificationToken}
+              onVerified={setEmailVerificationToken}
+              onReset={() => setEmailVerificationToken(null)}
+            />
+          ) : (
+            <div className="space-y-3">
+              <Label htmlFor="email">Work email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setEmailVerificationToken(null);
+                }}
+              />
+              <Meta>Edit the address only if the login email must change — OTP confirmation will appear.</Meta>
+            </div>
+          )}
         </div>
         <div>
           <Label htmlFor="phone">Phone</Label>
@@ -131,8 +177,8 @@ export function EmployeeOverviewEditor({ employee }: { employee: Employee }) {
           />
         </div>
       </div>
-      <Button type="submit" disabled={isLoading}>
-        {isLoading ? 'Saving…' : 'Save details'}
+      <Button type="submit" disabled={isLoading || (emailChanged && !emailVerificationToken)}>
+        {isLoading ? 'Saving…' : emailChanged ? 'Save email & details' : 'Save details'}
       </Button>
     </form>
   );

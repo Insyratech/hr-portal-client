@@ -353,6 +353,12 @@ const SA_CATEGORIES: FaqCategory[] = [
           'Sensitive directory edits may require an approved unlock request. Review pending requests before enabling edits on a profile.',
       },
       {
+        id: 'sa-change-email',
+        question: 'How do I change an employee’s login email?',
+        answer:
+          'Open the employee profile → Edit personal details. Change Work email, send the 4-digit code to the new inbox, confirm it, then Save. Both the directory and the login account update. The person should sign in with the new address afterward.',
+      },
+      {
         id: 'sa-org',
         question: 'Where are companies, departments, and designations?',
         answer:
