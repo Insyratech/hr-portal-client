@@ -201,7 +201,7 @@ const GM_CATEGORIES: FaqCategory[] = [
         id: 'gm-leave',
         question: 'How do I see who is out?',
         answer:
-          'Open Who’s out (also on the GM overview) to see approved leave covering today and upcoming pending or approved leave. HR Manager approves requests; this view is for coverage only.',
+          'Open Who’s out (also on the GM overview) to see people on leave by name for a chosen date, upcoming approved leave, and recent past leave. HR Manager approves requests; this view is for coverage only.',
       },
       {
         id: 'gm-work',

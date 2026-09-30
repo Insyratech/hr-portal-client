@@ -925,6 +925,15 @@ export type LeaveApplication = {
   createdAt: string;
 };
 
+/** Org-wide who’s-out board (GM / HR / Super Admin). */
+export type LeavePresenceBoardData = {
+  asOf: string;
+  pastFrom: string;
+  onLeave: LeaveApplication[];
+  upcoming: LeaveApplication[];
+  past: LeaveApplication[];
+};
+
 export type LeaveProjectOption = {
   id: string;
   name: string;

@@ -15,6 +15,46 @@ export function todayIso(now = new Date()): string {
   }).format(now);
 }
 
+export type LeavePresencePerson = {
+  employeeId: string;
+  employeeName: string;
+  leaves: LeaveApplication[];
+};
+
+/** One row per employee (A→Z), with their leave lines underneath. */
+export function groupLeavePresenceByEmployee(items: LeaveApplication[]): LeavePresencePerson[] {
+  const byId = new Map<string, LeavePresencePerson>();
+  for (const row of items) {
+    const key = row.employeeId || row.id;
+    const existing = byId.get(key);
+    if (existing) {
+      existing.leaves.push(row);
+      continue;
+    }
+    byId.set(key, {
+      employeeId: key,
+      employeeName: row.employeeName?.trim() || 'Employee',
+      leaves: [row],
+    });
+  }
+  return [...byId.values()].sort((a, b) =>
+    a.employeeName.localeCompare(b.employeeName, undefined, { sensitivity: 'base' }),
+  );
+}
+
+export function formatLeavePresenceLine(row: LeaveApplication): string {
+  const type = row.leaveTypeName ?? row.leaveTypeCode ?? 'Leave';
+  const start = dateKey(row.startDate);
+  const end = dateKey(row.endDate);
+  const dates = start === end ? start : `${start} – ${end}`;
+  const qty =
+    row.duration === 'half'
+      ? 'half day'
+      : `${row.quantity} day${row.quantity === 1 ? '' : 's'}`;
+  return `${type} · ${dates} · ${qty}`;
+}
+
+/** @deprecated Prefer LeavePresenceBoardData from the presence API. */
 export function splitLeavePresence(items: LeaveApplication[], today = todayIso()) {
   const open = items.filter((row) => row.status === 'APPROVED' || row.status === 'PENDING');
   const onLeave = open.filter((row) => {

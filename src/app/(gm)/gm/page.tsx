@@ -3,11 +3,10 @@
 import { useRouter } from 'next/navigation';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { PageHeader } from '@/components/layout/page-header';
-import { LeavePresenceBoard } from '@/features/leave/leave-presence-board';
+import { LeavePresenceOverview } from '@/features/leave/leave-presence-board';
 import {
   useGetAttendanceImportsQuery,
   useGetEmployeesQuery,
-  useGetLeavePresenceQuery,
   useGetPayrollRunsQuery,
   useGetReportsOverviewQuery,
 } from '@/store/api/api';
@@ -18,7 +17,6 @@ export default function GmOverviewPage() {
   const { data: payrollRuns } = useGetPayrollRunsQuery();
   const { data: reports } = useGetReportsOverviewQuery();
   const { data: employees } = useGetEmployeesQuery();
-  const { data: presence, isLoading: presenceLoading, isError: presenceError } = useGetLeavePresenceQuery();
 
   return (
     <>
@@ -71,13 +69,7 @@ export default function GmOverviewPage() {
           onClick={() => router.push('/gm/weekly-updates')}
         />
       </div>
-      <LeavePresenceBoard
-        items={presence?.data ?? []}
-        reviewBase="/gm/leave-status"
-        linkReviews={false}
-        loading={presenceLoading}
-        error={presenceError}
-      />
+      <LeavePresenceOverview reviewBase="/gm/leave-status" linkReviews={false} />
     </>
   );
 }

@@ -3,17 +3,12 @@
 import { useRouter } from 'next/navigation';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { PageHeader } from '@/components/layout/page-header';
-import { LeavePresenceBoard } from '@/features/leave/leave-presence-board';
-import {
-  useGetGrievanceCountsQuery,
-  useGetLeaveApplicationsQuery,
-  useGetLeavePresenceQuery,
-} from '@/store/api/api';
+import { LeavePresenceOverview } from '@/features/leave/leave-presence-board';
+import { useGetGrievanceCountsQuery, useGetLeaveApplicationsQuery } from '@/store/api/api';
 
 export default function HrOverviewPage() {
   const router = useRouter();
   const { data: applications } = useGetLeaveApplicationsQuery();
-  const { data: presence, isLoading: presenceLoading, isError: presenceError } = useGetLeavePresenceQuery();
   const { data: grievanceCounts } = useGetGrievanceCountsQuery();
   const pendingLeaveCount = (applications?.data ?? []).filter((row) => row.status === 'PENDING').length;
   const openGrievances = grievanceCounts?.data.byStatus?.OPEN ?? 0;
@@ -46,12 +41,7 @@ export default function HrOverviewPage() {
         />
         <StatCard value="Org" label="Employees" icon="users" onClick={() => router.push('/hr/employees')} />
       </div>
-      <LeavePresenceBoard
-        items={presence?.data ?? []}
-        reviewBase="/hr/leaves"
-        loading={presenceLoading}
-        error={presenceError}
-      />
+      <LeavePresenceOverview reviewBase="/hr/leaves" />
     </>
   );
 }

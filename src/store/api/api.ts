@@ -135,6 +135,7 @@ import type {
   Holiday,
   HrPolicy,
   LeaveApplication,
+  LeavePresenceBoardData,
   LeaveAllocation,
   LeaveBalance,
   LeaveColleague,
@@ -2296,8 +2297,11 @@ export const api = createApi({
       }),
       providesTags: ['LeaveApplications'],
     }),
-    getLeavePresence: builder.query<ApiSuccess<LeaveApplication[]>, void>({
-      query: () => '/api/v1/leaves/presence',
+    getLeavePresence: builder.query<ApiSuccess<LeavePresenceBoardData>, { asOf?: string } | void>({
+      query: (arg) => ({
+        url: '/api/v1/leaves/presence',
+        params: arg && 'asOf' in arg && arg.asOf ? { asOf: arg.asOf } : undefined,
+      }),
       providesTags: ['LeaveApplications'],
     }),
     getLeaveApplication: builder.query<ApiSuccess<LeaveApplication>, string>({
