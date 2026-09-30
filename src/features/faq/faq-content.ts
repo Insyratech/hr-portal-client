@@ -159,7 +159,7 @@ const HR_CATEGORIES: FaqCategory[] = [
         id: 'hr-attendance',
         question: 'How does attendance import / review work?',
         answer:
-          'Attendance imports and day reviews live under Attendance admin tools. Confirm or reject imported batches carefully—confirmed data feeds payroll and reports.',
+          'Attendance imports and day reviews live under Attendance admin tools. Confirmed data feeds payroll. Approved work permissions (up to 120 minutes/month) credit short days so they do not propose LOP; punch times are adjusted −9 minutes for machine skew, with a 15-minute grace.',
       },
       {
         id: 'hr-policies',
