@@ -4,15 +4,22 @@ import { useState } from 'react';
 import { PageLoading } from '@/components/ui/page-loading';
 import Link from 'next/link';
 import { LeaveJourney } from '@/components/leave/leave-journey';
-import { StatusBadge } from '@/components/dashboard/status-badge';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
 import { StatusMessage } from '@/components/ui/status-message';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
-import { formatDuration } from '@/lib/attendance-format';
+import { cn } from '@/lib/utils';
 import type { AttendanceReviewDay } from '@/types/api';
+import {
+  attendanceDayDetail,
+  attendanceDayLopLabel,
+  attendanceLopClass,
+  attendanceStatusBadgeClass,
+  attendanceStatusClass,
+  attendanceStatusMark,
+} from '@/features/attendance/attendance-day-display';
 import {
   useDecideAttendanceReviewMutation,
   useGetAttendanceImportCardQuery,
@@ -25,11 +32,13 @@ const ACTIONS = [
   { id: 'EXCLUDE' as const, label: 'Exclude' },
 ];
 
-function dayTone(status: string): 'pending' | 'approved' | 'rejected' {
-  if (status === 'PRESENT' || status === 'LEAVE' || status === 'HOLIDAY' || status === 'WEEK_OFF') return 'approved';
-  if (status === 'ABSENT' || status === 'MISSING_PUNCH') return 'rejected';
-  if (status === 'NO_SHIFT') return 'pending';
-  return 'pending';
+function AttendanceStatusLabel({ status }: { status: string }) {
+  return (
+    <span className={attendanceStatusBadgeClass(status)}>
+      <span aria-hidden="true">{attendanceStatusMark(status)}</span>
+      {status}
+    </span>
+  );
 }
 
 export function AttendanceReviewCardPage({
@@ -122,11 +131,11 @@ export function AttendanceReviewCardPage({
               </div>
               <div>
                 <Meta>Proposed LOP</Meta>
-                <p className="mt-1">{card.proposedLop}</p>
+                <p className={cn('mt-1', attendanceLopClass())}>{card.proposedLop}</p>
               </div>
               <div>
                 <Meta>Final payable / LOP</Meta>
-                <p className="mt-1">
+                <p className={cn('mt-1', attendanceLopClass())}>
                   {card.payableDays} payable days · {card.finalLop} LOP
                 </p>
               </div>
@@ -140,28 +149,30 @@ export function AttendanceReviewCardPage({
                   <p className="text-sm font-medium">
                     {day.attendanceDate} · in {day.actualIn ?? '—'} · out {day.actualOut ?? '—'}
                   </p>
-                  <StatusBadge status={dayTone(day.status)} label={day.status} />
+                  <AttendanceStatusLabel status={day.status} />
                 </div>
-                <p className="mt-2 text-sm text-muted">
-                  {day.skippedFromLop
-                    ? 'Weekly off or holiday — skipped from LOP'
-                    : day.lateMinutes > 0
-                      ? `Late ${day.lateMinutes}m${day.permissionCovered ? ` · ${day.permissionMinutes}m permission covered this` : day.permissionMinutes ? ` · ${day.permissionMinutes}m permission` : ' · no permission'}`
-                      : day.leaveTypeName
-                        ? `${day.leaveTypeName} (${day.leavePaid ? 'paid' : 'unpaid'})`
-                        : day.workedMinutes != null
-                        ? `Worked ${formatDuration(day.workedMinutes)} · flexible (any start time, ${card.shiftName ?? 'hours required'})`
-                          : '—'}
+                <p
+                  className={cn(
+                    'mt-2 text-sm',
+                    day.status === 'LATE' || day.status === 'HALF_DAY' || day.status === 'LEAVE'
+                      ? attendanceStatusClass(day.status)
+                      : 'text-muted',
+                  )}
+                >
+                  {attendanceDayDetail(day, card.shiftName)}
                 </p>
                 {day.needsHrDecision ? (
                   <p className="mt-2 text-sm">Needs your LOP choice{day.hrAction ? ` · ${day.hrAction}` : ''}.</p>
                 ) : (
-                  <p className="mt-2 text-sm text-muted">
-                    {day.hrAction ?? 'No LOP'} · LOP{' '}
-                    {day.hrAction ? (day.finalLop ?? 0) : (day.proposedLop ?? day.finalLop ?? 0)}
-                  </p>
+                  <p className={cn('mt-2 text-sm', attendanceLopClass())}>{attendanceDayLopLabel(day)}</p>
                 )}
-                {canManage && !frozen && (day.needsHrDecision || day.status === 'ABSENT' || day.status === 'HALF_DAY' || day.status === 'LATE' || day.status === 'MISSING_PUNCH') ? (
+                {canManage &&
+                !frozen &&
+                (day.needsHrDecision ||
+                  day.status === 'ABSENT' ||
+                  day.status === 'HALF_DAY' ||
+                  day.status === 'LATE' ||
+                  day.status === 'MISSING_PUNCH') ? (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {ACTIONS.map((item) => (
                       <Button
