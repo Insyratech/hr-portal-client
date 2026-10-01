@@ -798,22 +798,14 @@ export type MonthlyWorkReportPerson = {
   departmentName: string | null;
 };
 
-export type MonthlyWorkReportMonthRow = {
+export type MonthlyWorkReportPeriod = {
   period: string;
-  pptUploaded: number;
-  pptExpected: number;
-  weeksWithPriorities: number;
-  weeksWithApproved: number;
-  weeksTotal: number;
-  dailySubmitted: number;
-  dailyRequired: number;
-  jcUploads: number;
-  projects: string[];
+  label: string;
+  weekCount: number;
 };
 
-export type MonthlyWorkReportMonths = {
-  employee: MonthlyWorkReportPerson;
-  months: MonthlyWorkReportMonthRow[];
+export type MonthlyWorkReportPeriods = {
+  months: MonthlyWorkReportPeriod[];
 };
 
 export type MonthlyWorkReportDetail = {

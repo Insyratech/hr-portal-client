@@ -163,7 +163,7 @@ import type {
   WorkPrioritiesApproved,
   WorkAnalytics,
   MonthlyWorkReportDetail,
-  MonthlyWorkReportMonths,
+  MonthlyWorkReportPeriods,
   MonthlyWorkReportPerson,
   WorkSettings,
   WorkPriority,
@@ -2634,13 +2634,10 @@ export const api = createApi({
       query: () => '/api/v1/work/monthly-report/people',
       providesTags: ['Work'],
     }),
-    getMonthlyWorkReportMonths: builder.query<
-      ApiSuccess<MonthlyWorkReportMonths>,
-      { employeeId: string; months?: number }
-    >({
-      query: ({ employeeId, months }) => ({
+    getMonthlyWorkReportPeriods: builder.query<ApiSuccess<MonthlyWorkReportPeriods>, { months?: number } | void>({
+      query: (arg) => ({
         url: '/api/v1/work/monthly-report/months',
-        params: { employeeId, ...(months ? { months } : {}) },
+        params: arg?.months ? { months: arg.months } : undefined,
       }),
       providesTags: ['Work'],
     }),
@@ -4133,7 +4130,7 @@ export const {
   useGetWorkLeadPrioritiesApprovedQuery,
   useGetWorkAnalyticsQuery,
   useGetMonthlyWorkReportPeopleQuery,
-  useGetMonthlyWorkReportMonthsQuery,
+  useGetMonthlyWorkReportPeriodsQuery,
   useGetMonthlyWorkReportQuery,
   useGetWorkSettingsQuery,
   useUpdateWorkSettingsMutation,
