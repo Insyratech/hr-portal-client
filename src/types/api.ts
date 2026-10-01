@@ -791,6 +791,96 @@ export type WorkAnalytics = {
   }[];
 };
 
+export type MonthlyWorkReportPerson = {
+  employeeId: string;
+  fullName: string;
+  employeeCode: string | null;
+  departmentName: string | null;
+};
+
+export type MonthlyWorkReportMonthRow = {
+  period: string;
+  pptUploaded: number;
+  pptExpected: number;
+  weeksWithPriorities: number;
+  weeksWithApproved: number;
+  weeksTotal: number;
+  dailySubmitted: number;
+  dailyRequired: number;
+  jcUploads: number;
+  projects: string[];
+};
+
+export type MonthlyWorkReportMonths = {
+  employee: MonthlyWorkReportPerson;
+  months: MonthlyWorkReportMonthRow[];
+};
+
+export type MonthlyWorkReportDetail = {
+  period: string;
+  employee: MonthlyWorkReportPerson;
+  projects: {
+    projectId: string;
+    name: string;
+    code: string;
+    status: string;
+    leadName: string | null;
+    isLead: boolean;
+    activeMilestone: { id: string; name: string; targetDate: string | null } | null;
+  }[];
+  ppt: {
+    expected: number;
+    uploaded: number;
+    pct: number;
+    weeks: {
+      weekStart: string;
+      weekEnd: string;
+      uploaded: boolean;
+      timing: 'on_time' | 'last_hour' | 'late' | null;
+      submittedAt: string | null;
+    }[];
+  };
+  jc: {
+    expected: boolean;
+    count: number;
+    uploads: {
+      id: string;
+      status: string;
+      uploadedAt: string;
+      transferredAt: string | null;
+      consumedAt: string | null;
+    }[];
+  };
+  weeks: {
+    weekStart: string;
+    weekEnd: string;
+    prioritiesUpdated: boolean;
+    prioritiesApproved: boolean;
+    priorityCount: number;
+    approvedCount: number;
+    milestoneLinked: boolean;
+    expectsPrioritiesForMilestone: boolean;
+    dailyRequired: number;
+    dailySubmitted: number;
+    dailyOk: boolean;
+    priorities: {
+      id: string;
+      type: string;
+      title: string;
+      approvalStatus: string;
+      executionStatus: string;
+      milestoneId: string | null;
+    }[];
+  }[];
+  summary: {
+    pptPct: number;
+    prioritiesSetPct: number;
+    prioritiesApprovedPct: number;
+    dailyPct: number;
+    hasActiveMilestone: boolean;
+  };
+};
+
 export type WeeklyWorkBoard = {
   week: {
     planId: string;

@@ -38,9 +38,12 @@ function fileToBase64(file: File): Promise<string> {
 export function AttendanceImportHub({
   listHref,
   canManage,
+  workReportHref,
 }: {
   listHref: string;
   canManage: boolean;
+  /** Optional link to monthly work report (GM / managers). */
+  workReportHref?: string;
 }) {
   const router = useRouter();
   const { data, isLoading } = useGetAttendanceImportsQuery();
@@ -95,17 +98,24 @@ export function AttendanceImportHub({
         kicker="Attendance"
         title="Monthly import"
         actions={
-          canManage ? (
-            <Button
-              type="button"
-              onClick={() => {
-                setError(null);
-                setUploadOpen(true);
-              }}
-            >
-              Upload and review
-            </Button>
-          ) : null
+          <div className="flex flex-wrap items-center gap-3">
+            {workReportHref ? (
+              <Button type="button" variant="outline" asChild>
+                <Link href={workReportHref}>Monthly report</Link>
+              </Button>
+            ) : null}
+            {canManage ? (
+              <Button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setUploadOpen(true);
+                }}
+              >
+                Upload and review
+              </Button>
+            ) : null}
+          </div>
         }
       />
       {!canManage ? (

@@ -145,6 +145,7 @@ export const HR_OPS_NAV: readonly NavItem[] = [
 export const HR_WORK_NAV: readonly NavItem[] = [
   { href: '/hr/work', label: 'Team week', icon: 'calendar' },
   { href: '/hr/work/priorities', label: 'Priorities', icon: 'grid' },
+  { href: '/hr/monthly-report', label: 'Monthly report', icon: 'overview' },
 ];
 
 export const HR_NAV: readonly NavItem[] = [
@@ -159,6 +160,7 @@ export const GM_OVERVIEW_NAV: readonly NavItem[] = [{ href: '/gm', label: 'Overv
 
 export const GM_ORG_NAV: readonly NavItem[] = [
   { href: '/gm/employees', label: 'Employees', icon: 'users' },
+  { href: '/gm/monthly-report', label: 'Monthly report', icon: 'overview' },
 ];
 
 export const GM_ATTENDANCE_NAV: readonly NavItem[] = [
@@ -195,6 +197,7 @@ export const CSO_WORK_NAV: readonly NavItem[] = [
   { href: '/cso/work/projects', label: 'Projects', icon: 'building' },
   { href: '/cso/work/employees', label: 'Employees', icon: 'users' },
   { href: '/cso/work/insights', label: 'Insights', icon: 'overview' },
+  { href: '/cso/work/monthly-report', label: 'Monthly report', icon: 'overview' },
   { href: '/cso/shift-changes', label: 'Shift changes', icon: 'clock' },
 ];
 

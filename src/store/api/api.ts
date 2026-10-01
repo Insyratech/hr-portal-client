@@ -162,6 +162,9 @@ import type {
   WorkPrioritiesQueue,
   WorkPrioritiesApproved,
   WorkAnalytics,
+  MonthlyWorkReportDetail,
+  MonthlyWorkReportMonths,
+  MonthlyWorkReportPerson,
   WorkSettings,
   WorkPriority,
   WorkProject,
@@ -2627,6 +2630,30 @@ export const api = createApi({
       }),
       providesTags: ['Work'],
     }),
+    getMonthlyWorkReportPeople: builder.query<ApiSuccess<{ employees: MonthlyWorkReportPerson[] }>, void>({
+      query: () => '/api/v1/work/monthly-report/people',
+      providesTags: ['Work'],
+    }),
+    getMonthlyWorkReportMonths: builder.query<
+      ApiSuccess<MonthlyWorkReportMonths>,
+      { employeeId: string; months?: number }
+    >({
+      query: ({ employeeId, months }) => ({
+        url: '/api/v1/work/monthly-report/months',
+        params: { employeeId, ...(months ? { months } : {}) },
+      }),
+      providesTags: ['Work'],
+    }),
+    getMonthlyWorkReport: builder.query<
+      ApiSuccess<MonthlyWorkReportDetail>,
+      { employeeId: string; month: string }
+    >({
+      query: ({ employeeId, month }) => ({
+        url: '/api/v1/work/monthly-report',
+        params: { employeeId, month },
+      }),
+      providesTags: ['Work'],
+    }),
     getWorkSettings: builder.query<ApiSuccess<WorkSettings>, void>({
       query: () => '/api/v1/work/settings',
       providesTags: ['Work'],
@@ -4105,6 +4132,9 @@ export const {
   useGetWorkLeadPrioritiesQueueQuery,
   useGetWorkLeadPrioritiesApprovedQuery,
   useGetWorkAnalyticsQuery,
+  useGetMonthlyWorkReportPeopleQuery,
+  useGetMonthlyWorkReportMonthsQuery,
+  useGetMonthlyWorkReportQuery,
   useGetWorkSettingsQuery,
   useUpdateWorkSettingsMutation,
   useCreateWorkFeedbackMutation,

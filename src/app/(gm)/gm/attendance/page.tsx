@@ -6,5 +6,5 @@ import { PERMISSIONS } from '@/types/permissions';
 
 export default function Page() {
   const canManage = useAppSelector((state) => state.permissions.permissions.includes(PERMISSIONS.ATTENDANCE_MANAGE));
-  return <AttendanceImportHub listHref="/gm/attendance" canManage={canManage} />;
+  return <AttendanceImportHub listHref="/gm/attendance" canManage={canManage} workReportHref="/gm/monthly-report" />;
 }

@@ -28,9 +28,25 @@ export function attendanceStatusClass(status: string): string {
   }
 }
 
-/** LOP decision line (NO_LOP / EXCLUDE / FULL_LOP, etc.). */
-export function attendanceLopClass(): string {
-  return 'text-cyan-400';
+/** Numeric LOP totals on the card header (proposed / final). */
+export function attendanceLopAmountClass(amount: number): string {
+  if (amount > 0) return 'text-red-500';
+  return 'text-gray-200';
+}
+
+/**
+ * Day LOP decision line:
+ * - EXCLUDE → light olive
+ * - LOP amount > 0 (or FULL/HALF) → red
+ * - NO_LOP / zero → muted gray (not cyan)
+ */
+export function attendanceLopClass(day: AttendanceReviewDay): string {
+  if (day.hrAction === 'EXCLUDE') return 'text-[#b4c48a]';
+  const amount = day.hrAction ? (day.finalLop ?? 0) : (day.proposedLop ?? day.finalLop ?? 0);
+  if (amount > 0 || day.hrAction === 'FULL_LOP' || day.hrAction === 'HALF_LOP') {
+    return 'text-red-500';
+  }
+  return 'text-gray-200';
 }
 
 export function attendanceStatusMark(status: string): string {
@@ -39,9 +55,20 @@ export function attendanceStatusMark(status: string): string {
   return '●';
 }
 
+function workedHoursLine(day: AttendanceReviewDay, shiftName: string | null): string | null {
+  if (day.workedMinutes == null) return null;
+  const shift = day.shiftName ?? shiftName ?? 'hours required';
+  const flexible =
+    shift.toLowerCase().includes('flex') || shift.toLowerCase().includes('any start');
+  return `Worked ${formatDuration(day.workedMinutes)} · ${
+    flexible ? `flexible (any start time, ${shift})` : shift
+  }`;
+}
+
 /**
  * Human detail under each day. Leave must win over skippedFromLop —
  * paid leave is skipped from LOP but is not a weekly off/holiday.
+ * PRESENT and LATE show worked hours when punches allow; MISSING_PUNCH does not.
  */
 export function attendanceDayDetail(day: AttendanceReviewDay, shiftName: string | null): string {
   if (day.status === 'LEAVE' || day.leaveTypeName) {
@@ -65,23 +92,17 @@ export function attendanceDayDetail(day: AttendanceReviewDay, shiftName: string 
   if (day.status === 'ABSENT' && day.workedMinutes == null) {
     return 'No punches';
   }
+  const worked = workedHoursLine(day, shiftName);
   if (day.lateMinutes > 0) {
     const permission = day.permissionCovered
       ? ` · ${day.permissionMinutes}m permission covered this`
       : day.permissionMinutes
         ? ` · ${day.permissionMinutes}m permission`
         : ' · no permission';
-    return `Late ${day.lateMinutes}m${permission}`;
+    const lateLine = `Late ${day.lateMinutes}m${permission}`;
+    return worked ? `${lateLine} · ${worked}` : lateLine;
   }
-  if (day.workedMinutes != null) {
-    const shift = day.shiftName ?? shiftName ?? 'hours required';
-    const flexible =
-      shift.toLowerCase().includes('flex') ||
-      shift.toLowerCase().includes('any start');
-    return `Worked ${formatDuration(day.workedMinutes)} · ${
-      flexible ? `flexible (any start time, ${shift})` : shift
-    }`;
-  }
+  if (worked) return worked;
   if (day.skippedFromLop) {
     return 'Skipped from LOP';
   }

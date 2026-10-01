@@ -25,10 +25,12 @@ export function AttendanceImportReview({
   importId,
   listHref,
   canManage,
+  workReportHref,
 }: {
   importId: string;
   listHref: string;
   canManage: boolean;
+  workReportHref?: string;
 }) {
   const router = useRouter();
   const { data, isLoading, isError, error } = useGetAttendanceImportQuery(importId);
@@ -93,7 +95,17 @@ export function AttendanceImportReview({
 
   return (
     <>
-      <PageHeader kicker="Attendance" title={bundle ? bundle.import.period : 'Review'} />
+      <PageHeader
+        kicker="Attendance"
+        title={bundle ? bundle.import.period : 'Review'}
+        actions={
+          workReportHref ? (
+            <Button type="button" variant="outline" asChild>
+              <Link href={workReportHref}>Monthly report</Link>
+            </Button>
+          ) : null
+        }
+      />
       <p className="mb-8">
         <Link href={listHref} className="text-sm text-muted hover:text-foreground">
           Back to imports

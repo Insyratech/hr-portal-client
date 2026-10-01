@@ -15,6 +15,7 @@ import type { AttendanceReviewDay } from '@/types/api';
 import {
   attendanceDayDetail,
   attendanceDayLopLabel,
+  attendanceLopAmountClass,
   attendanceLopClass,
   attendanceStatusBadgeClass,
   attendanceStatusClass,
@@ -131,11 +132,11 @@ export function AttendanceReviewCardPage({
               </div>
               <div>
                 <Meta>Proposed LOP</Meta>
-                <p className={cn('mt-1', attendanceLopClass())}>{card.proposedLop}</p>
+                <p className={cn('mt-1', attendanceLopAmountClass(card.proposedLop))}>{card.proposedLop}</p>
               </div>
               <div>
                 <Meta>Final payable / LOP</Meta>
-                <p className={cn('mt-1', attendanceLopClass())}>
+                <p className={cn('mt-1', attendanceLopAmountClass(card.finalLop))}>
                   {card.payableDays} payable days · {card.finalLop} LOP
                 </p>
               </div>
@@ -164,7 +165,7 @@ export function AttendanceReviewCardPage({
                 {day.needsHrDecision ? (
                   <p className="mt-2 text-sm">Needs your LOP choice{day.hrAction ? ` · ${day.hrAction}` : ''}.</p>
                 ) : (
-                  <p className={cn('mt-2 text-sm', attendanceLopClass())}>{attendanceDayLopLabel(day)}</p>
+                  <p className={cn('mt-2 text-sm', attendanceLopClass(day))}>{attendanceDayLopLabel(day)}</p>
                 )}
                 {canManage &&
                 !frozen &&
