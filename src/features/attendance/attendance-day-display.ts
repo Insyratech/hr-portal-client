@@ -74,8 +74,13 @@ export function attendanceDayDetail(day: AttendanceReviewDay, shiftName: string 
     return `Late ${day.lateMinutes}m${permission}`;
   }
   if (day.workedMinutes != null) {
-    const shift = shiftName ?? 'hours required';
-    return `Worked ${formatDuration(day.workedMinutes)} · ${shift.includes('flexible') || shift.toLowerCase().includes('flex') ? `flexible (any start time, ${shift})` : shift}`;
+    const shift = day.shiftName ?? shiftName ?? 'hours required';
+    const flexible =
+      shift.toLowerCase().includes('flex') ||
+      shift.toLowerCase().includes('any start');
+    return `Worked ${formatDuration(day.workedMinutes)} · ${
+      flexible ? `flexible (any start time, ${shift})` : shift
+    }`;
   }
   if (day.skippedFromLop) {
     return 'Skipped from LOP';
