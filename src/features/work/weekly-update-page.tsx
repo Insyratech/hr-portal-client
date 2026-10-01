@@ -103,8 +103,8 @@ export function WeeklyUpdatePage() {
       <PageHeader kicker="Work" title="My weekly update" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
         Upload one PowerPoint that explains what you did this week. Use View to check it in the browser. Deadline{' '}
-        <span className="font-medium text-foreground">Sunday 23:59 IST</span>. After CSO shares the week with General
-        Manager, the file leaves this page (history remains). You can replace once before share (2 uploads max).
+        <span className="font-medium text-foreground">Sunday 23:59 IST</span>. It goes directly to General Manager on
+        upload (view closes here; history remains). You can replace once (2 uploads max).
       </p>
 
       <section className="mb-8 border border-border bg-background p-5 shadow-card">
@@ -148,7 +148,7 @@ export function WeeklyUpdatePage() {
                     View
                   </Button>
                 ) : board.current.sharedToGm ? (
-                  <span className="text-xs text-muted">Shared with GM — view closed</span>
+                  <span className="text-xs text-muted">With GM — view closed</span>
                 ) : (
                   <span className="text-xs text-muted">File removed from storage (audit kept)</span>
                 )}
@@ -239,7 +239,7 @@ export function WeeklyUpdatePage() {
                         View
                       </Button>
                     ) : week.update?.sharedToGm ? (
-                      <span className="text-xs text-muted">Shared with GM</span>
+                      <span className="text-xs text-muted">With GM</span>
                     ) : null}
                   </div>
                 </li>

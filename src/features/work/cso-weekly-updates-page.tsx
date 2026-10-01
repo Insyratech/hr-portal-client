@@ -60,16 +60,21 @@ function CsoWeeklyUpdatesInner() {
     [fetchDownload, toast],
   );
 
-  async function onShare() {
+  async function onSyncMissing() {
     if (!board) return;
     try {
       const result = await shareToGm({ weekStart: board.week.start }).unwrap();
-      toast.success(
-        `Shared ${result.data.share.fileCount} PPT${result.data.share.fileCount === 1 ? '' : 's'} with General Manager.`,
-      );
+      const added = result.data.added ?? 0;
+      if (added > 0) {
+        toast.success(
+          `Synced ${added} missing PPT${added === 1 ? '' : 's'} to General Manager.`,
+        );
+      } else {
+        toast.success('All submitted PPTs for this week are already with General Manager.');
+      }
       await refetch();
     } catch (error) {
-      toast.error(apiErrorMessage(error, 'Could not share this week’s PPTs.'));
+      toast.error(apiErrorMessage(error, 'Could not sync weekly PPTs to General Manager.'));
     }
   }
 
@@ -77,8 +82,8 @@ function CsoWeeklyUpdatesInner() {
     <>
       <PageHeader kicker="Work" title="Weekly work updates" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
-        Review this week’s employee PPTs with View, then share the package with General Manager. After you share, files
-        leave this desk (history remains). GM downloads or emails them from Shared weekly updates.
+        Status desk for this week’s employee weekly wrap PPTs. Files go directly to General Manager on upload (JC
+        PPTs still transfer through CSO). Use Sync if any older submissions are missing from the GM inbox.
       </p>
 
       {isLoading ? <PageLoading compact message="Loading…" /> : null}
@@ -119,10 +124,11 @@ function CsoWeeklyUpdatesInner() {
               <Button
                 type="button"
                 size="sm"
+                variant="outline"
                 disabled={shareState.isLoading || board.counts.submitted === 0}
-                onClick={() => void onShare()}
+                onClick={() => void onSyncMissing()}
               >
-                {shareState.isLoading ? 'Sharing…' : 'Share all to General Manager'}
+                {shareState.isLoading ? 'Syncing…' : 'Sync missing to GM'}
               </Button>
             </div>
           </section>
@@ -192,7 +198,7 @@ function CsoWeeklyUpdatesInner() {
                             View
                           </Button>
                         ) : person.update?.sharedToGm ? (
-                          <span className="text-xs text-muted">Shared with GM — view closed</span>
+                          <span className="text-xs text-muted">With GM — view closed</span>
                         ) : person.update ? (
                           <span className="text-xs text-muted">Removed from storage</span>
                         ) : null}
@@ -205,9 +211,9 @@ function CsoWeeklyUpdatesInner() {
           )}
 
           <section className="space-y-3">
-            <Meta>Share timeline (this week)</Meta>
+            <Meta>GM inbox packages (this week)</Meta>
             {board.shares.length === 0 ? (
-              <p className="text-sm text-muted">Not shared with General Manager yet.</p>
+              <p className="text-sm text-muted">No packages in the General Manager inbox for this week yet.</p>
             ) : (
               <ul className="space-y-3">
                 {board.shares.map((share) => (

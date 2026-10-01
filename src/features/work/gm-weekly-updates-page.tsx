@@ -156,25 +156,25 @@ function GmWeeklyUpdatesInner() {
 
   return (
     <>
-      <PageHeader kicker="Work" title="Shared weekly updates" />
+      <PageHeader kicker="Work" title="Weekly updates" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
-        Packages CSO shared with you (max 15 MB per file). Download, email, or delete — each removes the file from
-        portal storage and keeps the share history for audit.
+        Weekly wrap PPTs uploaded by employees (max 15 MB per file). They arrive here directly — JC PPTs still come via
+        CSO transfer. Download, email, or delete — each removes the file from portal storage and keeps history for audit.
       </p>
 
       {isLoading ? <PageLoading compact message="Loading…" /> : null}
-      {isError ? <p className="text-sm">Unable to load shared weekly updates.</p> : null}
+      {isError ? <p className="text-sm">Unable to load weekly updates.</p> : null}
 
       {board ? (
         <div className="space-y-6">
           {board.count === 0 ? (
             <p className="text-sm text-muted">
-              No packages shared yet. When CSO shares a week’s PPTs, they appear here.
+              No weekly PPTs yet. When employees upload their weekly wrap, packages appear here.
             </p>
           ) : (
             <>
               <p className="text-sm text-muted">
-                {board.count} shared package{board.count === 1 ? '' : 's'}.
+                {board.count} package{board.count === 1 ? '' : 's'}.
               </p>
               <ul className="space-y-4">
                 {ordered.map((share) => {
@@ -196,7 +196,7 @@ function GmWeeklyUpdatesInner() {
                             {share.weekStart} → {share.weekEnd}
                           </p>
                           <p className="mt-1 text-xs text-muted">
-                            Shared by {share.sharedByName} · {formatSharedAt(share.sharedAt)} IST ·{' '}
+                            Shared via {share.sharedByName} · {formatSharedAt(share.sharedAt)} IST ·{' '}
                             {share.fileCount} file{share.fileCount === 1 ? '' : 's'} · {share.availableCount} still in
                             storage
                           </p>

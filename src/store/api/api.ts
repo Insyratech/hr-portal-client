@@ -2985,7 +2985,11 @@ export const api = createApi({
       providesTags: ['Work'],
     }),
     shareWeeklyPptToGm: builder.mutation<
-      ApiSuccess<{ share: { id: string; weekStart: string; weekEnd: string; sharedAt: string; fileCount: number }; recipients: number }>,
+      ApiSuccess<{
+        share: { id: string; weekStart: string; weekEnd: string; sharedAt: string; fileCount: number };
+        recipients: number;
+        added: number;
+      }>,
       { weekStart?: string } | void
     >({
       query: (body) => ({

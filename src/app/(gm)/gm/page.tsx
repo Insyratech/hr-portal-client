@@ -23,7 +23,7 @@ export default function GmOverviewPage() {
       <PageHeader kicker="General Manager" title="Overview" />
       <p className="mb-6 max-w-2xl text-sm text-muted">
         Upload attendance, run payroll, open the employee directory (both companies), see who is out, and open
-        weekly PPT packages shared by CSO. Leave approval is handled by HR Manager.
+        weekly wrap PPTs (employees upload straight to you). Leave approval is handled by HR Manager.
       </p>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6 lg:gap-6">
         <StatCard
@@ -64,7 +64,7 @@ export default function GmOverviewPage() {
         />
         <StatCard
           value="PPT"
-          label="Shared weekly updates"
+          label="Weekly updates"
           icon="file"
           onClick={() => router.push('/gm/weekly-updates')}
         />

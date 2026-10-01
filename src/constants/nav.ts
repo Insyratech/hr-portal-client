@@ -175,7 +175,7 @@ export const GM_LEAVE_NAV: readonly NavItem[] = [
 ];
 
 export const GM_WORK_NAV: readonly NavItem[] = [
-  { href: '/gm/weekly-updates', label: 'Shared weekly updates', icon: 'file' },
+  { href: '/gm/weekly-updates', label: 'Weekly updates', icon: 'file' },
   { href: '/gm/jc', label: 'Team JC', icon: 'file' },
 ];
 

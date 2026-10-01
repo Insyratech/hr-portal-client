@@ -207,7 +207,7 @@ const GM_CATEGORIES: FaqCategory[] = [
         id: 'gm-work',
         question: 'How do I review weekly work and JC materials?',
         answer:
-          'GM Work areas cover weekly PPT shares and JC PPT boards transferred for your review, including download and email actions where enabled.',
+          'GM Work areas cover weekly wrap PPTs (uploaded straight to you) and JC PPT boards transferred by CSO, including download and email actions where enabled.',
       },
       {
         id: 'gm-reports',
@@ -236,7 +236,7 @@ const CSO_CATEGORIES: FaqCategory[] = [
         id: 'cso-weekly',
         question: 'How do weekly update PPTs work for CSO?',
         answer:
-          'Use CSO weekly updates to collect and share weekly PPT packs. Status badges show what is pending, shared, or completed for the week.',
+          'Weekly wrap PPTs go directly to General Manager on upload — this desk shows who submitted and timing. JC PPTs still transfer through CSO. Use Sync missing to GM if older files need a one-time push.',
       },
       {
         id: 'cso-projects',
