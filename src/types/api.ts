@@ -1072,6 +1072,8 @@ export type AttendanceImport = {
   status: string;
   uploadedBy: string;
   confirmedAt: string | null;
+  /** Employees selected for salary slips at confirm; null on legacy imports. */
+  salarySlipEmployeeIds: string[] | null;
   createdAt: string;
 };
 

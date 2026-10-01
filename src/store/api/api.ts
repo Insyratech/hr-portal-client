@@ -3154,8 +3154,15 @@ export const api = createApi({
       query: ({ id, ...body }) => ({ url: `/api/v1/attendance/reviews/${id}/decide`, method: 'POST', body }),
       invalidatesTags: ['AttendanceImports'],
     }),
-    confirmAttendanceImport: builder.mutation<ApiSuccess<AttendanceImportDetail>, string>({
-      query: (id) => ({ url: `/api/v1/attendance/imports/${id}/confirm`, method: 'POST' }),
+    confirmAttendanceImport: builder.mutation<
+      ApiSuccess<AttendanceImportDetail>,
+      { id: string; salarySlipEmployeeIds: string[] }
+    >({
+      query: ({ id, salarySlipEmployeeIds }) => ({
+        url: `/api/v1/attendance/imports/${id}/confirm`,
+        method: 'POST',
+        body: { salarySlipEmployeeIds },
+      }),
       invalidatesTags: ['AttendanceImports', 'Attendance'],
     }),
     rejectAttendanceImport: builder.mutation<ApiSuccess<AttendanceImport>, string>({

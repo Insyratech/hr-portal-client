@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PageLoading } from '@/components/ui/page-loading';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -11,6 +11,7 @@ import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { StatusMessage } from '@/components/ui/status-message';
+import { CheckboxIdPicker } from '@/features/work/checkbox-id-picker';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
@@ -35,12 +36,35 @@ export function AttendanceImportReview({
   const [reject, { isLoading: rejecting }] = useRejectAttendanceImportMutation();
   const [remove, { isLoading: deleting }] = useDeleteAttendanceImportMutation();
   const [askDelete, setAskDelete] = useState(false);
+  const [askSalarySlips, setAskSalarySlips] = useState(false);
+  const [salarySlipEmployeeIds, setSalarySlipEmployeeIds] = useState<string[]>([]);
   const toast = useToast();
   const bundle = data?.data;
 
+  const salarySlipOptions = useMemo(
+    () =>
+      (bundle?.cards ?? []).map((row) => ({
+        id: row.employeeId,
+        label: row.fullName,
+        hint: `${row.employeeCode}${row.companyName ? ` · ${row.companyName}` : ''}`,
+      })),
+    [bundle?.cards],
+  );
+
+  function openSalarySlipDialog() {
+    if (!bundle) return;
+    setSalarySlipEmployeeIds(bundle.cards.map((row) => row.employeeId));
+    setAskSalarySlips(true);
+  }
+
   async function onConfirm() {
+    if (salarySlipEmployeeIds.length === 0) {
+      toast.error('Select at least one employee for salary slips.');
+      return;
+    }
     try {
-      await confirm(importId).unwrap();
+      await confirm({ id: importId, salarySlipEmployeeIds }).unwrap();
+      setAskSalarySlips(false);
       toast.success('Month confirmed. Employees can now see this attendance.');
     } catch (cause) {
       toast.error(apiErrorMessage(cause, 'Unable to confirm this month.'));
@@ -152,9 +176,9 @@ export function AttendanceImportReview({
                   type="button"
                   loading={confirming}
                   disabled={!bundle.canConfirm || confirming}
-                  onClick={() => void onConfirm()}
+                  onClick={openSalarySlipDialog}
                 >
-                  {confirming ? 'Confirming month' : 'Confirm month'}
+                  Confirm month
                 </Button>
                 <Button type="button" variant="outline" loading={rejecting} disabled={rejecting || confirming} onClick={() => void onReject()}>
                   {rejecting ? 'Rejecting' : 'Reject import'}
@@ -165,7 +189,12 @@ export function AttendanceImportReview({
                   Open each person with a Flags count above 0, choose Full / Half / No LOP or Exclude for those days,
                   then return here. Exceptions (unknown UserIDs) do not block confirm.
                 </p>
-              ) : null}
+              ) : (
+                <p className="text-sm text-muted">
+                  Confirm opens a list of employees. Unselect anyone who should not get a salary slip; attendance still
+                  publishes for everyone.
+                </p>
+              )}
             </div>
           ) : null}
           {canManage && bundle.import.status === 'REJECTED' ? (
@@ -175,6 +204,64 @@ export function AttendanceImportReview({
           ) : null}
         </div>
       ) : null}
+      <Dialog
+        open={askSalarySlips}
+        onOpenChange={(open) => {
+          if (!open && !confirming) setAskSalarySlips(false);
+        }}
+      >
+        <DialogContent>
+          <DialogTitle>Prepare salary slips</DialogTitle>
+          <DialogDescription>
+            Selected employees will get salary slips when payroll is calculated. Unselect anyone who does not need a
+            slip. Attendance still confirms for every person on this import.
+          </DialogDescription>
+          <div className="mt-6 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
+              <span>
+                {salarySlipEmployeeIds.length} of {salarySlipOptions.length} selected
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={confirming || salarySlipOptions.length === 0}
+                  onClick={() => setSalarySlipEmployeeIds(salarySlipOptions.map((row) => row.id))}
+                >
+                  Select all
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={confirming || salarySlipEmployeeIds.length === 0}
+                  onClick={() => setSalarySlipEmployeeIds([])}
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+            <CheckboxIdPicker
+              options={salarySlipOptions}
+              selectedIds={salarySlipEmployeeIds}
+              onChange={setSalarySlipEmployeeIds}
+              emptyLabel="No employees on this import."
+            />
+          </div>
+          <div className="mt-8 flex justify-end gap-3">
+            <Button type="button" variant="outline" disabled={confirming} onClick={() => setAskSalarySlips(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              loading={confirming}
+              disabled={confirming || salarySlipEmployeeIds.length === 0}
+              onClick={() => void onConfirm()}
+            >
+              {confirming ? 'Confirming month' : 'Confirm month'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Dialog open={askDelete} onOpenChange={(open) => !open && setAskDelete(false)}>
         <DialogContent>
           <DialogTitle>Delete rejected import</DialogTitle>
