@@ -157,7 +157,8 @@ export function AttendanceReviewCardPage({
                   <p className="mt-2 text-sm">Needs your LOP choice{day.hrAction ? ` · ${day.hrAction}` : ''}.</p>
                 ) : (
                   <p className="mt-2 text-sm text-muted">
-                    {day.hrAction ?? 'No LOP'} · proposed {day.proposedLop ?? 0}
+                    {day.hrAction ?? 'No LOP'} · LOP{' '}
+                    {day.hrAction ? (day.finalLop ?? 0) : (day.proposedLop ?? day.finalLop ?? 0)}
                   </p>
                 )}
                 {canManage && !frozen && (day.needsHrDecision || day.status === 'ABSENT' || day.status === 'HALF_DAY' || day.status === 'LATE' || day.status === 'MISSING_PUNCH') ? (
