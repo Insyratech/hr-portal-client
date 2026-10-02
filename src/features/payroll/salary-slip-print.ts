@@ -9,11 +9,7 @@ function esc(value: string | null | undefined): string {
     .replace(/"/g, '&quot;');
 }
 
-function row(label: string, value: string): string {
-  return `<div class="row"><span>${esc(label)}</span><span class="num">${esc(value)}</span></div>`;
-}
-
-/** Opens a dedicated print/PDF window with only the salary slip (white paper, black text). */
+/** Opens a dedicated print/PDF window with only the salary slip (landscape, one page). */
 export function printSalarySlip(slip: SalarySlip): boolean {
   const p = slip.particulars;
   const logo = slip.companyLogoUrl
@@ -26,130 +22,184 @@ export function printSalarySlip(slip: SalarySlip): boolean {
   <meta charset="utf-8" />
   <title>Salary slip · ${esc(slip.employeeName)} · ${esc(slip.monthLabel)}</title>
   <style>
-    @page { size: A4; margin: 12mm; }
+    @page { size: A4 landscape; margin: 8mm; }
     * { box-sizing: border-box; }
-    body {
+    html, body {
       margin: 0;
       padding: 0;
       background: #fff;
       color: #000;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
+    .no-print { margin: 8px 12px; font-size: 12px; color: #444; }
     .sheet {
-      max-width: 190mm;
-      margin: 8mm auto;
-      padding: 10mm;
-      border: 1px solid #000;
+      width: 100%;
+      max-width: 281mm;
+      margin: 0 auto;
+      padding: 3mm;
+      border: 1px solid #a3a3a3;
       background: #fff;
     }
-    header {
-      display: grid;
-      grid-template-columns: 1fr 2fr;
-      gap: 12px;
-      align-items: center;
-      border-bottom: 1px solid #000;
-      padding-bottom: 14px;
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    td, th {
+      border: 1px solid #d4d4d4;
+      padding: 3px 6px;
+      font-size: 10.5px;
+      line-height: 1.25;
+      vertical-align: top;
+      color: #000;
     }
-    .logo-wrap { display: flex; align-items: center; justify-content: flex-start; min-height: 28mm; }
-    .logo { width: 100%; max-height: 32mm; object-fit: contain; object-position: left center; display: block; }
+    th { background: #f5f5f5; font-weight: 700; text-align: left; }
+    .logo-cell { width: 32%; vertical-align: middle; }
+    .logo { display: block; max-height: 14mm; max-width: 100%; object-fit: contain; object-position: left center; }
     .logo-ph {
-      width: 100%;
-      min-height: 24mm;
+      height: 12mm;
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 1px solid #999;
-      font-size: 11px;
       color: #666;
+      font-size: 11px;
     }
-    .company { text-align: right; }
-    h1 { margin: 0; font-size: 20px; font-weight: 700; }
-    .addr { margin: 8px 0 0; white-space: pre-line; font-size: 12px; color: #222; }
-    .title { margin: 18px 0 0; text-align: center; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin-top: 18px; font-size: 13px; }
+    .company { text-align: right; vertical-align: middle; }
+    .company-name { margin: 0; font-size: 13px; font-weight: 700; }
+    .addr { margin: 3px 0 0; white-space: pre-line; font-size: 10px; color: #222; }
+    .title-cell { text-align: center; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+    .month-cell { text-align: center; font-size: 11px; font-weight: 600; }
     .label { font-weight: 700; }
-    h2 { margin: 22px 0 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
-    .cols-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 20px; }
-    .cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 8px; }
-    .row { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid #ddd; padding: 5px 0; font-size: 13px; }
-    .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .net { margin-top: 22px; border-top: 1px solid #ccc; padding-top: 12px; text-align: right; font-size: 16px; font-weight: 700; }
-    .note { margin-top: 4px; text-align: right; font-size: 11px; color: #444; }
-    footer { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 48px; font-size: 13px; color: #333; }
-    footer p { margin: 0; border-top: 1px solid #ccc; padding-top: 8px; }
-    footer p.right { text-align: right; }
-    .no-print { margin: 12px; font-size: 12px; color: #444; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .strong { font-weight: 700; }
+    .net { font-size: 12px; font-weight: 700; }
+    .note { margin: 2px 0 0; text-align: right; font-size: 9px; color: #555; }
+    .sign { height: 16mm; vertical-align: bottom; color: #333; }
+    .sign.right { text-align: right; }
     @media print {
       .no-print { display: none !important; }
-      body { background: #fff; }
-      .sheet { margin: 0; max-width: none; }
+      html, body { width: 100%; height: auto; }
+      .sheet {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 2mm;
+        border: 1px solid #a3a3a3;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      table { page-break-inside: avoid; break-inside: avoid; }
     }
   </style>
 </head>
 <body>
-  <p class="no-print">Use Print → Save as PDF, or send to a printer. Close this window when done.</p>
+  <p class="no-print">Use Print → Save as PDF. Turn off Headers and footers. Close this window when done.</p>
   <div class="sheet">
-    <header>
-      <div class="logo-wrap">${logo}</div>
-      <div class="company">
-        <h1>${esc(slip.companyName)}</h1>
-        <p class="addr">${esc(slip.companyAddress)}</p>
-      </div>
-    </header>
-    <p class="title">Salary slip · ${esc(slip.monthLabel)}</p>
-    <div class="grid">
-      <p><span class="label">Employee name: </span>${esc(slip.employeeName)}</p>
-      <p><span class="label">Employee ID: </span>${esc(slip.employeeCode)}</p>
-      <p><span class="label">Designation: </span>${esc(slip.designationName ?? '—')}</p>
-      <p><span class="label">Date of joining: </span>${esc(slip.joiningDate ?? '—')}</p>
-      <p><span class="label">Total days: </span>${esc(String(slip.calendarDays))}</p>
-      <p><span class="label">Working days: </span>${esc(String(slip.workingDays))}</p>
-      <p><span class="label">PAN: </span>${esc(slip.panMasked ?? '—')}</p>
-      <p><span class="label">Bank name: </span>${esc(slip.bankNameMasked ?? '—')}</p>
-      <p><span class="label">Account number: </span>${esc(slip.bankAccountMasked ?? '—')}</p>
-      <p><span class="label">IFSC: </span>${esc(slip.ifscMasked ?? '—')}</p>
-    </div>
-    <h2>Leave particulars</h2>
-    <div class="cols-3">
-      ${row('CL', String(p.cl))}
-      ${row('SL', String(p.sl))}
-      ${row('ML', String(p.ml))}
-      ${row('EL', String(p.el))}
-      ${row('Maternity / Paternity', String(p.maternityPaternity))}
-      ${row('Miss punch', String(p.missPunch))}
-      ${row('Permissions', `${p.permissionsCount} (${p.permissionHours}h)`)}
-      ${row('Late days', String(p.lateDays))}
-      ${row('Absent', String(p.absent))}
-      ${row('Total LOPs', String(p.totalLop))}
-    </div>
-    <div class="cols-2">
-      <div>
-        <h2>Income (₹)</h2>
-        ${row('Basic', formatInr(slip.basic))}
-        ${row('DA', formatInr(slip.da))}
-        ${row('HRA', formatInr(slip.hra))}
-        ${row('Fuel', formatInr(slip.fuel))}
-        ${row('Incentives', formatInr(slip.incentives))}
-        ${row('Other', formatInr(slip.other))}
-        ${row('Gross', formatInr(slip.gross))}
-      </div>
-      <div>
-        <h2>Deductions (₹)</h2>
-        ${row('Professional tax', formatInr(slip.professionalTax))}
-        ${row('TDS', formatInr(slip.tds))}
-        ${row('Welfare', formatInr(slip.employeeWelfare))}
-        ${row('KPI', formatInr(slip.kpi))}
-        ${row('Other', formatInr(slip.otherDeductions))}
-        ${row(`Non-working days (${slip.nonWorkingDays})`, formatInr(slip.nonWorkingAmount))}
-        ${row('LOP', formatInr(slip.lopAmount))}
-      </div>
-    </div>
-    <p class="net">Net pay ${esc(formatInr(slip.net))}</p>
+    <table>
+      <tr>
+        <td class="logo-cell">${logo}</td>
+        <td class="company">
+          <p class="company-name">${esc(slip.companyName)}</p>
+          <p class="addr">${esc(slip.companyAddress)}</p>
+        </td>
+      </tr>
+      <tr>
+        <td class="title-cell">Salary slip</td>
+        <td class="month-cell">Month · ${esc(slip.monthLabel)}</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <td><span class="label">Employee name:</span> ${esc(slip.employeeName)}</td>
+        <td><span class="label">Employee ID:</span> ${esc(slip.employeeCode)}</td>
+      </tr>
+      <tr>
+        <td><span class="label">Designation:</span> ${esc(slip.designationName ?? '—')}</td>
+        <td><span class="label">Date of joining:</span> ${esc(slip.joiningDate ?? '—')}</td>
+      </tr>
+      <tr>
+        <td><span class="label">PAN:</span> ${esc(slip.panMasked ?? '—')}</td>
+        <td><span class="label">Bank name:</span> ${esc(slip.bankNameMasked ?? '—')}</td>
+      </tr>
+      <tr>
+        <td><span class="label">Account number:</span> ${esc(slip.bankAccountMasked ?? '—')}</td>
+        <td><span class="label">IFSC:</span> ${esc(slip.ifscMasked ?? '—')}</td>
+      </tr>
+      <tr>
+        <td><span class="label">Total days:</span> ${esc(String(slip.calendarDays))}</td>
+        <td><span class="label">Paid days:</span> ${esc(String(slip.workingDays))}</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr><th colspan="4">Leave particulars</th></tr>
+      <tr>
+        <td>CL: ${esc(String(p.cl))}</td>
+        <td>SL: ${esc(String(p.sl))}</td>
+        <td>ML: ${esc(String(p.ml))}</td>
+        <td>EL: ${esc(String(p.el))}</td>
+      </tr>
+      <tr>
+        <td>Maternity / Paternity: ${esc(String(p.maternityPaternity))}</td>
+        <td>Miss punch: ${esc(String(p.missPunch))}</td>
+        <td>Permissions: ${esc(String(p.permissionsCount))} (${esc(String(p.permissionHours))}h)</td>
+        <td>Late days: ${esc(String(p.lateDays))}</td>
+      </tr>
+      <tr>
+        <td>Absent: ${esc(String(p.absent))}</td>
+        <td colspan="3" class="strong">Total LOPs: ${esc(String(p.totalLop))}</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <th style="width:25%">Income</th>
+        <th class="num" style="width:25%">Amount (₹)</th>
+        <th style="width:25%">Deductions</th>
+        <th class="num" style="width:25%">Amount (₹)</th>
+      </tr>
+      <tr>
+        <td>Basic</td><td class="num">${esc(formatInr(slip.basic))}</td>
+        <td>Professional tax</td><td class="num">${esc(formatInr(slip.professionalTax))}</td>
+      </tr>
+      <tr>
+        <td>DA</td><td class="num">${esc(formatInr(slip.da))}</td>
+        <td>TDS</td><td class="num">${esc(formatInr(slip.tds))}</td>
+      </tr>
+      <tr>
+        <td>HRA</td><td class="num">${esc(formatInr(slip.hra))}</td>
+        <td>Welfare</td><td class="num">${esc(formatInr(slip.employeeWelfare))}</td>
+      </tr>
+      <tr>
+        <td>Fuel</td><td class="num">${esc(formatInr(slip.fuel))}</td>
+        <td>KPI</td><td class="num">${esc(formatInr(slip.kpi))}</td>
+      </tr>
+      <tr>
+        <td>Incentives</td><td class="num">${esc(formatInr(slip.incentives))}</td>
+        <td>Other</td><td class="num">${esc(formatInr(slip.otherDeductions))}</td>
+      </tr>
+      <tr>
+        <td>Other</td><td class="num">${esc(formatInr(slip.other))}</td>
+        <td>Non-working days (${esc(String(slip.nonWorkingDays))})</td>
+        <td class="num">${esc(formatInr(slip.nonWorkingAmount))}</td>
+      </tr>
+      <tr>
+        <td class="strong">Gross</td><td class="num strong">${esc(formatInr(slip.gross))}</td>
+        <td>LOP</td><td class="num">${esc(formatInr(slip.lopAmount))}</td>
+      </tr>
+      <tr>
+        <td colspan="2" class="strong">Net pay for the month</td>
+        <td colspan="2" class="num net">${esc(formatInr(slip.net))}</td>
+      </tr>
+    </table>
+
     <p class="note">All amounts are in Indian Rupees (₹).</p>
-    <footer>
-      <p>Employee</p>
-      <p class="right">Authorised signatory</p>
-    </footer>
+
+    <table>
+      <tr>
+        <td class="sign">Employee signature</td>
+        <td class="sign right">Authorised signatory</td>
+      </tr>
+    </table>
   </div>
   <script>window.onload=function(){window.print();}</script>
 </body>
