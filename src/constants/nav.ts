@@ -140,6 +140,7 @@ export const HR_OPS_NAV: readonly NavItem[] = [
   { href: '/hr/permissions', label: 'Permissions', icon: 'clock' },
   { href: '/hr/shift-changes', label: 'Shift change requests', icon: 'clock' },
   { href: '/hr/grievances', label: 'Grievances', icon: 'shield' },
+  { href: '/hr/salary-slips', label: 'Published salary slips', icon: 'file' },
 ];
 
 export const HR_WORK_NAV: readonly NavItem[] = [

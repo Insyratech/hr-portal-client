@@ -12,6 +12,8 @@ import { StatusMessage } from '@/components/ui/status-message';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import { formatInr } from '@/features/payroll/format';
+import { printSalarySlip } from '@/features/payroll/salary-slip-print';
+import type { SalarySlip } from '@/types/api';
 import { useGetPayrollRunQuery, usePublishPayrollMutation } from '@/store/api/api';
 
 export function PayrollRunPreview({
@@ -19,11 +21,13 @@ export function PayrollRunPreview({
   listHref,
   slipHref,
   canManage,
+  backLabel = 'Back to payroll',
 }: {
   runId: string;
   listHref: string;
   slipHref: (slipId: string) => string;
   canManage: boolean;
+  backLabel?: string;
 }) {
   const { data, isLoading, isError, error } = useGetPayrollRunQuery(runId);
   const [publish, { isLoading: publishing }] = usePublishPayrollMutation();
@@ -45,12 +49,19 @@ export function PayrollRunPreview({
     }
   }
 
+  function onPrintOrDownload(slip: SalarySlip) {
+    const opened = printSalarySlip(slip);
+    if (!opened) {
+      toast.error('Allow pop-ups to print or save the salary slip as PDF.');
+    }
+  }
+
   return (
     <>
       <PageHeader kicker="Payroll" title={bundle ? bundle.run.period : 'Run'} />
       <p className="mb-8">
         <Link href={listHref} className="text-sm text-muted hover:text-foreground">
-          Back to payroll
+          {backLabel}
         </Link>
       </p>
       {isLoading ? <PageLoading compact message="Loading slips…" /> : null}
@@ -90,19 +101,40 @@ export function PayrollRunPreview({
           </div>
           <DataTable
             columns={[
-              { id: 'code', header: 'ID', cell: (row) => row.employeeCode },
               { id: 'name', header: 'Name', cell: (row) => row.employeeName },
+              { id: 'code', header: 'ID', cell: (row) => row.employeeCode },
               { id: 'company', header: 'Company', cell: (row) => row.companyName },
-              { id: 'lop', header: 'LOP', cell: (row) => String(row.lopDays) },
-              { id: 'working', header: 'Working days', cell: (row) => String(row.workingDays) },
-              { id: 'net', header: 'Net', cell: (row) => formatInr(row.net) },
               {
-                id: 'open',
-                header: '',
+                id: 'working',
+                header: 'Working days',
+                cell: (row) => String(row.workingDays ?? row.calendarDays),
+              },
+              { id: 'lop', header: 'LOP days', cell: (row) => String(row.lopDays) },
+              { id: 'salary', header: 'Salary (CTC)', cell: (row) => formatInr(row.gross) },
+              { id: 'net', header: 'Net pay', cell: (row) => formatInr(row.net) },
+              {
+                id: 'actions',
+                header: 'Actions',
                 cell: (row) => (
-                  <Link href={slipHref(row.id)} className="text-sm text-muted hover:text-foreground">
-                    Slip
-                  </Link>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link href={slipHref(row.id)} className="text-sm text-muted hover:text-foreground">
+                      View
+                    </Link>
+                    <button
+                      type="button"
+                      className="text-sm text-muted hover:text-foreground"
+                      onClick={() => onPrintOrDownload(row)}
+                    >
+                      Print
+                    </button>
+                    <button
+                      type="button"
+                      className="text-sm text-muted hover:text-foreground"
+                      onClick={() => onPrintOrDownload(row)}
+                    >
+                      Download
+                    </button>
+                  </div>
                 ),
               },
             ]}

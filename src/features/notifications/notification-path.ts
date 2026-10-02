@@ -75,6 +75,7 @@ export function pathForNotification(item: NotificationItem, roles: string[]): st
 
   if (item.referenceType === 'payroll_run') {
     if (gm) return '/gm/payroll';
+    if (hrManager) return '/hr/salary-slips';
     if (finance) return '/finance';
     return '/payslips';
   }
