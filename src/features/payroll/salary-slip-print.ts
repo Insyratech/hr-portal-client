@@ -22,7 +22,7 @@ export function printSalarySlip(slip: SalarySlip): boolean {
   <meta charset="utf-8" />
   <title>Salary slip · ${esc(slip.employeeName)} · ${esc(slip.monthLabel)}</title>
   <style>
-    @page { size: A4 landscape; margin: 8mm; }
+    @page { size: A4 landscape; margin: 6mm; }
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
@@ -36,55 +36,83 @@ export function printSalarySlip(slip: SalarySlip): boolean {
     .no-print { margin: 8px 12px; font-size: 12px; color: #444; }
     .sheet {
       width: 100%;
-      max-width: 281mm;
+      max-width: 285mm;
       margin: 0 auto;
-      padding: 3mm;
-      border: 1px solid #a3a3a3;
+      padding: 2mm;
+      border: 1.5px solid #404040;
       background: #fff;
     }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     td, th {
-      border: 1px solid #d4d4d4;
-      padding: 3px 6px;
-      font-size: 10.5px;
-      line-height: 1.25;
+      padding: 2px 6px;
+      font-size: 10px;
+      line-height: 1.2;
       vertical-align: top;
       color: #000;
     }
-    th { background: #f5f5f5; font-weight: 700; text-align: left; }
-    .logo-cell { width: 32%; vertical-align: middle; }
-    .logo { display: block; max-height: 14mm; max-width: 100%; object-fit: contain; object-position: left center; }
+    /* Body lines: light gray */
+    .body td, .body th { border: 1px solid #e5e5e5; }
+    /* Headers / section edges: darker */
+    .edge td, .edge th, th.edge, td.edge { border: 1px solid #404040; }
+    th {
+      background: #f5f5f5;
+      font-weight: 700;
+      text-align: left;
+      border: 1px solid #404040;
+    }
+    .logo-cell { width: 34%; vertical-align: middle; border: 1px solid #404040; }
+    .logo { display: block; max-height: 12mm; max-width: 100%; object-fit: contain; object-position: left center; }
     .logo-ph {
-      height: 12mm;
+      height: 10mm;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #666;
-      font-size: 11px;
+      font-size: 10px;
     }
-    .company { text-align: right; vertical-align: middle; }
-    .company-name { margin: 0; font-size: 13px; font-weight: 700; }
-    .addr { margin: 3px 0 0; white-space: pre-line; font-size: 10px; color: #222; }
-    .title-cell { text-align: center; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
-    .month-cell { text-align: center; font-size: 11px; font-weight: 600; }
+    .company { text-align: right; vertical-align: middle; border: 1px solid #404040; }
+    .company-name { margin: 2px 0 0; font-size: 12px; font-weight: 700; }
+    .addr { margin: 0; white-space: pre-line; font-size: 9.5px; color: #222; }
+    .title-cell {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border: 1px solid #404040;
+      background: #f5f5f5;
+    }
+    .month-cell {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid #404040;
+      background: #f5f5f5;
+    }
     .label { font-weight: 700; }
     .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .strong { font-weight: 700; }
-    .net { font-size: 12px; font-weight: 700; }
-    .note { margin: 2px 0 0; text-align: right; font-size: 9px; color: #555; }
-    .sign { height: 16mm; vertical-align: bottom; color: #333; }
+    .net { font-size: 11px; font-weight: 700; }
+    .note { margin: 2px 0 0; text-align: right; font-size: 8.5px; color: #555; }
+    .sign {
+      height: 14mm;
+      vertical-align: bottom;
+      color: #333;
+      border: 1px solid #404040;
+    }
     .sign.right { text-align: right; }
     @media print {
       .no-print { display: none !important; }
-      html, body { width: 100%; height: auto; }
+      html, body { width: 100%; height: auto; overflow: hidden; }
       .sheet {
         width: 100%;
         max-width: none;
         margin: 0;
-        padding: 2mm;
-        border: 1px solid #a3a3a3;
+        padding: 1.5mm;
+        border: 1.5px solid #404040;
         page-break-inside: avoid;
         break-inside: avoid;
+        page-break-after: avoid;
       }
       table { page-break-inside: avoid; break-inside: avoid; }
     }
@@ -93,12 +121,12 @@ export function printSalarySlip(slip: SalarySlip): boolean {
 <body>
   <p class="no-print">Use Print → Save as PDF. Turn off Headers and footers. Close this window when done.</p>
   <div class="sheet">
-    <table>
+    <table class="edge">
       <tr>
         <td class="logo-cell">${logo}</td>
         <td class="company">
-          <p class="company-name">${esc(slip.companyName)}</p>
           <p class="addr">${esc(slip.companyAddress)}</p>
+          <p class="company-name">${esc(slip.companyName)}</p>
         </td>
       </tr>
       <tr>
@@ -107,30 +135,29 @@ export function printSalarySlip(slip: SalarySlip): boolean {
       </tr>
     </table>
 
-    <table>
+    <table class="body">
       <tr>
         <td><span class="label">Employee name:</span> ${esc(slip.employeeName)}</td>
+        <td><span class="label">PAN:</span> ${esc(slip.panMasked ?? '—')}</td>
+      </tr>
+      <tr>
         <td><span class="label">Employee ID:</span> ${esc(slip.employeeCode)}</td>
+        <td><span class="label">Account number:</span> ${esc(slip.bankAccountMasked ?? '—')}</td>
       </tr>
       <tr>
         <td><span class="label">Designation:</span> ${esc(slip.designationName ?? '—')}</td>
-        <td><span class="label">Date of joining:</span> ${esc(slip.joiningDate ?? '—')}</td>
-      </tr>
-      <tr>
-        <td><span class="label">PAN:</span> ${esc(slip.panMasked ?? '—')}</td>
         <td><span class="label">Bank name:</span> ${esc(slip.bankNameMasked ?? '—')}</td>
       </tr>
       <tr>
-        <td><span class="label">Account number:</span> ${esc(slip.bankAccountMasked ?? '—')}</td>
+        <td><span class="label">Date of joining:</span> ${esc(slip.joiningDate ?? '—')}</td>
         <td><span class="label">IFSC:</span> ${esc(slip.ifscMasked ?? '—')}</td>
       </tr>
       <tr>
-        <td><span class="label">Total days:</span> ${esc(String(slip.calendarDays))}</td>
-        <td><span class="label">Paid days:</span> ${esc(String(slip.workingDays))}</td>
+        <td colspan="2"><span class="label">Total days:</span> ${esc(String(slip.calendarDays))}</td>
       </tr>
     </table>
 
-    <table>
+    <table class="body">
       <tr><th colspan="4">Leave particulars</th></tr>
       <tr>
         <td>CL: ${esc(String(p.cl))}</td>
@@ -150,12 +177,16 @@ export function printSalarySlip(slip: SalarySlip): boolean {
       </tr>
     </table>
 
-    <table>
+    <table class="body">
       <tr>
-        <th style="width:25%">Income</th>
+        <th style="width:25%">Particulars</th>
         <th class="num" style="width:25%">Amount (₹)</th>
-        <th style="width:25%">Deductions</th>
+        <th style="width:25%">Particulars</th>
         <th class="num" style="width:25%">Amount (₹)</th>
+      </tr>
+      <tr>
+        <th colspan="2">Income</th>
+        <th colspan="2">Deductions</th>
       </tr>
       <tr>
         <td>Basic</td><td class="num">${esc(formatInr(slip.basic))}</td>
@@ -183,12 +214,16 @@ export function printSalarySlip(slip: SalarySlip): boolean {
         <td class="num">${esc(formatInr(slip.nonWorkingAmount))}</td>
       </tr>
       <tr>
-        <td class="strong">Gross</td><td class="num strong">${esc(formatInr(slip.gross))}</td>
+        <td colspan="2"></td>
         <td>LOP</td><td class="num">${esc(formatInr(slip.lopAmount))}</td>
       </tr>
       <tr>
-        <td colspan="2" class="strong">Net pay for the month</td>
-        <td colspan="2" class="num net">${esc(formatInr(slip.net))}</td>
+        <td class="edge strong" colspan="2">CTC for the month</td>
+        <td class="edge num strong" colspan="2">${esc(formatInr(slip.gross))}</td>
+      </tr>
+      <tr>
+        <td class="edge strong" colspan="2">Net pay for the month</td>
+        <td class="edge num net" colspan="2">${esc(formatInr(slip.net))}</td>
       </tr>
     </table>
 
