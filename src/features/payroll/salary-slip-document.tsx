@@ -124,7 +124,7 @@ export function SalarySlipDocument({ slip }: { slip: SalarySlip }) {
             <Row label="Welfare" value={formatInr(slip.employeeWelfare)} />
             <Row label="KPI" value={formatInr(slip.kpi)} />
             <Row label="Other" value={formatInr(slip.otherDeductions)} />
-            <Row label={`LOP (${slip.lopDays} × ${formatInr(slip.dailyRate)})`} value={formatInr(slip.lopAmount)} />
+            <Row label="LOP" value={formatInr(slip.lopAmount)} />
           </div>
         </div>
       </section>

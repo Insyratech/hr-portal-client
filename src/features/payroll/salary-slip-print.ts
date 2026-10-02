@@ -139,7 +139,7 @@ export function printSalarySlip(slip: SalarySlip): boolean {
         ${row('Welfare', formatInr(slip.employeeWelfare))}
         ${row('KPI', formatInr(slip.kpi))}
         ${row('Other', formatInr(slip.otherDeductions))}
-        ${row(`LOP (${slip.lopDays} × ${formatInr(slip.dailyRate)})`, formatInr(slip.lopAmount))}
+        ${row('LOP', formatInr(slip.lopAmount))}
       </div>
     </div>
     <p class="net">Net pay ${esc(formatInr(slip.net))}</p>
