@@ -13,9 +13,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 function SlipHeading({ children }: { children: string }) {
-  return (
-    <p className="text-xs font-bold uppercase tracking-[0.16em] text-black">{children}</p>
-  );
+  return <p className="text-xs font-bold uppercase tracking-[0.16em] text-black">{children}</p>;
 }
 
 /** Always white paper + black ink so print / PDF stays readable in any theme. */
@@ -24,21 +22,28 @@ export function SalarySlipDocument({ slip }: { slip: SalarySlip }) {
   return (
     <article
       id="salary-slip-print-root"
-      className="mx-auto max-w-3xl border border-neutral-300 bg-white p-8 text-black shadow-none"
+      className="mx-auto max-w-3xl border border-black bg-white p-8 text-black shadow-none sm:p-10"
     >
-      <header className="flex flex-wrap items-start gap-4 border-b border-neutral-300 pb-6">
-        {slip.companyLogoUrl ? (
-          <img src={slip.companyLogoUrl} alt="" className="h-16 w-16 object-contain" />
-        ) : (
-          <div className="flex h-16 w-16 items-center justify-center border border-neutral-300 text-xs text-neutral-500">
-            Logo
-          </div>
-        )}
-        <div>
-          <h1 className="text-lg font-bold tracking-tight text-black">{slip.companyName}</h1>
-          <p className="mt-1 whitespace-pre-line text-sm text-neutral-700">{slip.companyAddress}</p>
+      <header className="grid grid-cols-3 items-center gap-4 border-b border-black pb-6">
+        <div className="col-span-1 flex min-h-[5.5rem] items-center justify-center">
+          {slip.companyLogoUrl ? (
+            <img
+              src={slip.companyLogoUrl}
+              alt=""
+              className="max-h-28 w-full max-w-full object-contain object-left"
+            />
+          ) : (
+            <div className="flex h-24 w-full items-center justify-center border border-neutral-400 text-xs text-neutral-500">
+              Logo
+            </div>
+          )}
+        </div>
+        <div className="col-span-2 text-right">
+          <h1 className="text-xl font-bold tracking-tight text-black sm:text-2xl">{slip.companyName}</h1>
+          <p className="mt-2 whitespace-pre-line text-sm text-neutral-800">{slip.companyAddress}</p>
         </div>
       </header>
+
       <p className="mt-6 text-center text-sm font-bold uppercase tracking-[0.16em] text-black">
         Salary slip · {slip.monthLabel}
       </p>
@@ -57,16 +62,24 @@ export function SalarySlipDocument({ slip }: { slip: SalarySlip }) {
           {slip.designationName ?? '—'}
         </p>
         <p>
-          <span className="font-semibold text-black">Department: </span>
-          {slip.departmentName ?? '—'}
+          <span className="font-semibold text-black">Date of joining: </span>
+          {slip.joiningDate ?? '—'}
+        </p>
+        <p>
+          <span className="font-semibold text-black">Total days: </span>
+          {slip.calendarDays}
         </p>
         <p>
           <span className="font-semibold text-black">PAN: </span>
           {slip.panMasked ?? '—'}
         </p>
         <p>
-          <span className="font-semibold text-black">Bank: </span>
-          {[slip.bankNameMasked, slip.bankAccountMasked].filter(Boolean).join(' · ') || '—'}
+          <span className="font-semibold text-black">Bank name: </span>
+          {slip.bankNameMasked ?? '—'}
+        </p>
+        <p>
+          <span className="font-semibold text-black">Account number: </span>
+          {slip.bankAccountMasked ?? '—'}
         </p>
         <p>
           <span className="font-semibold text-black">IFSC: </span>

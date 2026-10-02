@@ -1685,6 +1685,8 @@ export type SalarySlip = {
   employeeCode: string;
   employeeName: string;
   designationName: string | null;
+  /** YYYY-MM-DD from employee master; shown on the slip after designation. */
+  joiningDate: string | null;
   departmentName: string | null;
   companyName: string;
   companyAddress: string;

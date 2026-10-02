@@ -19,7 +19,6 @@ export function printSalarySlip(slip: SalarySlip): boolean {
   const logo = slip.companyLogoUrl
     ? `<img src="${esc(slip.companyLogoUrl)}" alt="" class="logo" />`
     : `<div class="logo-ph">Logo</div>`;
-  const bank = [slip.bankNameMasked, slip.bankAccountMasked].filter(Boolean).join(' · ') || '—';
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -27,7 +26,7 @@ export function printSalarySlip(slip: SalarySlip): boolean {
   <meta charset="utf-8" />
   <title>Salary slip · ${esc(slip.employeeName)} · ${esc(slip.monthLabel)}</title>
   <style>
-    @page { size: A4; margin: 14mm; }
+    @page { size: A4; margin: 12mm; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -36,12 +35,36 @@ export function printSalarySlip(slip: SalarySlip): boolean {
       color: #000;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
     }
-    .sheet { max-width: 190mm; margin: 0 auto; padding: 8mm; }
-    header { display: flex; gap: 14px; align-items: flex-start; border-bottom: 1px solid #ccc; padding-bottom: 14px; }
-    .logo, .logo-ph { width: 64px; height: 64px; object-fit: contain; flex-shrink: 0; }
-    .logo-ph { display: flex; align-items: center; justify-content: center; border: 1px solid #ccc; font-size: 11px; color: #666; }
-    h1 { margin: 0; font-size: 18px; font-weight: 700; }
-    .addr { margin: 6px 0 0; white-space: pre-line; font-size: 12px; color: #333; }
+    .sheet {
+      max-width: 190mm;
+      margin: 8mm auto;
+      padding: 10mm;
+      border: 1px solid #000;
+      background: #fff;
+    }
+    header {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 12px;
+      align-items: center;
+      border-bottom: 1px solid #000;
+      padding-bottom: 14px;
+    }
+    .logo-wrap { display: flex; align-items: center; justify-content: flex-start; min-height: 28mm; }
+    .logo { width: 100%; max-height: 32mm; object-fit: contain; object-position: left center; display: block; }
+    .logo-ph {
+      width: 100%;
+      min-height: 24mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #999;
+      font-size: 11px;
+      color: #666;
+    }
+    .company { text-align: right; }
+    h1 { margin: 0; font-size: 20px; font-weight: 700; }
+    .addr { margin: 8px 0 0; white-space: pre-line; font-size: 12px; color: #222; }
     .title { margin: 18px 0 0; text-align: center; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin-top: 18px; font-size: 13px; }
     .label { font-weight: 700; }
@@ -56,15 +79,19 @@ export function printSalarySlip(slip: SalarySlip): boolean {
     footer p { margin: 0; border-top: 1px solid #ccc; padding-top: 8px; }
     footer p.right { text-align: right; }
     .no-print { margin: 12px; font-size: 12px; color: #444; }
-    @media print { .no-print { display: none !important; } body { background: #fff; } }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff; }
+      .sheet { margin: 0; max-width: none; }
+    }
   </style>
 </head>
 <body>
   <p class="no-print">Use Print → Save as PDF, or send to a printer. Close this window when done.</p>
   <div class="sheet">
     <header>
-      ${logo}
-      <div>
+      <div class="logo-wrap">${logo}</div>
+      <div class="company">
         <h1>${esc(slip.companyName)}</h1>
         <p class="addr">${esc(slip.companyAddress)}</p>
       </div>
@@ -74,9 +101,11 @@ export function printSalarySlip(slip: SalarySlip): boolean {
       <p><span class="label">Employee name: </span>${esc(slip.employeeName)}</p>
       <p><span class="label">Employee ID: </span>${esc(slip.employeeCode)}</p>
       <p><span class="label">Designation: </span>${esc(slip.designationName ?? '—')}</p>
-      <p><span class="label">Department: </span>${esc(slip.departmentName ?? '—')}</p>
+      <p><span class="label">Date of joining: </span>${esc(slip.joiningDate ?? '—')}</p>
+      <p><span class="label">Total days: </span>${esc(String(slip.calendarDays))}</p>
       <p><span class="label">PAN: </span>${esc(slip.panMasked ?? '—')}</p>
-      <p><span class="label">Bank: </span>${esc(bank)}</p>
+      <p><span class="label">Bank name: </span>${esc(slip.bankNameMasked ?? '—')}</p>
+      <p><span class="label">Account number: </span>${esc(slip.bankAccountMasked ?? '—')}</p>
       <p><span class="label">IFSC: </span>${esc(slip.ifscMasked ?? '—')}</p>
     </div>
     <h2>Leave particulars</h2>
