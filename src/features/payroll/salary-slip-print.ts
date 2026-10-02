@@ -39,28 +39,25 @@ export function printSalarySlip(slip: SalarySlip): boolean {
       max-width: 285mm;
       margin: 0 auto;
       padding: 2mm;
-      border: 1.5px solid #404040;
+      border: 1px solid #000;
       background: #fff;
     }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     td, th {
+      border: 1px solid #000;
       padding: 2px 6px;
       font-size: 10px;
       line-height: 1.2;
       vertical-align: top;
       color: #000;
     }
-    /* Body lines: light gray */
-    .body td, .body th { border: 1px solid #e5e5e5; }
-    /* Headers / section edges: darker */
-    .edge td, .edge th, th.edge, td.edge { border: 1px solid #404040; }
     th {
       background: #f5f5f5;
       font-weight: 700;
       text-align: left;
-      border: 1px solid #404040;
     }
-    .logo-cell { width: 34%; vertical-align: middle; border: 1px solid #404040; }
+    th.center { text-align: center; }
+    .logo-cell { width: 34%; vertical-align: middle; }
     .logo { display: block; max-height: 12mm; max-width: 100%; object-fit: contain; object-position: left center; }
     .logo-ph {
       height: 10mm;
@@ -70,7 +67,7 @@ export function printSalarySlip(slip: SalarySlip): boolean {
       color: #666;
       font-size: 10px;
     }
-    .company { text-align: right; vertical-align: middle; border: 1px solid #404040; }
+    .company { text-align: right; vertical-align: middle; }
     .company-name { margin: 2px 0 0; font-size: 12px; font-weight: 700; }
     .addr { margin: 0; white-space: pre-line; font-size: 9.5px; color: #222; }
     .title-cell {
@@ -79,14 +76,12 @@ export function printSalarySlip(slip: SalarySlip): boolean {
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      border: 1px solid #404040;
       background: #f5f5f5;
     }
     .month-cell {
       text-align: center;
       font-size: 11px;
       font-weight: 600;
-      border: 1px solid #404040;
       background: #f5f5f5;
     }
     .label { font-weight: 700; }
@@ -94,12 +89,7 @@ export function printSalarySlip(slip: SalarySlip): boolean {
     .strong { font-weight: 700; }
     .net { font-size: 11px; font-weight: 700; }
     .note { margin: 2px 0 0; text-align: right; font-size: 8.5px; color: #555; }
-    .sign {
-      height: 14mm;
-      vertical-align: bottom;
-      color: #333;
-      border: 1px solid #404040;
-    }
+    .sign { height: 14mm; vertical-align: bottom; color: #333; }
     .sign.right { text-align: right; }
     @media print {
       .no-print { display: none !important; }
@@ -109,7 +99,7 @@ export function printSalarySlip(slip: SalarySlip): boolean {
         max-width: none;
         margin: 0;
         padding: 1.5mm;
-        border: 1.5px solid #404040;
+        border: 1px solid #000;
         page-break-inside: avoid;
         break-inside: avoid;
         page-break-after: avoid;
@@ -121,7 +111,7 @@ export function printSalarySlip(slip: SalarySlip): boolean {
 <body>
   <p class="no-print">Use Print → Save as PDF. Turn off Headers and footers. Close this window when done.</p>
   <div class="sheet">
-    <table class="edge">
+    <table>
       <tr>
         <td class="logo-cell">${logo}</td>
         <td class="company">
@@ -135,7 +125,7 @@ export function printSalarySlip(slip: SalarySlip): boolean {
       </tr>
     </table>
 
-    <table class="body">
+    <table>
       <tr>
         <td><span class="label">Employee name:</span> ${esc(slip.employeeName)}</td>
         <td><span class="label">PAN:</span> ${esc(slip.panMasked ?? '—')}</td>
@@ -157,7 +147,7 @@ export function printSalarySlip(slip: SalarySlip): boolean {
       </tr>
     </table>
 
-    <table class="body">
+    <table>
       <tr><th colspan="4">Leave particulars</th></tr>
       <tr>
         <td>CL: ${esc(String(p.cl))}</td>
@@ -177,16 +167,16 @@ export function printSalarySlip(slip: SalarySlip): boolean {
       </tr>
     </table>
 
-    <table class="body">
+    <table>
       <tr>
-        <th style="width:25%">Particulars</th>
-        <th class="num" style="width:25%">Amount (₹)</th>
-        <th style="width:25%">Particulars</th>
-        <th class="num" style="width:25%">Amount (₹)</th>
+        <th class="center" colspan="2">Income</th>
+        <th class="center" colspan="2">Deductions</th>
       </tr>
       <tr>
-        <th colspan="2">Income</th>
-        <th colspan="2">Deductions</th>
+        <th style="width:25%">Particulars</th>
+        <th class="num" style="width:25%">Amount (₹)</th>
+        <th style="width:25%">Particulars</th>
+        <th class="num" style="width:25%">Amount (₹)</th>
       </tr>
       <tr>
         <td>Basic</td><td class="num">${esc(formatInr(slip.basic))}</td>
@@ -218,12 +208,12 @@ export function printSalarySlip(slip: SalarySlip): boolean {
         <td>LOP</td><td class="num">${esc(formatInr(slip.lopAmount))}</td>
       </tr>
       <tr>
-        <td class="edge strong" colspan="2">CTC for the month</td>
-        <td class="edge num strong" colspan="2">${esc(formatInr(slip.gross))}</td>
+        <td class="strong" colspan="2">CTC for the month</td>
+        <td class="num strong" colspan="2">${esc(formatInr(slip.gross))}</td>
       </tr>
       <tr>
-        <td class="edge strong" colspan="2">Net pay for the month</td>
-        <td class="edge num net" colspan="2">${esc(formatInr(slip.net))}</td>
+        <td class="strong" colspan="2">Net pay for the month</td>
+        <td class="num net" colspan="2">${esc(formatInr(slip.net))}</td>
       </tr>
     </table>
 

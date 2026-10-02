@@ -3,13 +3,12 @@
 import type { SalarySlip } from '@/types/api';
 import { formatInr } from '@/features/payroll/format';
 
-const outer = 'border border-neutral-700';
-const head = 'border border-neutral-700 bg-neutral-100';
-const body = 'border border-neutral-200';
+const cell = 'border border-black';
+const head = 'border border-black bg-neutral-50';
 
 function InfoCell({ label, value }: { label: string; value: string }) {
   return (
-    <td className={`${body} px-2 py-1 align-top text-[11px] leading-snug text-black`}>
+    <td className={`${cell} px-2 py-1 align-top text-[11px] leading-snug text-black`}>
       <span className="font-semibold">{label}</span> {value}
     </td>
   );
@@ -21,12 +20,12 @@ export function SalarySlipDocument({ slip }: { slip: SalarySlip }) {
   return (
     <article
       id="salary-slip-print-root"
-      className={`mx-auto w-full max-w-5xl ${outer} bg-white p-2 text-black shadow-none sm:p-3`}
+      className={`mx-auto w-full max-w-5xl ${cell} bg-white p-2 text-black shadow-none sm:p-3`}
     >
       <table className="w-full border-collapse">
         <tbody>
           <tr>
-            <td className={`w-[34%] ${outer} px-2 py-2 align-middle`}>
+            <td className={`w-[34%] ${cell} px-2 py-2 align-middle`}>
               {slip.companyLogoUrl ? (
                 <img
                   src={slip.companyLogoUrl}
@@ -37,8 +36,8 @@ export function SalarySlipDocument({ slip }: { slip: SalarySlip }) {
                 <div className="flex h-12 items-center justify-center text-[11px] text-neutral-500">Logo</div>
               )}
             </td>
-            <td className={`${outer} px-3 py-2 align-middle text-right`}>
-              <p className="text-[11px] leading-snug text-neutral-800 whitespace-pre-line">{slip.companyAddress}</p>
+            <td className={`${cell} px-3 py-2 align-middle text-right`}>
+              <p className="whitespace-pre-line text-[11px] leading-snug text-neutral-800">{slip.companyAddress}</p>
               <p className="mt-1 text-sm font-bold text-black">{slip.companyName}</p>
             </td>
           </tr>
@@ -72,7 +71,7 @@ export function SalarySlipDocument({ slip }: { slip: SalarySlip }) {
             <InfoCell label="IFSC:" value={slip.ifscMasked ?? '—'} />
           </tr>
           <tr>
-            <td className={`${body} px-2 py-1 text-[11px] text-black`} colSpan={2}>
+            <td className={`${cell} px-2 py-1 text-[11px] text-black`} colSpan={2}>
               <span className="font-semibold">Total days:</span> {slip.calendarDays}
             </td>
           </tr>
@@ -92,24 +91,24 @@ export function SalarySlipDocument({ slip }: { slip: SalarySlip }) {
         </thead>
         <tbody>
           <tr>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>CL: {p.cl}</td>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>SL: {p.sl}</td>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>ML: {p.ml}</td>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>EL: {p.el}</td>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>CL: {p.cl}</td>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>SL: {p.sl}</td>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>ML: {p.ml}</td>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>EL: {p.el}</td>
           </tr>
           <tr>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>
               Maternity / Paternity: {p.maternityPaternity}
             </td>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>Miss punch: {p.missPunch}</td>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Miss punch: {p.missPunch}</td>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>
               Permissions: {p.permissionsCount} ({p.permissionHours}h)
             </td>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>Late days: {p.lateDays}</td>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Late days: {p.lateDays}</td>
           </tr>
           <tr>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>Absent: {p.absent}</td>
-            <td className={`${body} px-2 py-0.5 text-[11px] font-semibold`} colSpan={3}>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Absent: {p.absent}</td>
+            <td className={`${cell} px-2 py-0.5 text-[11px] font-semibold`} colSpan={3}>
               Total LOPs: {p.totalLop}
             </td>
           </tr>
@@ -119,89 +118,97 @@ export function SalarySlipDocument({ slip }: { slip: SalarySlip }) {
       <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th className={`w-1/4 ${head} px-2 py-1 text-left text-[11px] font-bold text-black`}>Particulars</th>
-            <th className={`w-1/4 ${head} px-2 py-1 text-right text-[11px] font-bold text-black`}>Amount (₹)</th>
-            <th className={`w-1/4 ${head} px-2 py-1 text-left text-[11px] font-bold text-black`}>Particulars</th>
-            <th className={`w-1/4 ${head} px-2 py-1 text-right text-[11px] font-bold text-black`}>Amount (₹)</th>
-          </tr>
-          <tr>
-            <th className={`${head} px-2 py-0.5 text-left text-[10px] font-semibold text-black`} colSpan={2}>
+            <th className={`${head} px-2 py-1 text-center text-[11px] font-bold text-black`} colSpan={2}>
               Income
             </th>
-            <th className={`${head} px-2 py-0.5 text-left text-[10px] font-semibold text-black`} colSpan={2}>
+            <th className={`${head} px-2 py-1 text-center text-[11px] font-bold text-black`} colSpan={2}>
               Deductions
+            </th>
+          </tr>
+          <tr>
+            <th className={`w-1/4 ${head} px-2 py-0.5 text-left text-[11px] font-semibold text-black`}>
+              Particulars
+            </th>
+            <th className={`w-1/4 ${head} px-2 py-0.5 text-right text-[11px] font-semibold text-black`}>
+              Amount (₹)
+            </th>
+            <th className={`w-1/4 ${head} px-2 py-0.5 text-left text-[11px] font-semibold text-black`}>
+              Particulars
+            </th>
+            <th className={`w-1/4 ${head} px-2 py-0.5 text-right text-[11px] font-semibold text-black`}>
+              Amount (₹)
             </th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>Basic</td>
-            <td className={`${body} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(slip.basic)}</td>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>Professional tax</td>
-            <td className={`${body} px-2 py-0.5 text-right text-[11px] tabular-nums`}>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Basic</td>
+            <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(slip.basic)}</td>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Professional tax</td>
+            <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>
               {formatInr(slip.professionalTax)}
             </td>
           </tr>
           <tr>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>DA</td>
-            <td className={`${body} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(slip.da)}</td>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>TDS</td>
-            <td className={`${body} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(slip.tds)}</td>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>DA</td>
+            <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(slip.da)}</td>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>TDS</td>
+            <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(slip.tds)}</td>
           </tr>
           <tr>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>HRA</td>
-            <td className={`${body} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(slip.hra)}</td>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>Welfare</td>
-            <td className={`${body} px-2 py-0.5 text-right text-[11px] tabular-nums`}>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>HRA</td>
+            <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(slip.hra)}</td>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Welfare</td>
+            <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>
               {formatInr(slip.employeeWelfare)}
             </td>
           </tr>
           <tr>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>Fuel</td>
-            <td className={`${body} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(slip.fuel)}</td>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>KPI</td>
-            <td className={`${body} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(slip.kpi)}</td>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Fuel</td>
+            <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(slip.fuel)}</td>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>KPI</td>
+            <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(slip.kpi)}</td>
           </tr>
           <tr>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>Incentives</td>
-            <td className={`${body} px-2 py-0.5 text-right text-[11px] tabular-nums`}>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Incentives</td>
+            <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>
               {formatInr(slip.incentives)}
             </td>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>Other</td>
-            <td className={`${body} px-2 py-0.5 text-right text-[11px] tabular-nums`}>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Other</td>
+            <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>
               {formatInr(slip.otherDeductions)}
             </td>
           </tr>
           <tr>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>Other</td>
-            <td className={`${body} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(slip.other)}</td>
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Other</td>
+            <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(slip.other)}</td>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>
               Non-working days ({slip.nonWorkingDays})
             </td>
-            <td className={`${body} px-2 py-0.5 text-right text-[11px] tabular-nums`}>
+            <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>
               {formatInr(slip.nonWorkingAmount)}
             </td>
           </tr>
           <tr>
-            <td className={`${body} px-2 py-0.5 text-[11px]`} colSpan={2} />
-            <td className={`${body} px-2 py-0.5 text-[11px]`}>LOP</td>
-            <td className={`${body} px-2 py-0.5 text-right text-[11px] tabular-nums`}>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`} colSpan={2} />
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>LOP</td>
+            <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>
               {formatInr(slip.lopAmount)}
             </td>
           </tr>
           <tr>
-            <td className={`${outer} px-2 py-1 text-[11px] font-semibold`} colSpan={2}>
+            <td className={`${cell} px-2 py-1 text-[11px] font-semibold`} colSpan={2}>
               CTC for the month
             </td>
-            <td className={`${outer} px-2 py-1 text-right text-[11px] font-semibold tabular-nums`} colSpan={2}>
+            <td className={`${cell} px-2 py-1 text-right text-[11px] font-semibold tabular-nums`} colSpan={2}>
               {formatInr(slip.gross)}
             </td>
           </tr>
           <tr>
-            <td className={`${outer} px-2 py-1 text-[11px] font-bold`} colSpan={2}>
+            <td className={`${cell} px-2 py-1 text-[11px] font-bold`} colSpan={2}>
               Net pay for the month
             </td>
-            <td className={`${outer} px-2 py-1 text-right text-sm font-bold tabular-nums`} colSpan={2}>
+            <td className={`${cell} px-2 py-1 text-right text-sm font-bold tabular-nums`} colSpan={2}>
               {formatInr(slip.net)}
             </td>
           </tr>
@@ -213,10 +220,10 @@ export function SalarySlipDocument({ slip }: { slip: SalarySlip }) {
       <table className="mt-2 w-full border-collapse">
         <tbody>
           <tr>
-            <td className={`h-14 w-1/2 ${outer} px-2 py-1 align-bottom text-[11px] text-neutral-700`}>
+            <td className={`h-14 w-1/2 ${cell} px-2 py-1 align-bottom text-[11px] text-neutral-700`}>
               Employee signature
             </td>
-            <td className={`h-14 w-1/2 ${outer} px-2 py-1 align-bottom text-right text-[11px] text-neutral-700`}>
+            <td className={`h-14 w-1/2 ${cell} px-2 py-1 align-bottom text-right text-[11px] text-neutral-700`}>
               Authorised signatory
             </td>
           </tr>
