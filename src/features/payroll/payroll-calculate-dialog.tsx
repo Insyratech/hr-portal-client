@@ -11,24 +11,26 @@ import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
   editableFromCompensation,
-  PAYROLL_FIXED_EARNINGS,
-  PAYROLL_VARIABLE_DEDUCTIONS,
-  PAYROLL_VARIABLE_EARNINGS,
+  PAYROLL_EDITABLE_FIELDS,
   toNumber,
   type PayrollEditableKey,
   type PayrollEditableValues,
 } from '@/features/payroll/compensation-fields';
-import { formatInr } from '@/features/payroll/format';
 import type { PayrollPreviewEmployee } from '@/types/api';
 import { useCalculatePayrollMutation, useGetPayrollPreviewQuery } from '@/store/api/api';
 
 type DraftRow = PayrollEditableValues;
 
-function initDraft(employees: PayrollPreviewEmployee[]): Record<string, DraftRow> {
+function initDraft(employees: PayrollPreviewEmployee[], calendarDays: number): Record<string, DraftRow> {
   const next: Record<string, DraftRow> = {};
   for (const employee of employees) {
     if (!employee.compensation) continue;
-    next[employee.employeeId] = editableFromCompensation(employee.compensation);
+    const suggested =
+      employee.suggestedWorkingDays > 0 ? employee.suggestedWorkingDays : calendarDays;
+    next[employee.employeeId] = editableFromCompensation(
+      employee.compensation,
+      Math.min(suggested, calendarDays),
+    );
   }
   return next;
 }
@@ -57,10 +59,10 @@ export function PayrollCalculateDialog({
 
   useEffect(() => {
     if (!preview) return;
-    setDraft(initDraft(preview.employees));
+    setDraft(initDraft(preview.employees, preview.calendarDays));
   }, [preview]);
 
-  function setField(employeeId: string, key: PayrollEditableKey, value: string) {
+  function setMoneyField(employeeId: string, key: PayrollEditableKey, value: string) {
     setDraft((current) => ({
       ...current,
       [employeeId]: {
@@ -70,8 +72,33 @@ export function PayrollCalculateDialog({
     }));
   }
 
+  function setWorkingDays(employeeId: string, value: string, calendarDays: number) {
+    const parsed = toNumber(value);
+    const workingDays = Math.min(Math.max(0, parsed), calendarDays);
+    setDraft((current) => ({
+      ...current,
+      [employeeId]: {
+        ...current[employeeId],
+        workingDays,
+      },
+    }));
+  }
+
   async function onCalculate() {
     if (!importId || !preview) return;
+    for (const row of preview.employees.filter((employee) => employee.ready)) {
+      const values = draft[row.employeeId];
+      if (!values) {
+        toast.error(`Missing compensation values for ${row.fullName}.`);
+        return;
+      }
+      if (values.workingDays < 0 || values.workingDays > preview.calendarDays) {
+        toast.error(
+          `Working days for ${row.fullName} must be between 0 and ${preview.calendarDays}.`,
+        );
+        return;
+      }
+    }
     const adjustments = preview.employees
       .filter((row) => row.ready)
       .map((row) => ({
@@ -94,7 +121,7 @@ export function PayrollCalculateDialog({
         <DialogTitle>Review compensation before calculating</DialogTitle>
         <DialogDescription>
           {preview
-            ? `${preview.monthLabel} · ${preview.calendarDays} calendar days. Update incentives, other earnings, and deductions for this run only. Fixed pay parts come from each employee profile.`
+            ? `${preview.monthLabel} · ${preview.calendarDays} calendar days. Enter working days and amounts for this run. Pay = (monthly gross ÷ ${preview.calendarDays}) × working days, then minus deductions and LOP.`
             : 'Load employee compensation for this confirmed month.'}
         </DialogDescription>
 
@@ -121,17 +148,8 @@ export function PayrollCalculateDialog({
                     <tr>
                       <th className="px-3 py-2 font-medium">Employee</th>
                       <th className="px-3 py-2 font-medium">LOP</th>
-                      {PAYROLL_FIXED_EARNINGS.map((field) => (
-                        <th key={field.key} className="px-3 py-2 font-medium">
-                          {field.label}
-                        </th>
-                      ))}
-                      {PAYROLL_VARIABLE_EARNINGS.map((field) => (
-                        <th key={field.key} className="px-3 py-2 font-medium">
-                          {field.label}
-                        </th>
-                      ))}
-                      {PAYROLL_VARIABLE_DEDUCTIONS.map((field) => (
+                      <th className="px-3 py-2 font-medium">Working days</th>
+                      {PAYROLL_EDITABLE_FIELDS.map((field) => (
                         <th key={field.key} className="px-3 py-2 font-medium">
                           {field.label}
                         </th>
@@ -140,7 +158,6 @@ export function PayrollCalculateDialog({
                   </thead>
                   <tbody>
                     {preview.employees.map((employee) => {
-                      const compensation = employee.compensation;
                       const values = draft[employee.employeeId];
                       return (
                         <tr key={employee.employeeId} className="border-t border-border">
@@ -152,12 +169,25 @@ export function PayrollCalculateDialog({
                             ) : null}
                           </td>
                           <td className="px-3 py-2 align-top text-muted">{employee.lopDays}</td>
-                          {PAYROLL_FIXED_EARNINGS.map((field) => (
-                            <td key={field.key} className="px-3 py-2 align-top text-muted">
-                              {compensation ? formatInr(compensation[field.key]) : '—'}
-                            </td>
-                          ))}
-                          {[...PAYROLL_VARIABLE_EARNINGS, ...PAYROLL_VARIABLE_DEDUCTIONS].map((field) => (
+                          <td className="px-3 py-2 align-top">
+                            {employee.ready && values ? (
+                              <Input
+                                type="number"
+                                min={0}
+                                max={preview.calendarDays}
+                                step="1"
+                                className="h-8 w-20 px-2 text-xs"
+                                value={values.workingDays}
+                                disabled={calculating}
+                                onChange={(event) =>
+                                  setWorkingDays(employee.employeeId, event.target.value, preview.calendarDays)
+                                }
+                              />
+                            ) : (
+                              <span className="text-muted">—</span>
+                            )}
+                          </td>
+                          {PAYROLL_EDITABLE_FIELDS.map((field) => (
                             <td key={field.key} className="px-3 py-2 align-top">
                               {employee.ready && values ? (
                                 <Input
@@ -167,7 +197,9 @@ export function PayrollCalculateDialog({
                                   className="h-8 w-24 px-2 text-xs"
                                   value={values[field.key]}
                                   disabled={calculating}
-                                  onChange={(event) => setField(employee.employeeId, field.key, event.target.value)}
+                                  onChange={(event) =>
+                                    setMoneyField(employee.employeeId, field.key, event.target.value)
+                                  }
                                 />
                               ) : (
                                 <span className="text-muted">—</span>

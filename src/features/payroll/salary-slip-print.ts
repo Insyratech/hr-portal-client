@@ -103,6 +103,7 @@ export function printSalarySlip(slip: SalarySlip): boolean {
       <p><span class="label">Designation: </span>${esc(slip.designationName ?? '—')}</p>
       <p><span class="label">Date of joining: </span>${esc(slip.joiningDate ?? '—')}</p>
       <p><span class="label">Total days: </span>${esc(String(slip.calendarDays))}</p>
+      <p><span class="label">Working days: </span>${esc(String(slip.workingDays))}</p>
       <p><span class="label">PAN: </span>${esc(slip.panMasked ?? '—')}</p>
       <p><span class="label">Bank name: </span>${esc(slip.bankNameMasked ?? '—')}</p>
       <p><span class="label">Account number: </span>${esc(slip.bankAccountMasked ?? '—')}</p>
@@ -139,6 +140,7 @@ export function printSalarySlip(slip: SalarySlip): boolean {
         ${row('Welfare', formatInr(slip.employeeWelfare))}
         ${row('KPI', formatInr(slip.kpi))}
         ${row('Other', formatInr(slip.otherDeductions))}
+        ${row(`Non-working days (${slip.nonWorkingDays})`, formatInr(slip.nonWorkingAmount))}
         ${row('LOP', formatInr(slip.lopAmount))}
       </div>
     </div>

@@ -94,6 +94,7 @@ export function PayrollRunPreview({
               { id: 'name', header: 'Name', cell: (row) => row.employeeName },
               { id: 'company', header: 'Company', cell: (row) => row.companyName },
               { id: 'lop', header: 'LOP', cell: (row) => String(row.lopDays) },
+              { id: 'working', header: 'Working days', cell: (row) => String(row.workingDays) },
               { id: 'net', header: 'Net', cell: (row) => formatInr(row.net) },
               {
                 id: 'open',

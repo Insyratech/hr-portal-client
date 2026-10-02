@@ -70,6 +70,10 @@ export function SalarySlipDocument({ slip }: { slip: SalarySlip }) {
           {slip.calendarDays}
         </p>
         <p>
+          <span className="font-semibold text-black">Working days: </span>
+          {slip.workingDays}
+        </p>
+        <p>
           <span className="font-semibold text-black">PAN: </span>
           {slip.panMasked ?? '—'}
         </p>
@@ -124,6 +128,10 @@ export function SalarySlipDocument({ slip }: { slip: SalarySlip }) {
             <Row label="Welfare" value={formatInr(slip.employeeWelfare)} />
             <Row label="KPI" value={formatInr(slip.kpi)} />
             <Row label="Other" value={formatInr(slip.otherDeductions)} />
+            <Row
+              label={`Non-working days (${slip.nonWorkingDays})`}
+              value={formatInr(slip.nonWorkingAmount)}
+            />
             <Row label="LOP" value={formatInr(slip.lopAmount)} />
           </div>
         </div>

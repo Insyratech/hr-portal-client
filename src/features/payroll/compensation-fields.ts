@@ -20,14 +20,27 @@ export const PAYROLL_VARIABLE_DEDUCTIONS = [
   { key: 'otherDeductions', label: 'Other deductions' },
 ] as const satisfies ReadonlyArray<{ key: keyof PayrollCompensationParts; label: string }>;
 
-export type PayrollEditableKey =
-  | (typeof PAYROLL_VARIABLE_EARNINGS)[number]['key']
-  | (typeof PAYROLL_VARIABLE_DEDUCTIONS)[number]['key'];
+export const PAYROLL_EDITABLE_FIELDS = [
+  ...PAYROLL_FIXED_EARNINGS,
+  ...PAYROLL_VARIABLE_EARNINGS,
+  ...PAYROLL_VARIABLE_DEDUCTIONS,
+] as const;
 
-export type PayrollEditableValues = Pick<PayrollCompensationParts, PayrollEditableKey>;
+export type PayrollEditableKey = (typeof PAYROLL_EDITABLE_FIELDS)[number]['key'];
 
-export function editableFromCompensation(compensation: PayrollCompensationParts): PayrollEditableValues {
+export type PayrollEditableValues = Pick<PayrollCompensationParts, PayrollEditableKey> & {
+  workingDays: number;
+};
+
+export function editableFromCompensation(
+  compensation: PayrollCompensationParts,
+  workingDays: number,
+): PayrollEditableValues {
   return {
+    basic: compensation.basic,
+    da: compensation.da,
+    hra: compensation.hra,
+    fuel: compensation.fuel,
     incentives: compensation.incentives,
     other: compensation.other,
     professionalTax: compensation.professionalTax,
@@ -35,6 +48,7 @@ export function editableFromCompensation(compensation: PayrollCompensationParts)
     employeeWelfare: compensation.employeeWelfare,
     kpi: compensation.kpi,
     otherDeductions: compensation.otherDeductions,
+    workingDays,
   };
 }
 

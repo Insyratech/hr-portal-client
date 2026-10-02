@@ -1647,6 +1647,8 @@ export type PayrollPreviewEmployee = {
   fullName: string;
   companyName: string | null;
   lopDays: number;
+  /** Suggested payable working days from attendance (excludes week off / holiday). */
+  suggestedWorkingDays: number;
   compensation: PayrollCompensationParts | null;
   ready: boolean;
   skipReason: string | null;
@@ -1662,6 +1664,11 @@ export type PayrollPreview = {
 
 export type PayrollAdjustment = {
   employeeId: string;
+  workingDays?: number;
+  basic?: number;
+  da?: number;
+  hra?: number;
+  fuel?: number;
   incentives?: number;
   other?: number;
   professionalTax?: number;
@@ -1708,8 +1715,12 @@ export type SalarySlip = {
   kpi: number;
   otherDeductions: number;
   calendarDays: number;
+  /** Payable working days used for pay (not LOP). */
+  workingDays: number;
   gross: number;
   dailyRate: number;
+  nonWorkingDays: number;
+  nonWorkingAmount: number;
   lopDays: number;
   lopAmount: number;
   net: number;
