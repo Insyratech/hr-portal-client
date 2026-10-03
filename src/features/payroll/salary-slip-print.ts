@@ -1,6 +1,9 @@
 import type { SalarySlip } from '@/types/api';
 import { formatInr } from '@/features/payroll/format';
 
+/** A4 landscape content width used for off-screen render (~277mm at 96dpi). */
+const SLIP_RENDER_WIDTH_PX = 1048;
+
 function esc(value: string | null | undefined): string {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -9,20 +12,8 @@ function esc(value: string | null | undefined): string {
     .replace(/"/g, '&quot;');
 }
 
-/** Opens a dedicated print/PDF window with only the salary slip (landscape, one page). */
-export function printSalarySlip(slip: SalarySlip): boolean {
-  const p = slip.particulars;
-  const logo = slip.companyLogoUrl
-    ? `<img src="${esc(slip.companyLogoUrl)}" alt="" class="logo" />`
-    : `<div class="logo-ph">Logo</div>`;
-
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>Salary slip · ${esc(slip.employeeName)} · ${esc(slip.monthLabel)}</title>
-  <style>
-    @page { size: A4 landscape; margin: 6mm; }
+function slipStyles(): string {
+  return `
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
@@ -35,8 +26,7 @@ export function printSalarySlip(slip: SalarySlip): boolean {
     }
     .no-print { margin: 8px 12px; font-size: 12px; color: #444; }
     .sheet {
-      width: 100%;
-      max-width: 285mm;
+      width: 277mm;
       margin: 0 auto;
       padding: 2mm;
       border: 1px solid #000;
@@ -91,6 +81,7 @@ export function printSalarySlip(slip: SalarySlip): boolean {
     .note { margin: 2px 0 0; text-align: right; font-size: 8.5px; color: #555; }
     .sign { height: 14mm; vertical-align: bottom; color: #333; }
     .sign.right { text-align: right; }
+    @page { size: A4 landscape; margin: 6mm; }
     @media print {
       .no-print { display: none !important; }
       html, body { width: 100%; height: auto; overflow: hidden; }
@@ -106,14 +97,16 @@ export function printSalarySlip(slip: SalarySlip): boolean {
       }
       table { page-break-inside: avoid; break-inside: avoid; }
     }
-  </style>
-</head>
-<body>
-  <p class="no-print">Use Print → Save as PDF. Turn off Headers and footers. Close this window when done.</p>
+  `;
+}
+
+function slipSheetHtml(slip: SalarySlip, logoHtml: string): string {
+  const p = slip.particulars;
+  return `
   <div class="sheet">
     <table>
       <tr>
-        <td class="logo-cell">${logo}</td>
+        <td class="logo-cell">${logoHtml}</td>
         <td class="company">
           <p class="addr">${esc(slip.companyAddress)}</p>
           <p class="company-name">${esc(slip.companyName)}</p>
@@ -225,7 +218,50 @@ export function printSalarySlip(slip: SalarySlip): boolean {
         <td class="sign right">Authorised signatory</td>
       </tr>
     </table>
-  </div>
+  </div>`;
+}
+
+function logoMarkup(logoSrc: string | null): string {
+  return logoSrc
+    ? `<img src="${esc(logoSrc)}" alt="" class="logo" crossorigin="anonymous" />`
+    : `<div class="logo-ph">Logo</div>`;
+}
+
+async function resolveLogoDataUrl(url: string | null): Promise<string | null> {
+  if (!url) return null;
+  try {
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) return url;
+    const blob = await response.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return url;
+  }
+}
+
+function pdfFileName(slip: SalarySlip): string {
+  const name = slip.employeeName.replace(/[^\w\-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  const month = slip.monthLabel.replace(/[^\w\-]+/g, '_').replace(/_+/g, '_');
+  return `Salary_slip_${name || slip.employeeCode}_${month || slip.period}.pdf`;
+}
+
+/** Opens a dedicated print window with only the salary slip (landscape). */
+export function printSalarySlip(slip: SalarySlip): boolean {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Salary slip · ${esc(slip.employeeName)} · ${esc(slip.monthLabel)}</title>
+  <style>${slipStyles()}</style>
+</head>
+<body>
+  <p class="no-print">Use Print → Save as PDF. Turn off Headers and footers. Close this window when done.</p>
+  ${slipSheetHtml(slip, logoMarkup(slip.companyLogoUrl))}
   <script>window.onload=function(){window.print();}</script>
 </body>
 </html>`;
@@ -237,4 +273,91 @@ export function printSalarySlip(slip: SalarySlip): boolean {
   win.document.close();
   win.focus();
   return true;
+}
+
+/**
+ * Builds a landscape A4 PDF in the browser and downloads it directly
+ * (no Chrome print dialog).
+ */
+export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    import('html2canvas'),
+    import('jspdf'),
+  ]);
+
+  const logoSrc = await resolveLogoDataUrl(slip.companyLogoUrl);
+  const host = document.createElement('div');
+  host.setAttribute('aria-hidden', 'true');
+  host.style.cssText = [
+    'position:fixed',
+    'left:-10000px',
+    'top:0',
+    `width:${SLIP_RENDER_WIDTH_PX}px`,
+    'background:#fff',
+    'z-index:-1',
+    'pointer-events:none',
+  ].join(';');
+  host.innerHTML = `<style>${slipStyles()}</style>${slipSheetHtml(slip, logoMarkup(logoSrc))}`;
+  document.body.appendChild(host);
+
+  const sheet = host.querySelector('.sheet') as HTMLElement | null;
+  if (!sheet) {
+    host.remove();
+    throw new Error('Unable to prepare the salary slip for download.');
+  }
+  sheet.style.width = `${SLIP_RENDER_WIDTH_PX}px`;
+
+  try {
+    await Promise.all(
+      Array.from(sheet.querySelectorAll('img')).map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            if (img.complete) {
+              resolve();
+              return;
+            }
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+          }),
+      ),
+    );
+
+    // Let the browser finish layout before capture.
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
+    const canvas = await html2canvas(sheet, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: '#ffffff',
+      logging: false,
+      width: SLIP_RENDER_WIDTH_PX,
+      windowWidth: SLIP_RENDER_WIDTH_PX,
+    });
+
+    const pdf = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4',
+      compress: true,
+    });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 5;
+    const maxW = pageWidth - margin * 2;
+    const maxH = pageHeight - margin * 2;
+    // Scale to fit one landscape page (never spill to page 2).
+    const ratio = Math.min(maxW / canvas.width, maxH / canvas.height);
+    const drawW = canvas.width * ratio;
+    const drawH = canvas.height * ratio;
+    const x = (pageWidth - drawW) / 2;
+    const y = (pageHeight - drawH) / 2;
+    const imageData = canvas.toDataURL('image/jpeg', 0.95);
+    pdf.addImage(imageData, 'JPEG', x, y, drawW, drawH, undefined, 'FAST');
+    pdf.save(pdfFileName(slip));
+  } finally {
+    host.remove();
+  }
 }

@@ -12,7 +12,7 @@ import { StatusMessage } from '@/components/ui/status-message';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import { formatInr } from '@/features/payroll/format';
-import { printSalarySlip } from '@/features/payroll/salary-slip-print';
+import { downloadSalarySlipPdf, printSalarySlip } from '@/features/payroll/salary-slip-print';
 import type { SalarySlip } from '@/types/api';
 import { useGetPayrollRunQuery, usePublishPayrollMutation } from '@/store/api/api';
 
@@ -32,6 +32,7 @@ export function PayrollRunPreview({
   const { data, isLoading, isError, error } = useGetPayrollRunQuery(runId);
   const [publish, { isLoading: publishing }] = usePublishPayrollMutation();
   const [company, setCompany] = useState('all');
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const toast = useToast();
   const bundle = data?.data;
   const slips = useMemo(() => {
@@ -49,10 +50,23 @@ export function PayrollRunPreview({
     }
   }
 
-  function onPrintOrDownload(slip: SalarySlip) {
+  function onPrint(slip: SalarySlip) {
     const opened = printSalarySlip(slip);
     if (!opened) {
-      toast.error('Allow pop-ups to print or save the salary slip as PDF.');
+      toast.error('Allow pop-ups to print the salary slip.');
+    }
+  }
+
+  async function onDownload(slip: SalarySlip) {
+    if (downloadingId) return;
+    setDownloadingId(slip.id);
+    try {
+      await downloadSalarySlipPdf(slip);
+      toast.success('Salary slip PDF downloaded.');
+    } catch {
+      toast.error('Unable to download the salary slip PDF.');
+    } finally {
+      setDownloadingId(null);
     }
   }
 
@@ -123,16 +137,17 @@ export function PayrollRunPreview({
                     <button
                       type="button"
                       className="text-sm text-muted hover:text-foreground"
-                      onClick={() => onPrintOrDownload(row)}
+                      onClick={() => onPrint(row)}
                     >
                       Print
                     </button>
                     <button
                       type="button"
-                      className="text-sm text-muted hover:text-foreground"
-                      onClick={() => onPrintOrDownload(row)}
+                      className="text-sm text-muted hover:text-foreground disabled:opacity-50"
+                      disabled={downloadingId === row.id}
+                      onClick={() => void onDownload(row)}
                     >
-                      Download
+                      {downloadingId === row.id ? 'Downloading…' : 'Download'}
                     </button>
                   </div>
                 ),
