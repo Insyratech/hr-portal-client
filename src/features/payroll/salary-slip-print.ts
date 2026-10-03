@@ -1,8 +1,11 @@
+import { jsPDF } from 'jspdf';
 import type { SalarySlip } from '@/types/api';
 import { formatInr } from '@/features/payroll/format';
 
-/** A4 landscape content width used for off-screen render (~277mm at 96dpi). */
-const SLIP_RENDER_WIDTH_PX = 1048;
+/** Helvetica has no ₹ glyph — use plain en-IN amounts in the vector PDF. */
+function formatInrPdf(value: number): string {
+  return value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 function esc(value: string | null | undefined): string {
   return String(value ?? '')
@@ -231,7 +234,7 @@ async function resolveLogoDataUrl(url: string | null): Promise<string | null> {
   if (!url) return null;
   try {
     const response = await fetch(url, { mode: 'cors' });
-    if (!response.ok) return url;
+    if (!response.ok) return null;
     const blob = await response.blob();
     return await new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -240,7 +243,7 @@ async function resolveLogoDataUrl(url: string | null): Promise<string | null> {
       reader.readAsDataURL(blob);
     });
   } catch {
-    return url;
+    return null;
   }
 }
 
@@ -249,6 +252,23 @@ function pdfFileName(slip: SalarySlip): string {
   const month = slip.monthLabel.replace(/[^\w\-]+/g, '_').replace(/_+/g, '_');
   return `Salary_slip_${name || slip.employeeCode}_${month || slip.period}.pdf`;
 }
+
+function imageFormatFromDataUrl(dataUrl: string): 'PNG' | 'JPEG' | 'WEBP' {
+  if (dataUrl.startsWith('data:image/jpeg') || dataUrl.startsWith('data:image/jpg')) return 'JPEG';
+  if (dataUrl.startsWith('data:image/webp')) return 'WEBP';
+  return 'PNG';
+}
+
+type Align = 'left' | 'center' | 'right';
+
+type CellOpts = {
+  text: string;
+  align?: Align;
+  bold?: boolean;
+  fill?: boolean;
+  fontSize?: number;
+  colSpan?: number;
+};
 
 /** Opens a dedicated print window with only the salary slip (landscape). */
 export function printSalarySlip(slip: SalarySlip): boolean {
@@ -276,88 +296,368 @@ export function printSalarySlip(slip: SalarySlip): boolean {
 }
 
 /**
- * Builds a landscape A4 PDF in the browser and downloads it directly
- * (no Chrome print dialog).
+ * Builds a landscape A4 PDF with native vector text/lines (no HTML screenshot).
+ * Avoids html2canvas Chrome bugs that draw table borders through text.
  */
 export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-    import('html2canvas'),
-    import('jspdf'),
-  ]);
-
   const logoSrc = await resolveLogoDataUrl(slip.companyLogoUrl);
-  const host = document.createElement('div');
-  host.setAttribute('aria-hidden', 'true');
-  host.style.cssText = [
-    'position:fixed',
-    'left:-10000px',
-    'top:0',
-    `width:${SLIP_RENDER_WIDTH_PX}px`,
-    'background:#fff',
-    'z-index:-1',
-    'pointer-events:none',
-  ].join(';');
-  host.innerHTML = `<style>${slipStyles()}</style>${slipSheetHtml(slip, logoMarkup(logoSrc))}`;
-  document.body.appendChild(host);
+  const pdf = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'a4',
+    compress: true,
+  });
 
-  const sheet = host.querySelector('.sheet') as HTMLElement | null;
-  if (!sheet) {
-    host.remove();
-    throw new Error('Unable to prepare the salary slip for download.');
+  const pageW = pdf.internal.pageSize.getWidth();
+  const margin = 8;
+  const x0 = margin;
+  const contentW = pageW - margin * 2;
+  let y = margin;
+
+  const ink = '#000000';
+  const muted = '#333333';
+  const headFill: [number, number, number] = [245, 245, 245];
+
+  pdf.setDrawColor(ink);
+  pdf.setTextColor(ink);
+  pdf.setLineWidth(0.25);
+
+  function setFont(bold: boolean, size: number) {
+    pdf.setFont('helvetica', bold ? 'bold' : 'normal');
+    pdf.setFontSize(size);
   }
-  sheet.style.width = `${SLIP_RENDER_WIDTH_PX}px`;
 
-  try {
-    await Promise.all(
-      Array.from(sheet.querySelectorAll('img')).map(
-        (img) =>
-          new Promise<void>((resolve) => {
-            if (img.complete) {
-              resolve();
-              return;
-            }
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-          }),
-      ),
+  function cellText(
+    text: string,
+    x: number,
+    yPos: number,
+    w: number,
+    h: number,
+    align: Align,
+    bold: boolean,
+    fontSize: number,
+  ) {
+    setFont(bold, fontSize);
+    const padX = 1.6;
+    const maxW = Math.max(4, w - padX * 2);
+    const lines = pdf.splitTextToSize(text || '—', maxW) as string[];
+    const lineH = fontSize * 0.4;
+    const blockH = lines.length * lineH;
+    let textY = yPos + (h - blockH) / 2 + lineH * 0.78;
+    for (const line of lines) {
+      let textX = x + padX;
+      if (align === 'center') textX = x + w / 2;
+      if (align === 'right') textX = x + w - padX;
+      pdf.text(line, textX, textY, { align });
+      textY += lineH;
+    }
+  }
+
+  /**
+   * Draws one table row with single shared borders.
+   * Pass continueTable=true for rows after the first in the same table
+   * so the shared horizontal edge is not stroked twice.
+   */
+  function drawRow(cols: CellOpts[], rowH: number, widths: number[], continueTable = false) {
+    const cells: { x: number; w: number; col: CellOpts }[] = [];
+    let x = x0;
+    let colIndex = 0;
+    for (const col of cols) {
+      const span = col.colSpan ?? 1;
+      let w = 0;
+      for (let i = 0; i < span; i += 1) {
+        w += widths[colIndex + i] ?? 0;
+      }
+      cells.push({ x, w, col });
+      x += w;
+      colIndex += span;
+    }
+
+    for (const cell of cells) {
+      if (cell.col.fill) {
+        pdf.setFillColor(...headFill);
+        pdf.rect(cell.x, y, cell.w, rowH, 'F');
+      }
+    }
+
+    pdf.setDrawColor(ink);
+    pdf.setLineWidth(0.25);
+    const right = x0 + contentW;
+    const bottom = y + rowH;
+    if (!continueTable) pdf.line(x0, y, right, y);
+    pdf.line(x0, bottom, right, bottom);
+    pdf.line(x0, y, x0, bottom);
+    pdf.line(right, y, right, bottom);
+    for (let i = 1; i < cells.length; i += 1) {
+      const edgeX = cells[i]!.x;
+      pdf.line(edgeX, y, edgeX, bottom);
+    }
+
+    for (const cell of cells) {
+      cellText(
+        cell.col.text,
+        cell.x,
+        y,
+        cell.w,
+        rowH,
+        cell.col.align ?? 'left',
+        Boolean(cell.col.bold),
+        cell.col.fontSize ?? 8.5,
+      );
+    }
+    y += rowH;
+  }
+
+  function sectionGap(mm = 0) {
+    y += mm;
+  }
+
+  // Outer border drawn at the end around full content.
+  const outerTop = y;
+
+  // Header: logo | company
+  const headerH = 18;
+  const logoW = contentW * 0.34;
+  const companyW = contentW - logoW;
+  drawRow(
+    [
+      { text: '', align: 'center' },
+      { text: '', align: 'right' },
+    ],
+    headerH,
+    [logoW, companyW],
+  );
+  // drawRow advanced y; paint header content inside the previous row.
+  const headerY = y - headerH;
+
+  if (logoSrc) {
+    try {
+      const imgH = 12;
+      const imgW = Math.min(logoW - 4, 48);
+      pdf.addImage(
+        logoSrc,
+        imageFormatFromDataUrl(logoSrc),
+        x0 + 2,
+        headerY + (headerH - imgH) / 2,
+        imgW,
+        imgH,
+        undefined,
+        'FAST',
+      );
+    } catch {
+      setFont(false, 8);
+      pdf.setTextColor('#666666');
+      pdf.text('Logo', x0 + logoW / 2, headerY + headerH / 2 + 1, { align: 'center' });
+      pdf.setTextColor(ink);
+    }
+  } else {
+    setFont(false, 8);
+    pdf.setTextColor('#666666');
+    pdf.text('Logo', x0 + logoW / 2, headerY + headerH / 2 + 1, { align: 'center' });
+    pdf.setTextColor(ink);
+  }
+
+  const addrLines = pdf.splitTextToSize(slip.companyAddress || '—', companyW - 4) as string[];
+  setFont(false, 8);
+  let addrY = headerY + 4.2;
+  for (const line of addrLines.slice(0, 3)) {
+    pdf.text(line, x0 + logoW + companyW - 2, addrY, { align: 'right' });
+    addrY += 3.2;
+  }
+  setFont(true, 10);
+  pdf.text(slip.companyName || '—', x0 + logoW + companyW - 2, headerY + headerH - 3.5, {
+    align: 'right',
+  });
+
+  // Title row (continues header table visually)
+  const titleH = 7;
+  const half = contentW / 2;
+  drawRow(
+    [
+      { text: 'SALARY SLIP', bold: true, fill: true, align: 'center', fontSize: 10 },
+      { text: `Month · ${slip.monthLabel}`, bold: true, fill: true, align: 'center', fontSize: 9.5 },
+    ],
+    titleH,
+    [half, half],
+    true,
+  );
+
+  // Employee info
+  const infoW = [contentW / 2, contentW / 2];
+  const infoH = 6.2;
+  drawRow(
+    [
+      { text: `Employee name: ${slip.employeeName}` },
+      { text: `PAN: ${slip.panMasked ?? '—'}` },
+    ],
+    infoH,
+    infoW,
+  );
+  drawRow(
+    [
+      { text: `Employee ID: ${slip.employeeCode}` },
+      { text: `Account number: ${slip.bankAccountMasked ?? '—'}` },
+    ],
+    infoH,
+    infoW,
+    true,
+  );
+  drawRow(
+    [
+      { text: `Designation: ${slip.designationName ?? '—'}` },
+      { text: `Bank name: ${slip.bankNameMasked ?? '—'}` },
+    ],
+    infoH,
+    infoW,
+    true,
+  );
+  drawRow(
+    [
+      { text: `Date of joining: ${slip.joiningDate ?? '—'}` },
+      { text: `IFSC: ${slip.ifscMasked ?? '—'}` },
+    ],
+    infoH,
+    infoW,
+    true,
+  );
+  drawRow([{ text: `Total days: ${slip.calendarDays}`, colSpan: 2 }], infoH, infoW, true);
+
+  // Leave particulars
+  const p = slip.particulars;
+  const leaveW = [contentW / 4, contentW / 4, contentW / 4, contentW / 4];
+  const leaveH = 6;
+  drawRow([{ text: 'Leave particulars', bold: true, fill: true, colSpan: 4 }], leaveH, leaveW);
+  drawRow(
+    [
+      { text: `CL: ${p.cl}` },
+      { text: `SL: ${p.sl}` },
+      { text: `ML: ${p.ml}` },
+      { text: `EL: ${p.el}` },
+    ],
+    leaveH,
+    leaveW,
+    true,
+  );
+  drawRow(
+    [
+      { text: `Maternity / Paternity: ${p.maternityPaternity}` },
+      { text: `Miss punch: ${p.missPunch}` },
+      { text: `Permissions: ${p.permissionsCount} (${p.permissionHours}h)` },
+      { text: `Late days: ${p.lateDays}` },
+    ],
+    leaveH,
+    leaveW,
+    true,
+  );
+  drawRow(
+    [
+      { text: `Absent: ${p.absent}` },
+      { text: `Total LOPs: ${p.totalLop}`, bold: true, colSpan: 3 },
+    ],
+    leaveH,
+    leaveW,
+    true,
+  );
+
+  // Income / Deductions
+  const moneyW = [contentW * 0.25, contentW * 0.25, contentW * 0.25, contentW * 0.25];
+  const moneyH = 5.8;
+  drawRow(
+    [
+      { text: 'Income', bold: true, fill: true, colSpan: 2, align: 'center' },
+      { text: 'Deductions', bold: true, fill: true, colSpan: 2, align: 'center' },
+    ],
+    moneyH,
+    moneyW,
+  );
+  drawRow(
+    [
+      { text: 'Particulars', bold: true, fill: true },
+      { text: 'Amount (Rs.)', bold: true, fill: true, align: 'right' },
+      { text: 'Particulars', bold: true, fill: true },
+      { text: 'Amount (Rs.)', bold: true, fill: true, align: 'right' },
+    ],
+    moneyH,
+    moneyW,
+    true,
+  );
+
+  const moneyRows: [string, string, string, string][] = [
+    ['Basic', formatInrPdf(slip.basic), 'Professional tax', formatInrPdf(slip.professionalTax)],
+    ['DA', formatInrPdf(slip.da), 'TDS', formatInrPdf(slip.tds)],
+    ['HRA', formatInrPdf(slip.hra), 'Welfare', formatInrPdf(slip.employeeWelfare)],
+    ['Fuel', formatInrPdf(slip.fuel), 'KPI', formatInrPdf(slip.kpi)],
+    ['Incentives', formatInrPdf(slip.incentives), 'Other', formatInrPdf(slip.otherDeductions)],
+    [
+      'Other',
+      formatInrPdf(slip.other),
+      `Non-working days (${slip.nonWorkingDays})`,
+      formatInrPdf(slip.nonWorkingAmount),
+    ],
+  ];
+  for (const [a, b, c, d] of moneyRows) {
+    drawRow(
+      [
+        { text: a },
+        { text: b, align: 'right' },
+        { text: c },
+        { text: d, align: 'right' },
+      ],
+      moneyH,
+      moneyW,
+      true,
     );
-
-    // Let the browser finish layout before capture.
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => resolve());
-    });
-
-    const canvas = await html2canvas(sheet, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: false,
-      backgroundColor: '#ffffff',
-      logging: false,
-      width: SLIP_RENDER_WIDTH_PX,
-      windowWidth: SLIP_RENDER_WIDTH_PX,
-    });
-
-    const pdf = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: 'a4',
-      compress: true,
-    });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 5;
-    const maxW = pageWidth - margin * 2;
-    const maxH = pageHeight - margin * 2;
-    // Scale to fit one landscape page (never spill to page 2).
-    const ratio = Math.min(maxW / canvas.width, maxH / canvas.height);
-    const drawW = canvas.width * ratio;
-    const drawH = canvas.height * ratio;
-    const x = (pageWidth - drawW) / 2;
-    const y = (pageHeight - drawH) / 2;
-    const imageData = canvas.toDataURL('image/jpeg', 0.95);
-    pdf.addImage(imageData, 'JPEG', x, y, drawW, drawH, undefined, 'FAST');
-    pdf.save(pdfFileName(slip));
-  } finally {
-    host.remove();
   }
+  drawRow(
+    [
+      { text: '', colSpan: 2 },
+      { text: 'LOP' },
+      { text: formatInrPdf(slip.lopAmount), align: 'right' },
+    ],
+    moneyH,
+    moneyW,
+    true,
+  );
+  drawRow(
+    [
+      { text: 'CTC for the month', bold: true, colSpan: 2 },
+      { text: formatInrPdf(slip.gross), bold: true, align: 'right', colSpan: 2 },
+    ],
+    6.4,
+    moneyW,
+    true,
+  );
+  drawRow(
+    [
+      { text: 'Net pay for the month', bold: true, colSpan: 2, fontSize: 10 },
+      { text: formatInrPdf(slip.net), bold: true, align: 'right', colSpan: 2, fontSize: 10 },
+    ],
+    7,
+    moneyW,
+    true,
+  );
+
+  sectionGap(1.5);
+  setFont(false, 7.5);
+  pdf.setTextColor(muted);
+  pdf.text('All amounts are in Indian Rupees (Rs.).', x0 + contentW, y + 3, { align: 'right' });
+  pdf.setTextColor(ink);
+  y += 5;
+
+  const signH = 14;
+  const signW = contentW / 2;
+  drawRow(
+    [
+      { text: 'Employee signature', align: 'left', fontSize: 8.5 },
+      { text: 'Authorised signatory', align: 'right', fontSize: 8.5 },
+    ],
+    signH,
+    [signW, signW],
+  );
+
+  // Outer frame around the full slip (matches on-screen border).
+  pdf.setLineWidth(0.45);
+  pdf.rect(x0 - 0.6, outerTop - 0.6, contentW + 1.2, y - outerTop + 0.6);
+
+  pdf.save(pdfFileName(slip));
 }
