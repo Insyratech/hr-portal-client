@@ -260,14 +260,21 @@ function imageFormatFromDataUrl(dataUrl: string): 'PNG' | 'JPEG' | 'WEBP' {
 }
 
 type Align = 'left' | 'center' | 'right';
+type VAlign = 'middle' | 'bottom';
 
 type CellOpts = {
-  text: string;
+  /** Plain cell text. Empty string draws nothing (never a placeholder dash). */
+  text?: string;
+  /** Bold label + normal value (matches on-screen InfoCell). */
+  label?: string;
+  value?: string;
   align?: Align;
+  valign?: VAlign;
   bold?: boolean;
   fill?: boolean;
   fontSize?: number;
   colSpan?: number;
+  muted?: boolean;
 };
 
 /** Opens a dedicated print window with only the salary slip (landscape). */
@@ -296,8 +303,8 @@ export function printSalarySlip(slip: SalarySlip): boolean {
 }
 
 /**
- * Builds a landscape A4 PDF with native vector text/lines (no HTML screenshot).
- * Avoids html2canvas Chrome bugs that draw table borders through text.
+ * Builds a landscape A4 PDF with native vector text/lines.
+ * Layout mirrors SalarySlipDocument (view) — not an HTML screenshot.
  */
 export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
   const logoSrc = await resolveLogoDataUrl(slip.companyLogoUrl);
@@ -309,41 +316,86 @@ export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
   });
 
   const pageW = pdf.internal.pageSize.getWidth();
-  const margin = 8;
-  const x0 = margin;
-  const contentW = pageW - margin * 2;
-  let y = margin;
+  const pageMargin = 7;
+  const pad = 2.2; // matches on-screen article padding (white gap inside outer border)
+  const outerX = pageMargin;
+  const outerTop = pageMargin;
+  const outerW = pageW - pageMargin * 2;
+  const x0 = outerX + pad;
+  const contentW = outerW - pad * 2;
+  let y = outerTop + pad;
 
   const ink = '#000000';
-  const muted = '#333333';
-  const headFill: [number, number, number] = [245, 245, 245];
+  const muted = '#404040';
+  // Tailwind neutral-50 (#fafafa) — same as view `bg-neutral-50`
+  const headFill: [number, number, number] = [250, 250, 250];
 
   pdf.setDrawColor(ink);
   pdf.setTextColor(ink);
-  pdf.setLineWidth(0.25);
+  pdf.setLineWidth(0.2);
 
   function setFont(bold: boolean, size: number) {
     pdf.setFont('helvetica', bold ? 'bold' : 'normal');
     pdf.setFontSize(size);
   }
 
-  function cellText(
-    text: string,
-    x: number,
-    yPos: number,
-    w: number,
-    h: number,
-    align: Align,
-    bold: boolean,
-    fontSize: number,
-  ) {
-    setFont(bold, fontSize);
-    const padX = 1.6;
+  function paintCellContent(cell: CellOpts, x: number, yPos: number, w: number, h: number) {
+    const fontSize = cell.fontSize ?? 8.5;
+    const padX = 1.8;
+    const align = cell.align ?? 'left';
+    const valign = cell.valign ?? 'middle';
+    const color = cell.muted ? muted : ink;
+    pdf.setTextColor(color);
+
+    if (cell.label != null) {
+      const label = cell.label.endsWith(' ') ? cell.label : `${cell.label} `;
+      const value = cell.value ?? '';
+      setFont(true, fontSize);
+      const labelW = pdf.getTextWidth(label);
+      setFont(false, fontSize);
+      const valueMax = Math.max(2, w - padX * 2 - labelW);
+      const valueLines = pdf.splitTextToSize(value, valueMax) as string[];
+      const lineH = fontSize * 0.38;
+      const blockH = Math.max(lineH, valueLines.length * lineH);
+      let textY =
+        valign === 'bottom'
+          ? yPos + h - 2.2
+          : yPos + (h - blockH) / 2 + lineH * 0.78;
+      let textX = x + padX;
+      if (align === 'right') textX = x + w - padX;
+      if (align === 'center') textX = x + w / 2;
+
+      if (align === 'left') {
+        setFont(true, fontSize);
+        pdf.text(label.trimEnd(), textX, textY);
+        setFont(false, fontSize);
+        pdf.text(valueLines[0] ?? '', textX + labelW, textY);
+        for (let i = 1; i < valueLines.length; i += 1) {
+          textY += lineH;
+          pdf.text(valueLines[i]!, textX + labelW, textY);
+        }
+      } else {
+        setFont(true, fontSize);
+        const full = `${label}${value}`;
+        pdf.text(full, textX, textY, { align });
+      }
+      pdf.setTextColor(ink);
+      return;
+    }
+
+    const text = cell.text ?? '';
+    if (!text) {
+      pdf.setTextColor(ink);
+      return;
+    }
+
+    setFont(Boolean(cell.bold), fontSize);
     const maxW = Math.max(4, w - padX * 2);
-    const lines = pdf.splitTextToSize(text || '—', maxW) as string[];
-    const lineH = fontSize * 0.4;
+    const lines = pdf.splitTextToSize(text, maxW) as string[];
+    const lineH = fontSize * 0.38;
     const blockH = lines.length * lineH;
-    let textY = yPos + (h - blockH) / 2 + lineH * 0.78;
+    let textY =
+      valign === 'bottom' ? yPos + h - 2.2 : yPos + (h - blockH) / 2 + lineH * 0.78;
     for (const line of lines) {
       let textX = x + padX;
       if (align === 'center') textX = x + w / 2;
@@ -351,12 +403,12 @@ export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
       pdf.text(line, textX, textY, { align });
       textY += lineH;
     }
+    pdf.setTextColor(ink);
   }
 
   /**
    * Draws one table row with single shared borders.
-   * Pass continueTable=true for rows after the first in the same table
-   * so the shared horizontal edge is not stroked twice.
+   * continueTable=true skips the top edge so consecutive rows share one line.
    */
   function drawRow(cols: CellOpts[], rowH: number, widths: number[], continueTable = false) {
     const cells: { x: number; w: number; col: CellOpts }[] = [];
@@ -381,7 +433,7 @@ export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
     }
 
     pdf.setDrawColor(ink);
-    pdf.setLineWidth(0.25);
+    pdf.setLineWidth(0.2);
     const right = x0 + contentW;
     const bottom = y + rowH;
     if (!continueTable) pdf.line(x0, y, right, y);
@@ -389,55 +441,34 @@ export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
     pdf.line(x0, y, x0, bottom);
     pdf.line(right, y, right, bottom);
     for (let i = 1; i < cells.length; i += 1) {
-      const edgeX = cells[i]!.x;
-      pdf.line(edgeX, y, edgeX, bottom);
+      pdf.line(cells[i]!.x, y, cells[i]!.x, bottom);
     }
 
     for (const cell of cells) {
-      cellText(
-        cell.col.text,
-        cell.x,
-        y,
-        cell.w,
-        rowH,
-        cell.col.align ?? 'left',
-        Boolean(cell.col.bold),
-        cell.col.fontSize ?? 8.5,
-      );
+      paintCellContent(cell.col, cell.x, y, cell.w, rowH);
     }
     y += rowH;
   }
 
-  function sectionGap(mm = 0) {
-    y += mm;
+  function info(label: string, value: string | number | null | undefined): CellOpts {
+    return { label, value: value == null || value === '' ? '—' : String(value) };
   }
 
-  // Outer border drawn at the end around full content.
-  const outerTop = y;
-
-  // Header: logo | company
-  const headerH = 18;
+  // —— Header: logo | company (content painted after empty bordered row) ——
+  const headerH = 17;
   const logoW = contentW * 0.34;
   const companyW = contentW - logoW;
-  drawRow(
-    [
-      { text: '', align: 'center' },
-      { text: '', align: 'right' },
-    ],
-    headerH,
-    [logoW, companyW],
-  );
-  // drawRow advanced y; paint header content inside the previous row.
+  drawRow([{ text: '' }, { text: '' }], headerH, [logoW, companyW]);
   const headerY = y - headerH;
 
   if (logoSrc) {
     try {
-      const imgH = 12;
-      const imgW = Math.min(logoW - 4, 48);
+      const imgH = 11;
+      const imgW = Math.min(logoW - 5, 52);
       pdf.addImage(
         logoSrc,
         imageFormatFromDataUrl(logoSrc),
-        x0 + 2,
+        x0 + 2.5,
         headerY + (headerH - imgH) / 2,
         imgW,
         imgH,
@@ -457,76 +488,71 @@ export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
     pdf.setTextColor(ink);
   }
 
-  const addrLines = pdf.splitTextToSize(slip.companyAddress || '—', companyW - 4) as string[];
+  const addrLines = pdf.splitTextToSize(slip.companyAddress || '', companyW - 5) as string[];
   setFont(false, 8);
-  let addrY = headerY + 4.2;
+  let addrY = headerY + 4;
   for (const line of addrLines.slice(0, 3)) {
-    pdf.text(line, x0 + logoW + companyW - 2, addrY, { align: 'right' });
-    addrY += 3.2;
+    if (!line) continue;
+    pdf.text(line, x0 + logoW + companyW - 2.2, addrY, { align: 'right' });
+    addrY += 3.1;
   }
   setFont(true, 10);
-  pdf.text(slip.companyName || '—', x0 + logoW + companyW - 2, headerY + headerH - 3.5, {
-    align: 'right',
-  });
+  if (slip.companyName) {
+    pdf.text(slip.companyName, x0 + logoW + companyW - 2.2, headerY + headerH - 3.2, {
+      align: 'right',
+    });
+  }
 
-  // Title row (continues header table visually)
-  const titleH = 7;
-  const half = contentW / 2;
+  // Title row (same table as logo block)
   drawRow(
     [
-      { text: 'SALARY SLIP', bold: true, fill: true, align: 'center', fontSize: 10 },
-      { text: `Month · ${slip.monthLabel}`, bold: true, fill: true, align: 'center', fontSize: 9.5 },
+      { text: 'SALARY SLIP', bold: true, fill: true, align: 'center', fontSize: 9.5 },
+      {
+        text: `Month · ${slip.monthLabel}`,
+        bold: true,
+        fill: true,
+        align: 'center',
+        fontSize: 9,
+      },
     ],
-    titleH,
-    [half, half],
+    6.5,
+    [contentW / 2, contentW / 2],
     true,
   );
 
-  // Employee info
+  // —— Employee info (bold labels like view) ——
   const infoW = [contentW / 2, contentW / 2];
-  const infoH = 6.2;
+  const infoH = 5.8;
+  drawRow([info('Employee name:', slip.employeeName), info('PAN:', slip.panMasked)], infoH, infoW);
   drawRow(
-    [
-      { text: `Employee name: ${slip.employeeName}` },
-      { text: `PAN: ${slip.panMasked ?? '—'}` },
-    ],
-    infoH,
-    infoW,
-  );
-  drawRow(
-    [
-      { text: `Employee ID: ${slip.employeeCode}` },
-      { text: `Account number: ${slip.bankAccountMasked ?? '—'}` },
-    ],
+    [info('Employee ID:', slip.employeeCode), info('Account number:', slip.bankAccountMasked)],
     infoH,
     infoW,
     true,
   );
   drawRow(
-    [
-      { text: `Designation: ${slip.designationName ?? '—'}` },
-      { text: `Bank name: ${slip.bankNameMasked ?? '—'}` },
-    ],
+    [info('Designation:', slip.designationName), info('Bank name:', slip.bankNameMasked)],
     infoH,
     infoW,
     true,
   );
   drawRow(
-    [
-      { text: `Date of joining: ${slip.joiningDate ?? '—'}` },
-      { text: `IFSC: ${slip.ifscMasked ?? '—'}` },
-    ],
+    [info('Date of joining:', slip.joiningDate), info('IFSC:', slip.ifscMasked)],
     infoH,
     infoW,
     true,
   );
-  drawRow([{ text: `Total days: ${slip.calendarDays}`, colSpan: 2 }], infoH, infoW, true);
+  drawRow([info('Total days:', slip.calendarDays)], infoH, [contentW], true);
 
-  // Leave particulars
+  // —— Leave particulars ——
   const p = slip.particulars;
   const leaveW = [contentW / 4, contentW / 4, contentW / 4, contentW / 4];
-  const leaveH = 6;
-  drawRow([{ text: 'Leave particulars', bold: true, fill: true, colSpan: 4 }], leaveH, leaveW);
+  const leaveH = 5.6;
+  drawRow(
+    [{ text: 'LEAVE PARTICULARS', bold: true, fill: true, colSpan: 4, fontSize: 8.5 }],
+    leaveH,
+    leaveW,
+  );
   drawRow(
     [
       { text: `CL: ${p.cl}` },
@@ -559,9 +585,9 @@ export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
     true,
   );
 
-  // Income / Deductions
+  // —— Income / Deductions ——
   const moneyW = [contentW * 0.25, contentW * 0.25, contentW * 0.25, contentW * 0.25];
-  const moneyH = 5.8;
+  const moneyH = 5.5;
   drawRow(
     [
       { text: 'Income', bold: true, fill: true, colSpan: 2, align: 'center' },
@@ -608,6 +634,7 @@ export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
       true,
     );
   }
+  // Empty left cells — text omitted (fixes stray "—" dash)
   drawRow(
     [
       { text: '', colSpan: 2 },
@@ -623,7 +650,7 @@ export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
       { text: 'CTC for the month', bold: true, colSpan: 2 },
       { text: formatInrPdf(slip.gross), bold: true, align: 'right', colSpan: 2 },
     ],
-    6.4,
+    6,
     moneyW,
     true,
   );
@@ -632,32 +659,33 @@ export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
       { text: 'Net pay for the month', bold: true, colSpan: 2, fontSize: 10 },
       { text: formatInrPdf(slip.net), bold: true, align: 'right', colSpan: 2, fontSize: 10 },
     ],
-    7,
+    6.5,
     moneyW,
     true,
   );
 
-  sectionGap(1.5);
-  setFont(false, 7.5);
+  y += 1.2;
+  setFont(false, 7.2);
   pdf.setTextColor(muted);
-  pdf.text('All amounts are in Indian Rupees (Rs.).', x0 + contentW, y + 3, { align: 'right' });
+  pdf.text('All amounts are in Indian Rupees (Rs.).', x0 + contentW, y + 2.5, { align: 'right' });
   pdf.setTextColor(ink);
-  y += 5;
+  y += 4.5;
 
-  const signH = 14;
+  const signH = 13;
   const signW = contentW / 2;
   drawRow(
     [
-      { text: 'Employee signature', align: 'left', fontSize: 8.5 },
-      { text: 'Authorised signatory', align: 'right', fontSize: 8.5 },
+      { text: 'Employee signature', align: 'left', valign: 'bottom', fontSize: 8, muted: true },
+      { text: 'Authorised signatory', align: 'right', valign: 'bottom', fontSize: 8, muted: true },
     ],
     signH,
     [signW, signW],
   );
 
-  // Outer frame around the full slip (matches on-screen border).
-  pdf.setLineWidth(0.45);
-  pdf.rect(x0 - 0.6, outerTop - 0.6, contentW + 1.2, y - outerTop + 0.6);
+  // Outer border with padding gap (matches view article border + inner tables)
+  pdf.setDrawColor(ink);
+  pdf.setLineWidth(0.35);
+  pdf.rect(outerX, outerTop, outerW, y - outerTop + pad);
 
   pdf.save(pdfFileName(slip));
 }
