@@ -102,9 +102,10 @@ export function WeeklyUpdatePage() {
     <>
       <PageHeader kicker="Work" title="My weekly update" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
-        Upload one PowerPoint that explains what you did this week. Use View to check it in the browser. Deadline{' '}
-        <span className="font-medium text-foreground">Sunday 23:59 IST</span>. It goes directly to General Manager on
-        upload (view closes here; history remains). You can replace once (2 uploads max).
+        Upload one PowerPoint that explains what you did this week. Use View to open it in the browser (no download).
+        Deadline <span className="font-medium text-foreground">Sunday 23:59 IST</span>. It goes directly to General
+        Manager on upload — you can still View until GM downloads, emails, or deletes it. You can replace once (2
+        uploads max).
       </p>
 
       <section className="mb-8 border border-border bg-background p-5 shadow-card">
@@ -144,11 +145,14 @@ export function WeeklyUpdatePage() {
                 />
                 <span className="font-medium">{board.current.systemFileName}</span>
                 {board.current.fileAvailable !== false ? (
-                  <Button type="button" size="sm" variant="outline" onClick={() => void onView(board.current!.id)}>
-                    View
-                  </Button>
-                ) : board.current.sharedToGm ? (
-                  <span className="text-xs text-muted">With GM — view closed</span>
+                  <>
+                    <Button type="button" size="sm" variant="outline" onClick={() => void onView(board.current!.id)}>
+                      View
+                    </Button>
+                    {board.current.sharedToGm ? (
+                      <span className="text-xs text-muted">With GM</span>
+                    ) : null}
+                  </>
                 ) : (
                   <span className="text-xs text-muted">File removed from storage (audit kept)</span>
                 )}
@@ -235,11 +239,16 @@ export function WeeklyUpdatePage() {
                       label={weeklyPptStatusLabel(week.status)}
                     />
                     {week.update && week.update.fileAvailable !== false ? (
-                      <Button type="button" size="sm" variant="outline" onClick={() => void onView(week.update!.id)}>
-                        View
-                      </Button>
-                    ) : week.update?.sharedToGm ? (
-                      <span className="text-xs text-muted">With GM</span>
+                      <div className="flex items-center gap-2">
+                        <Button type="button" size="sm" variant="outline" onClick={() => void onView(week.update!.id)}>
+                          View
+                        </Button>
+                        {week.update.sharedToGm ? (
+                          <span className="text-xs text-muted">With GM</span>
+                        ) : null}
+                      </div>
+                    ) : week.update ? (
+                      <span className="text-xs text-muted">Removed</span>
                     ) : null}
                   </div>
                 </li>

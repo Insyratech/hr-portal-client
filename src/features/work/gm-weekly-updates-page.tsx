@@ -12,7 +12,7 @@ import { StatusBadge } from '@/components/dashboard/status-badge';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
-import { downloadBase64File } from '@/features/work/jc-helpers';
+import { downloadBase64File, openPptView } from '@/features/work/jc-helpers';
 import { weeklyPptTimingLabel, weeklyPptTimingTone } from '@/features/work/weekly-ppt-status';
 import {
   useGetWeeklyPptGmSharesQuery,
@@ -20,6 +20,7 @@ import {
   useGmDeleteWeeklyPptMutation,
   useGmDownloadWeeklyPptMutation,
   useGmEmailWeeklyPptMutation,
+  useLazyGetWeeklyWorkUpdateDownloadQuery,
 } from '@/store/api/api';
 
 function formatSharedAt(iso: string): string {
@@ -50,6 +51,7 @@ function GmWeeklyUpdatesInner() {
   const [emailPpt, emailState] = useGmEmailWeeklyPptMutation();
   const [deletePpt, deleteState] = useGmDeleteWeeklyPptMutation();
   const [deleteAll, deleteAllState] = useGmDeleteAllWeeklyPptsInShareMutation();
+  const [fetchPreview] = useLazyGetWeeklyWorkUpdateDownloadQuery();
   const [emailById, setEmailById] = useState<Record<string, string>>({});
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<
@@ -67,6 +69,19 @@ function GmWeeklyUpdatesInner() {
     const el = document.getElementById(`share-${highlightShareId}`);
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [highlightShareId, ordered.length]);
+
+  async function onView(updateId: string, shareId: string) {
+    const key = `${shareId}:${updateId}:view`;
+    setBusyKey(key);
+    try {
+      const result = await fetchPreview({ id: updateId, shareId }).unwrap();
+      openPptView(result.data.url);
+    } catch (error) {
+      toast.error(apiErrorMessage(error, 'Could not open the PPT for viewing.'));
+    } finally {
+      setBusyKey(null);
+    }
+  }
 
   async function onDownload(updateId: string, shareId: string) {
     const key = `${shareId}:${updateId}`;
@@ -159,7 +174,8 @@ function GmWeeklyUpdatesInner() {
       <PageHeader kicker="Work" title="Weekly updates" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
         Weekly wrap PPTs uploaded by employees (max 15 MB per file). They arrive here directly — JC PPTs still come via
-        CSO transfer. Download, email, or delete — each removes the file from portal storage and keeps history for audit.
+        CSO transfer. Use View to open in the browser without removing the file. Download, email, or delete each removes
+        the file from portal storage and keeps history for audit.
       </p>
 
       {isLoading ? <PageLoading compact message="Loading…" /> : null}
@@ -242,7 +258,8 @@ function GmWeeklyUpdatesInner() {
                         <ul className="mt-4 space-y-3">
                           {share.files.map((file) => {
                             const key = `${share.id}:${file.updateId}`;
-                            const busy = busyKey === key;
+                            const viewKey = `${key}:view`;
+                            const busy = busyKey === key || busyKey === viewKey;
                             return (
                               <li
                                 key={file.updateId}
@@ -279,6 +296,15 @@ function GmWeeklyUpdatesInner() {
                                 </div>
                                 {file.fileAvailable ? (
                                   <div className="flex flex-wrap items-end gap-3">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      disabled={busy}
+                                      onClick={() => void onView(file.updateId, share.id)}
+                                    >
+                                      View
+                                    </Button>
                                     <Button
                                       type="button"
                                       size="sm"

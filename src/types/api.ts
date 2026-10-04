@@ -422,8 +422,9 @@ export type WeeklyWorkUpdate = {
   timing: WeeklyPptTiming;
   /** Derived from `timing` — true only for submissions after Sunday 23:59 IST. */
   late: boolean;
+  /** True while the PPT is still in storage (employee can View; false after GM download/email/delete). */
   fileAvailable?: boolean;
-  /** True after the update is in the GM inbox package — emp/CSO lose view access. */
+  /** True after the update is in the GM inbox package (status badge; does not block employee View). */
   sharedToGm?: boolean;
   fileRemovedAt?: string | null;
   fileRemovedReason?: 'downloaded' | 'emailed' | 'deleted' | null;
