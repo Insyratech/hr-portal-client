@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import {
   SELECT_CLASS,
+  formatCatalogItemLabel,
   formatQtyChips,
   parseQtyChipsInput,
 } from '@/features/inventory/inventory-constants';
@@ -119,7 +120,7 @@ export function InventoryPlasticReceivePage() {
             </option>
             {catalogItems.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.name} ({item.unit})
+                {formatCatalogItemLabel(item, { withUnit: true })}
               </option>
             ))}
           </select>

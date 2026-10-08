@@ -3361,6 +3361,8 @@ export type InventoryCatalogItem = {
   categoryCode: string;
   categoryName: string;
   name: string;
+  /** Supplier / internal catalogue number (shown with name in dropdowns). */
+  catalogNumber: string;
   unit: string;
   defaultQtyChips: number[];
   alertMode: InventoryAlertMode;

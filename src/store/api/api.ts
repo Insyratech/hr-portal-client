@@ -3522,6 +3522,7 @@ export const api = createApi({
       {
         categoryId: string;
         name: string;
+        catalogNumber: string;
         unit: string;
         defaultQtyChips?: number[];
         alertMode?: InventoryCatalogItem['alertMode'];
@@ -3540,6 +3541,7 @@ export const api = createApi({
         id: string;
         body: Partial<{
           name: string;
+          catalogNumber: string;
           unit: string;
           defaultQtyChips: number[];
           alertMode: InventoryCatalogItem['alertMode'];

@@ -65,6 +65,7 @@ export function InventoryCatalogPage() {
       await createItem({
         categoryId: String(form.get('categoryId') ?? ''),
         name: String(form.get('name') ?? '').trim(),
+        catalogNumber: String(form.get('catalogNumber') ?? '').trim(),
         unit: String(form.get('unit') ?? '').trim(),
         defaultQtyChips: chips,
         alertMode: String(form.get('alertMode') ?? 'both') as InventoryCatalogItem['alertMode'],
@@ -97,6 +98,7 @@ export function InventoryCatalogPage() {
         id: editing.id,
         body: {
           name: String(form.get('name') ?? '').trim(),
+          catalogNumber: String(form.get('catalogNumber') ?? '').trim(),
           unit: String(form.get('unit') ?? '').trim(),
           defaultQtyChips: chips,
           alertMode: String(form.get('alertMode') ?? 'both') as InventoryCatalogItem['alertMode'],
@@ -136,15 +138,26 @@ export function InventoryCatalogPage() {
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Master list of what you stock. <span className="text-foreground">Unit</span> is how this item
-        is measured (g, ml, …). Stock amounts live on each received lot — not here. Qty chips and
-        reorder qty use that same unit on the kiosk and alerts.
+        Master list of what you stock. Include the{' '}
+        <span className="text-foreground">catalogue number</span> with the name — it appears in
+        receive and prep pickers. <span className="text-foreground">Unit</span> is how this item is
+        measured (g, ml, …). Stock amounts live on each received lot — not here.
       </p>
       {isError ? <p className="mb-4 text-sm">Unable to load catalog.</p> : null}
 
       <DataTable
         columns={[
-          { id: 'name', header: 'Name', cell: (row) => row.name },
+          {
+            id: 'name',
+            header: 'Name',
+            cell: (row) =>
+              row.catalogNumber?.trim() ? `${row.name} (${row.catalogNumber.trim()})` : row.name,
+          },
+          {
+            id: 'catalogNumber',
+            header: 'Catalogue no.',
+            cell: (row) => row.catalogNumber?.trim() || '—',
+          },
           { id: 'category', header: 'Category', cell: (row) => row.categoryName },
           { id: 'unit', header: 'Unit', cell: (row) => row.unit },
           {
@@ -202,6 +215,17 @@ export function InventoryCatalogPage() {
                   <Input id="name" name="name" required placeholder="Agarose" />
                 </div>
                 <div>
+                  <Label htmlFor="catalogNumber">Catalogue number</Label>
+                  <Input
+                    id="catalogNumber"
+                    name="catalogNumber"
+                    required
+                    maxLength={128}
+                    placeholder="e.g. A9539 / CAT-123"
+                  />
+                  <p className="mt-1 text-xs text-muted">Shown with the name when receiving stock.</p>
+                </div>
+                <div className="sm:col-span-2">
                   <Label htmlFor="unit">Measuring unit</Label>
                   <Input id="unit" name="unit" required placeholder="g / ml / box" />
                   <p className="mt-1 text-xs text-muted">Used for stock, chips, and alerts.</p>
@@ -283,6 +307,18 @@ export function InventoryCatalogPage() {
                     <Input id="edit-name" name="name" defaultValue={editing.name} required />
                   </div>
                   <div>
+                    <Label htmlFor="edit-catalogNumber">Catalogue number</Label>
+                    <Input
+                      id="edit-catalogNumber"
+                      name="catalogNumber"
+                      defaultValue={editing.catalogNumber ?? ''}
+                      required
+                      maxLength={128}
+                      placeholder="e.g. A9539 / CAT-123"
+                    />
+                    <p className="mt-1 text-xs text-muted">Shown with the name when receiving stock.</p>
+                  </div>
+                  <div className="sm:col-span-2">
                     <Label htmlFor="edit-unit">Measuring unit</Label>
                     <Input id="edit-unit" name="unit" defaultValue={editing.unit} required />
                     <p className="mt-1 text-xs text-muted">Used for stock, chips, and alerts.</p>

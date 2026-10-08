@@ -46,3 +46,17 @@ export function parseQtyChipsInput(raw: string): number[] {
 export function formatQtyChips(chips: number[]): string {
   return chips.join(', ');
 }
+
+/** Name + catalogue number for lists/dropdowns. Empty number → name only. */
+export function formatCatalogItemLabel(
+  item: { name: string; catalogNumber?: string | null; categoryName?: string; unit?: string },
+  opts?: { withCategory?: boolean; withUnit?: boolean },
+): string {
+  const number = (item.catalogNumber ?? '').trim();
+  const base = number ? `${item.name} (${number})` : item.name;
+  const extras: string[] = [];
+  if (opts?.withCategory && item.categoryName) extras.push(item.categoryName);
+  if (opts?.withUnit && item.unit) extras.push(item.unit);
+  if (extras.length === 0) return base;
+  return `${base} · ${extras.join(' · ')}`;
+}
