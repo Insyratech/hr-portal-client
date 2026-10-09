@@ -36,8 +36,28 @@ function JcRow({
     <li className="flex flex-wrap items-center justify-between gap-3 border border-border bg-background px-4 py-3 shadow-card">
       <div>
         <p className="text-sm font-medium">{item.employeeName ?? 'Employee'}</p>
+        {item.paperTitle ? (
+          <p className="mt-1 text-xs text-foreground">
+            {item.paperTitle}
+            {item.doiUrl ? (
+              <>
+                {' · '}
+                <a
+                  href={item.doiUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted underline hover:text-foreground"
+                >
+                  DOI / link
+                </a>
+              </>
+            ) : null}
+          </p>
+        ) : null}
         <p className="mt-1 text-xs text-muted">
-          {item.systemFileName} · Uploaded {formatJcWhen(item.uploadedAt)}
+          {item.systemFileName}
+          {item.weekStart && item.weekEnd ? ` · ${item.weekStart} → ${item.weekEnd}` : ''}
+          {item.late ? ' · late' : ''} · Uploaded {formatJcWhen(item.uploadedAt)}
           {item.transferredAt ? ` · Transferred ${formatJcWhen(item.transferredAt)}` : ''}
           {item.consumedAt
             ? ` · ${

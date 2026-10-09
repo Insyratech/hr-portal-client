@@ -5,16 +5,21 @@ type CreateUpload = (arg: {
   fileName: string;
   contentType: string;
   sizeBytes: number;
+  paperTitle: string;
+  doiUrl: string;
 }) => { unwrap: () => Promise<ApiSuccess<JcPptUploadSession>> };
 
 export async function uploadJcPpt(
   createUpload: CreateUpload,
   file: File,
+  meta: { paperTitle: string; doiUrl: string },
 ): Promise<JcPptUploadSession> {
   const session = await createUpload({
     fileName: file.name,
     contentType: file.type || 'application/octet-stream',
     sizeBytes: file.size,
+    paperTitle: meta.paperTitle,
+    doiUrl: meta.doiUrl,
   }).unwrap();
 
   const supabase = getSupabaseBrowserClient();

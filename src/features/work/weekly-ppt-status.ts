@@ -3,7 +3,7 @@ import type { WeeklyPptPersonStatus, WeeklyPptTiming } from '@/types/api';
 
 /**
  * Shared wording for weekly PPT timing so the employee, CSO and GM screens never disagree.
- * A last-hour submission met the Sunday 23:59 deadline — it is flagged, not penalised.
+ * A last-hour submission met the Sunday 23:59 IST deadline (window Sat 14:00–Sun 23:59) — flagged, not missing.
  */
 export function weeklyPptStatusLabel(status: WeeklyPptPersonStatus): string {
   switch (status) {

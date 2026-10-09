@@ -199,6 +199,7 @@ import type {
   WorkPermission,
   WorkPermissionMine,
   ShiftChangeRequest,
+  PptUploadConcern,
 } from '@/types/api';
 
 export const api = createApi({
@@ -3043,13 +3044,66 @@ export const api = createApi({
         };
       },
     }),
+    getMyPptConcerns: builder.query<ApiSuccess<PptUploadConcern[]>, void>({
+      query: () => '/api/v1/work/ppt-concerns/mine',
+      providesTags: ['Work'],
+    }),
+    getPptConcernsDesk: builder.query<
+      ApiSuccess<PptUploadConcern[]>,
+      { status?: 'pending' | 'approved' | 'rejected' } | void
+    >({
+      query: (arg) => ({
+        url: '/api/v1/work/ppt-concerns',
+        params: arg?.status ? { status: arg.status } : undefined,
+      }),
+      providesTags: ['Work'],
+    }),
+    createPptConcern: builder.mutation<
+      ApiSuccess<{
+        concern: PptUploadConcern;
+        screenshotUpload: {
+          uploadUrl: string;
+          token: string;
+          path: string;
+          bucket: string;
+        } | null;
+      }>,
+      {
+        kind: 'weekly' | 'jc';
+        weekStart?: string;
+        reason: string;
+        screenshotFileName?: string;
+        screenshotContentType?: string;
+        screenshotSizeBytes?: number;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/work/ppt-concerns', method: 'POST', body }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
+    reviewPptConcern: builder.mutation<
+      ApiSuccess<PptUploadConcern>,
+      { id: string; status: 'approved' | 'rejected'; reviewNote?: string }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/api/v1/work/ppt-concerns/${id}/review`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Work', 'Notifications'],
+    }),
     getJcPptBoard: builder.query<ApiSuccess<JcPptEmployeeBoard>, void>({
       query: () => '/api/v1/work/jc',
       providesTags: ['Work'],
     }),
     createJcPptUpload: builder.mutation<
       ApiSuccess<JcPptUploadSession>,
-      { fileName: string; contentType: string; sizeBytes: number }
+      {
+        fileName: string;
+        contentType: string;
+        sizeBytes: number;
+        paperTitle: string;
+        doiUrl: string;
+      }
     >({
       query: (body) => ({ url: '/api/v1/work/jc/upload', method: 'POST', body }),
       invalidatesTags: ['Work', 'Notifications'],
@@ -4177,6 +4231,10 @@ export const {
   useShareWeeklyPptToGmMutation,
   useCreateWeeklyWorkUpdateUploadMutation,
   useLazyGetWeeklyWorkUpdateDownloadQuery,
+  useGetMyPptConcernsQuery,
+  useGetPptConcernsDeskQuery,
+  useCreatePptConcernMutation,
+  useReviewPptConcernMutation,
   useGetJcPptBoardQuery,
   useCreateJcPptUploadMutation,
   useLazyGetJcPptDownloadQuery,

@@ -24,6 +24,7 @@ import {
   WEEKLY_UPDATE_TEMPLATE_FILENAME,
   WEEKLY_UPDATE_TEMPLATE_HREF,
 } from '@/features/work/weekly-update-template';
+import { PptRaiseConcernPanel } from '@/features/work/ppt-concerns-panel';
 import {
   useCreateWeeklyWorkUpdateUploadMutation,
   useGetWeeklyWorkUpdateBoardQuery,
@@ -59,7 +60,7 @@ export function WeeklyUpdatePage() {
         return;
       }
       if (board.uploadsRemaining <= 0) {
-        toast.error('You already used both uploads for this week.');
+        toast.error(`You already used all ${board.maxUploads} uploads for this week.`);
         return;
       }
       setPendingFile(file);
@@ -102,10 +103,12 @@ export function WeeklyUpdatePage() {
     <>
       <PageHeader kicker="Work" title="My weekly update" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
-        Upload one PowerPoint that explains what you did this week. Use View to open it in the browser (no download).
-        Deadline <span className="font-medium text-foreground">Sunday 23:59 IST</span>. It goes directly to General
-        Manager on upload — you can still View until GM downloads, emails, or deletes it. You can replace once (2
-        uploads max).
+        Upload one PowerPoint for this work week (Tuesday → Monday; Monday is meeting day). Use View to open it in the
+        browser (no download). Upload window{' '}
+        <span className="font-medium text-foreground">Saturday 2:00 pm → Sunday 23:59 IST</span>. After the deadline,
+        raise a concern for CSO approval to reopen one late upload (marked late). Unapproved concerns are a RED FLAG on
+        the GM monthly report. It goes to General Manager on upload — you can still View until GM downloads, emails, or
+        deletes it. You can replace up to {board?.maxUploads ?? 10} times (latest kept).
       </p>
 
       <section className="mb-8 border border-border bg-background p-5 shadow-card">
@@ -134,8 +137,9 @@ export function WeeklyUpdatePage() {
               {board.week.start} → {board.week.end}
             </p>
             <p className="mt-2 text-sm text-muted">
-              Deadline {board.week.deadlineLabel}. Last hour submission from {board.week.lastHourAfterLabel}.
-              Uploads left: {board.uploadsRemaining} of {board.maxUploads}.
+              Week {board.week.start} → {board.week.end} (Tue–Mon). Window opens{' '}
+              {board.week.windowOpenLabel ?? 'Saturday 14:00 IST'}. Deadline {board.week.deadlineLabel}. Last hour from{' '}
+              {board.week.lastHourAfterLabel}. Uploads left: {board.uploadsRemaining} of {board.maxUploads}.
             </p>
             {board.current ? (
               <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
@@ -161,6 +165,8 @@ export function WeeklyUpdatePage() {
               <p className="mt-4 text-sm text-muted">No PPT uploaded for this week yet.</p>
             )}
           </section>
+
+          <PptRaiseConcernPanel kind="weekly" weekStart={board.week.start} />
 
           <section
             className={cn(
@@ -264,7 +270,7 @@ export function WeeklyUpdatePage() {
         description={
           pendingFile
             ? board?.current
-              ? `Upload “${pendingFile.name}”? This uses one of your two weekly uploads and replaces the current file.`
+              ? `Upload “${pendingFile.name}”? This uses one of your ${board.maxUploads} weekly uploads and replaces the current file.`
               : `Upload “${pendingFile.name}” as this week’s update?`
             : 'Confirm upload.'
         }

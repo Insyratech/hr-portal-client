@@ -438,7 +438,10 @@ export type WeeklyWorkUpdateBoard = {
     start: string;
     end: string;
     deadlineDate: string;
+    /** Saturday ISO date when the upload window opens (14:00 IST). */
+    windowOpenDate?: string;
     deadlineLabel: string;
+    windowOpenLabel?: string;
     lastHourAfterLabel: string;
   };
   current: WeeklyWorkUpdate | null;
@@ -473,6 +476,13 @@ export type JcPptItem = {
   contentType: string;
   sizeBytes: number;
   status: JcPptStatus;
+  paperTitle?: string;
+  doiUrl?: string;
+  weekStart?: string | null;
+  weekEnd?: string | null;
+  uploadCount?: number;
+  timing?: WeeklyPptTiming | null;
+  late?: boolean;
   fileAvailable: boolean;
   uploadedAt: string;
   transferredAt: string | null;
@@ -497,7 +507,19 @@ export type JcPptEvent = {
 };
 
 export type JcPptEmployeeBoard = {
+  week?: {
+    start: string;
+    end: string;
+    deadlineDate: string;
+    windowOpenDate?: string;
+    deadlineLabel: string;
+    windowOpenLabel?: string;
+    lastHourAfterLabel: string;
+  };
   maxBytes: number;
+  maxUploads?: number;
+  uploadsRemaining?: number;
+  current?: JcPptItem | null;
   pending: JcPptItem | null;
   items: JcPptItem[];
   events: JcPptEvent[];
@@ -543,7 +565,9 @@ export type WeeklyPptAdminBoard = {
     start: string;
     end: string;
     deadlineDate: string;
+    windowOpenDate?: string;
     deadlineLabel: string;
+    windowOpenLabel?: string;
     lastHourAfterLabel: string;
   };
   counts: {
@@ -809,6 +833,27 @@ export type MonthlyWorkReportPeriods = {
   months: MonthlyWorkReportPeriod[];
 };
 
+export type PptUploadConcern = {
+  id: string;
+  kind: 'weekly' | 'jc';
+  employeeId: string;
+  employeeName: string | null;
+  weekStart: string;
+  weekEnd: string;
+  reason: string;
+  hasScreenshot: boolean;
+  screenshotFileName: string | null;
+  screenshotUrl: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewedBy: string | null;
+  reviewerName: string | null;
+  reviewedAt: string | null;
+  reviewNote: string;
+  lateUploadUsed: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type MonthlyWorkReportDetail = {
   period: string;
   employee: MonthlyWorkReportPerson;
@@ -842,8 +887,16 @@ export type MonthlyWorkReportDetail = {
       uploadedAt: string;
       transferredAt: string | null;
       consumedAt: string | null;
+      paperTitle?: string;
+      doiUrl?: string;
+      weekStart?: string | null;
+      weekEnd?: string | null;
+      timing?: WeeklyPptTiming | null;
+      late?: boolean;
     }[];
   };
+  /** Pending or rejected late-upload concerns — RED FLAG for month-end. */
+  pptRedFlags?: PptUploadConcern[];
   weeks: {
     weekStart: string;
     weekEnd: string;
@@ -871,6 +924,7 @@ export type MonthlyWorkReportDetail = {
     prioritiesApprovedPct: number;
     dailyPct: number;
     hasActiveMilestone: boolean;
+    pptRedFlagCount?: number;
   };
 };
 

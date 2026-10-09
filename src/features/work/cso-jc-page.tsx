@@ -14,6 +14,7 @@ import {
   jcStatusTone,
   openPptView,
 } from '@/features/work/jc-helpers';
+import { PptConcernsReviewDesk } from '@/features/work/ppt-concerns-panel';
 import type { JcPptItem } from '@/types/api';
 import {
   useGetJcPptCsoBoardQuery,
@@ -32,8 +33,28 @@ function JcRow({
     <li className="flex flex-wrap items-center justify-between gap-3 border border-border bg-background px-4 py-3 shadow-card">
       <div>
         <p className="text-sm font-medium">{item.employeeName ?? 'Employee'}</p>
+        {item.paperTitle ? (
+          <p className="mt-1 text-xs text-foreground">
+            {item.paperTitle}
+            {item.doiUrl ? (
+              <>
+                {' · '}
+                <a
+                  href={item.doiUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted underline hover:text-foreground"
+                >
+                  DOI / link
+                </a>
+              </>
+            ) : null}
+          </p>
+        ) : null}
         <p className="mt-1 text-xs text-muted">
-          {item.systemFileName} · Uploaded {formatJcWhen(item.uploadedAt)}
+          {item.systemFileName}
+          {item.weekStart && item.weekEnd ? ` · ${item.weekStart} → ${item.weekEnd}` : ''}
+          {item.late ? ' · late' : ''} · Uploaded {formatJcWhen(item.uploadedAt)}
           {item.transferredAt ? ` · Transferred ${formatJcWhen(item.transferredAt)}` : ''}
           {item.consumedAt
             ? ` · ${item.status === 'emailed' ? 'Emailed' : 'Downloaded'} ${formatJcWhen(item.consumedAt)}`
@@ -88,9 +109,14 @@ export function CsoJcPage() {
     <>
       <PageHeader kicker="Work" title="Team JC" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
-        Review employee JC PowerPoints with View, then transfer each file to General Manager. After transfer, the file
-        leaves this desk (history remains). GM downloads or emails it from their inbox.
+        Review employee JC PowerPoints (paper name + DOI) with View, then transfer each file to General Manager. Same
+        Sat 2:00 pm–Sun 11:59 pm IST window as weekly PPT. After transfer, the file leaves this desk (history remains).
+        Review late-upload concerns below for one-time reopens.
       </p>
+
+      <div className="mb-8">
+        <PptConcernsReviewDesk kindFilter="jc" />
+      </div>
 
       {isLoading ? <PageLoading compact message="Loading…" /> : null}
       {isError ? <p className="text-sm">Unable to load Team JC.</p> : null}

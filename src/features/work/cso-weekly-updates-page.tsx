@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import { weeklyPptStatusLabel, weeklyPptStatusTone } from '@/features/work/weekly-ppt-status';
 import { openPptView } from '@/features/work/jc-helpers';
+import { PptConcernsReviewDesk } from '@/features/work/ppt-concerns-panel';
 import {
   useGetWeeklyPptAdminBoardQuery,
   useLazyGetWeeklyWorkUpdateDownloadQuery,
@@ -82,9 +83,14 @@ function CsoWeeklyUpdatesInner() {
     <>
       <PageHeader kicker="Work" title="Weekly work updates" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
-        Status desk for this week’s employee weekly wrap PPTs. Files go directly to General Manager on upload (JC
-        PPTs still transfer through CSO). Use Sync if any older submissions are missing from the GM inbox.
+        Status desk for this week’s employee weekly wrap PPTs (Tue–Mon; upload Sat 2:00 pm–Sun 11:59 pm IST). Files go
+        directly to General Manager on upload. Review late-upload concerns below — approve to reopen one late upload, or
+        reject (RED FLAG on GM monthly report). Use Sync if any older submissions are missing from the GM inbox.
       </p>
+
+      <div className="mb-8">
+        <PptConcernsReviewDesk kindFilter="weekly" />
+      </div>
 
       {isLoading ? <PageLoading compact message="Loading…" /> : null}
       {isError ? <p className="text-sm">Unable to load the weekly PPT desk.</p> : null}

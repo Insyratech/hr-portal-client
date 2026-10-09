@@ -81,6 +81,7 @@ function EmployeeReport({ detail }: { detail: MonthlyWorkReportDetail }) {
   const showJc = detail.jc.count > 0;
   const missingPpt = detail.ppt.weeks.filter((week) => !week.uploaded);
   const uploadedPpt = detail.ppt.weeks.filter((week) => week.uploaded);
+  const redFlags = detail.pptRedFlags ?? [];
 
   return (
     <div className="space-y-8">
@@ -90,6 +91,31 @@ function EmployeeReport({ detail }: { detail: MonthlyWorkReportDetail }) {
           {[detail.employee.employeeCode, detail.employee.departmentName].filter(Boolean).join(' · ') || 'Work loop'}
         </p>
       </div>
+
+      {redFlags.length > 0 ? (
+        <section className="space-y-2 border border-red-500/40 bg-red-500/5 p-4">
+          <Meta>RED FLAG — late PPT concerns</Meta>
+          <p className="text-sm text-foreground">
+            {redFlags.length} pending or rejected late-upload concern
+            {redFlags.length === 1 ? '' : 's'} — consider during month-end salary and attendance.
+          </p>
+          <ul className="space-y-2 text-sm">
+            {redFlags.map((flag) => (
+              <li key={flag.id}>
+                <span className="font-medium text-red-700 dark:text-red-400">
+                  {flag.status === 'rejected' ? 'Rejected' : 'Pending'} ·{' '}
+                  {flag.kind === 'jc' ? 'JC' : 'Weekly'} PPT
+                </span>
+                <span className="text-muted">
+                  {' '}
+                  · {weekRange(flag.weekStart, flag.weekEnd)}
+                </span>
+                <span className="mt-0.5 block text-muted">{flag.reason}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="space-y-2">
         <Meta>Projects</Meta>
@@ -141,11 +167,34 @@ function EmployeeReport({ detail }: { detail: MonthlyWorkReportDetail }) {
       {showJc ? (
         <section className="space-y-2">
           <Meta>JC</Meta>
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-2 text-sm">
             {detail.jc.uploads.map((upload) => (
               <li key={upload.id} className="text-foreground">
-                {upload.uploadedAt.slice(0, 10)}
-                <span className="text-muted"> · {upload.status}</span>
+                <span>
+                  {upload.uploadedAt.slice(0, 10)}
+                  <span className="text-muted"> · {upload.status}</span>
+                  {upload.late || upload.timing === 'late' ? (
+                    <span className="text-muted"> · late</span>
+                  ) : null}
+                </span>
+                {upload.paperTitle ? (
+                  <span className="mt-0.5 block text-muted">
+                    {upload.paperTitle}
+                    {upload.doiUrl ? (
+                      <>
+                        {' · '}
+                        <a
+                          href={upload.doiUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:text-foreground"
+                        >
+                          DOI / link
+                        </a>
+                      </>
+                    ) : null}
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>
