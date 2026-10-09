@@ -1,7 +1,7 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/dashboard/data-table';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
@@ -38,6 +38,15 @@ function alertLabel(value: string): string {
   return ALERT_MODES.find((item) => item.value === value)?.label ?? value;
 }
 
+function matchesCatalogSearch(item: InventoryCatalogItem, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const haystack = [item.name, item.brandName ?? '', item.catalogNumber ?? '', item.categoryName]
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(q);
+}
+
 export function InventoryCatalogPage() {
   const toast = useToast();
   const permissions = useAppSelector((state) => state.permissions.permissions);
@@ -48,7 +57,13 @@ export function InventoryCatalogPage() {
   const [updateItem, { isLoading: updating }] = useUpdateInventoryCatalogItemMutation();
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryCatalogItem | null>(null);
+  const [search, setSearch] = useState('');
   const categories = categoriesData?.data ?? [];
+  const allItems = data?.data ?? [];
+  const filteredItems = useMemo(
+    () => allItems.filter((item) => matchesCatalogSearch(item, search)),
+    [allItems, search],
+  );
 
   async function onCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,6 +80,7 @@ export function InventoryCatalogPage() {
       await createItem({
         categoryId: String(form.get('categoryId') ?? ''),
         name: String(form.get('name') ?? '').trim(),
+        brandName: String(form.get('brandName') ?? '').trim(),
         catalogNumber: String(form.get('catalogNumber') ?? '').trim(),
         unit: String(form.get('unit') ?? '').trim(),
         defaultQtyChips: chips,
@@ -98,6 +114,7 @@ export function InventoryCatalogPage() {
         id: editing.id,
         body: {
           name: String(form.get('name') ?? '').trim(),
+          brandName: String(form.get('brandName') ?? '').trim(),
           catalogNumber: String(form.get('catalogNumber') ?? '').trim(),
           unit: String(form.get('unit') ?? '').trim(),
           defaultQtyChips: chips,
@@ -139,11 +156,29 @@ export function InventoryCatalogPage() {
       />
       <p className="mb-6 max-w-2xl text-sm text-muted">
         Master list of what you stock. Include the{' '}
-        <span className="text-foreground">catalogue number</span> with the name — it appears in
-        receive and prep pickers. <span className="text-foreground">Unit</span> is how this item is
-        measured (g, ml, …). Stock amounts live on each received lot — not here.
+        <span className="text-foreground">catalogue number</span> and{' '}
+        <span className="text-foreground">brand name</span> — search filters by brand, catalogue number, or
+        name. Catalogue number is shown with the name in receive and prep pickers.{' '}
+        <span className="text-foreground">Unit</span> is how this item is measured (g, ml, …). Stock amounts
+        live on each received lot — not here. Duplicate name (same category) or catalogue number is blocked.
       </p>
       {isError ? <p className="mb-4 text-sm">Unable to load catalog.</p> : null}
+
+      <div className="mb-4 max-w-md">
+        <Label htmlFor="catalog-search">Search catalog</Label>
+        <Input
+          id="catalog-search"
+          className="mt-1"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Brand, catalogue number, or name…"
+          autoComplete="off"
+        />
+        <p className="mt-1 text-xs text-muted">
+          Showing {filteredItems.length} of {allItems.length}
+          {search.trim() ? ' matching' : ''} item{allItems.length === 1 ? '' : 's'}.
+        </p>
+      </div>
 
       <DataTable
         columns={[
@@ -152,6 +187,11 @@ export function InventoryCatalogPage() {
             header: 'Name',
             cell: (row) =>
               row.catalogNumber?.trim() ? `${row.name} (${row.catalogNumber.trim()})` : row.name,
+          },
+          {
+            id: 'brandName',
+            header: 'Brand',
+            cell: (row) => row.brandName?.trim() || '—',
           },
           {
             id: 'catalogNumber',
@@ -175,10 +215,14 @@ export function InventoryCatalogPage() {
             ),
           },
         ]}
-        rows={data?.data ?? []}
+        rows={filteredItems}
         loading={isLoading}
-        emptyTitle="No catalog items"
-        emptyDescription="Add Agarose, gloves, Milli-Q, and other named stock."
+        emptyTitle={search.trim() ? 'No matching catalog items' : 'No catalog items'}
+        emptyDescription={
+          search.trim()
+            ? 'Try another brand, catalogue number, or name.'
+            : 'Add Agarose, gloves, Milli-Q, and other named stock.'
+        }
       />
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -215,6 +259,15 @@ export function InventoryCatalogPage() {
                   <Input id="name" name="name" required placeholder="Agarose" />
                 </div>
                 <div>
+                  <Label htmlFor="brandName">Brand name</Label>
+                  <Input
+                    id="brandName"
+                    name="brandName"
+                    maxLength={128}
+                    placeholder="e.g. Sigma / Thermo"
+                  />
+                </div>
+                <div>
                   <Label htmlFor="catalogNumber">Catalogue number</Label>
                   <Input
                     id="catalogNumber"
@@ -223,9 +276,11 @@ export function InventoryCatalogPage() {
                     maxLength={128}
                     placeholder="e.g. A9539 / CAT-123"
                   />
-                  <p className="mt-1 text-xs text-muted">Shown with the name when receiving stock.</p>
+                  <p className="mt-1 text-xs text-muted">
+                    Must be unique. Shown with the name when receiving stock.
+                  </p>
                 </div>
-                <div className="sm:col-span-2">
+                <div>
                   <Label htmlFor="unit">Measuring unit</Label>
                   <Input id="unit" name="unit" required placeholder="g / ml / box" />
                   <p className="mt-1 text-xs text-muted">Used for stock, chips, and alerts.</p>
@@ -307,6 +362,16 @@ export function InventoryCatalogPage() {
                     <Input id="edit-name" name="name" defaultValue={editing.name} required />
                   </div>
                   <div>
+                    <Label htmlFor="edit-brandName">Brand name</Label>
+                    <Input
+                      id="edit-brandName"
+                      name="brandName"
+                      defaultValue={editing.brandName ?? ''}
+                      maxLength={128}
+                      placeholder="e.g. Sigma / Thermo"
+                    />
+                  </div>
+                  <div>
                     <Label htmlFor="edit-catalogNumber">Catalogue number</Label>
                     <Input
                       id="edit-catalogNumber"
@@ -316,9 +381,11 @@ export function InventoryCatalogPage() {
                       maxLength={128}
                       placeholder="e.g. A9539 / CAT-123"
                     />
-                    <p className="mt-1 text-xs text-muted">Shown with the name when receiving stock.</p>
+                    <p className="mt-1 text-xs text-muted">
+                      Must be unique. Shown with the name when receiving stock.
+                    </p>
                   </div>
-                  <div className="sm:col-span-2">
+                  <div>
                     <Label htmlFor="edit-unit">Measuring unit</Label>
                     <Input id="edit-unit" name="unit" defaultValue={editing.unit} required />
                     <p className="mt-1 text-xs text-muted">Used for stock, chips, and alerts.</p>

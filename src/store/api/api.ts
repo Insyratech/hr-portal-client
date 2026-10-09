@@ -3576,6 +3576,7 @@ export const api = createApi({
       {
         categoryId: string;
         name: string;
+        brandName?: string;
         catalogNumber: string;
         unit: string;
         defaultQtyChips?: number[];
@@ -3595,6 +3596,7 @@ export const api = createApi({
         id: string;
         body: Partial<{
           name: string;
+          brandName: string;
           catalogNumber: string;
           unit: string;
           defaultQtyChips: number[];
