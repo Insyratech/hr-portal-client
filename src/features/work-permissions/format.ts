@@ -42,6 +42,11 @@ export function slotLabel(slot: WorkPermission['slot'] | undefined): string {
 
 export function permissionTone(status: WorkPermission['status']): StatusTone {
   if (status === 'APPROVED') return 'approved';
-  if (status === 'REJECTED') return 'rejected';
+  if (status === 'REJECTED' || status === 'CANCELLED') return 'rejected';
   return 'pending';
+}
+
+export function permissionStatusLabel(status: WorkPermission['status']): string {
+  if (status === 'CANCELLED') return 'REVOKED';
+  return status;
 }

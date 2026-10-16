@@ -2432,6 +2432,10 @@ export const api = createApi({
       query: (id) => ({ url: `/api/v1/work-permissions/${id}/reject`, method: 'POST' }),
       invalidatesTags: ['WorkPermissions', 'Notifications'],
     }),
+    cancelWorkPermission: builder.mutation<ApiSuccess<WorkPermission>, string>({
+      query: (id) => ({ url: `/api/v1/work-permissions/${id}/cancel`, method: 'POST' }),
+      invalidatesTags: ['WorkPermissions', 'Notifications'],
+    }),
     getMyShiftChanges: builder.query<ApiSuccess<ShiftChangeRequest[]>, void>({
       query: () => '/api/v1/shift-changes/me',
       providesTags: ['ShiftChanges'],
@@ -4166,6 +4170,7 @@ export const {
   useApplyWorkPermissionMutation,
   useApproveWorkPermissionMutation,
   useRejectWorkPermissionMutation,
+  useCancelWorkPermissionMutation,
   useGetMyShiftChangesQuery,
   useGetShiftChangeLeadInboxQuery,
   useGetShiftChangesQuery,

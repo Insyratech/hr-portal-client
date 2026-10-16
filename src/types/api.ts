@@ -1104,7 +1104,7 @@ export type WorkPermission = {
   minutes: number;
   slot: 'START' | 'END';
   reason: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
   actorId: string | null;
   decidedAt: string | null;
   createdAt: string;

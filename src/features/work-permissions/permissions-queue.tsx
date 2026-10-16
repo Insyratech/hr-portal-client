@@ -6,7 +6,13 @@ import { DataTable } from '@/components/dashboard/data-table';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
-import { remainingText, hoursLabel, permissionTone, slotLabel } from '@/features/work-permissions/format';
+import {
+  remainingText,
+  hoursLabel,
+  permissionStatusLabel,
+  permissionTone,
+  slotLabel,
+} from '@/features/work-permissions/format';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
@@ -18,7 +24,7 @@ import {
 } from '@/store/api/api';
 import type { WorkPermission } from '@/types/api';
 
-const STATUSES = ['PENDING', 'APPROVED', 'REJECTED'] as const;
+const STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] as const;
 
 function PermissionsQueueBody() {
   const router = useRouter();
@@ -55,7 +61,7 @@ function PermissionsQueueBody() {
       <PageHeader kicker="Attendance" title="Permissions" />
       <p className="mb-6 max-w-2xl text-sm text-muted">
         Employees get 1 hour on 2 days each calendar month (2 hours total). Choose start or end of the shift. Pending
-        and approved days both count until a request is declined.
+        and approved days both count until a request is declined or the employee revokes a pending request.
       </p>
       <div className="mb-6 flex flex-wrap gap-2">
         {STATUSES.map((item) => (
@@ -85,7 +91,12 @@ function PermissionsQueueBody() {
           {
             id: 'status',
             header: 'Status',
-            cell: (row) => <StatusBadge status={permissionTone(row.status)} label={row.status} />,
+            cell: (row) => (
+              <StatusBadge
+                status={permissionTone(row.status)}
+                label={permissionStatusLabel(row.status)}
+              />
+            ),
           },
           ...(canDecide
             ? [
