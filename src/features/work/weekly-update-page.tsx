@@ -114,8 +114,8 @@ export function WeeklyUpdatePage() {
       <section className="mb-8 border border-border bg-background p-5 shadow-card">
         <Meta>Weekly update template</Meta>
         <p className="mt-2 max-w-2xl text-sm text-muted">
-          Download the standard format, fill in your week, then upload below. New and existing employees use the
-          same template.
+          Download the standard weekly update template (v1.2), fill in your week, then upload below. New and existing
+          employees use the same template.
         </p>
         <div className="mt-4">
           <Button asChild type="button" size="sm" variant="outline">
