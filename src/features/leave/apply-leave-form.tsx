@@ -248,7 +248,7 @@ export function ApplyLeaveForm({
       if (!colleague.available) {
         toast.warning(
           colleague.unavailableReason ??
-            'That colleague cannot take handover then. Choose someone on the same shift who is at work.',
+            'That colleague cannot take handover then. Choose someone on the same shift who is at work and covering fewer than 2 handovers.',
         );
         return;
       }
@@ -413,8 +413,8 @@ export function ApplyLeaveForm({
           </select>
           {startDate ? (
             <p className="mt-2 text-sm text-muted">
-              Only colleagues on your shift for these dates appear. People on leave or already covering handover
-              cannot be selected.
+              Only colleagues on your shift for these dates appear. People on leave, or already covering 2 handovers,
+              cannot be selected (one person may cover up to 2).
             </p>
           ) : null}
           {startDate && (colleagues?.data?.length ?? 0) === 0 ? (
