@@ -1117,6 +1117,35 @@ export type WorkPermissionMine = {
   items: WorkPermission[];
 };
 
+export type CompOffWork = {
+  id: string;
+  employeeId: string;
+  employeeName: string | null;
+  leaveApplicationId: string;
+  leaveTypeCode: string | null;
+  leaveTypeName: string | null;
+  workDate: string;
+  leaveDate: string;
+  quantity: number;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+  balanceRestored: number;
+  actorId: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+};
+
+export type CompOffEligibleLeave = {
+  leaveApplicationId: string;
+  leaveTypeCode: string | null;
+  leaveTypeName: string | null;
+  startDate: string;
+  endDate: string;
+  duration: 'full' | 'half';
+  status: string;
+  days: { leaveDate: string; quantity: number; available: boolean }[];
+};
+
 export type ShiftChangeRequest = {
   id: string;
   employeeId: string;

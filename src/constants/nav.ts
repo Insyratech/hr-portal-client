@@ -130,6 +130,7 @@ export const HR_ORG_NAV: readonly NavItem[] = [
 
 export const HR_LEAVE_NAV: readonly NavItem[] = [
   { href: '/hr/leaves', label: 'Applications', icon: 'leave' },
+  { href: '/hr/comp-off', label: 'Compensatory work', icon: 'leave' },
   { href: '/hr/leave-types', label: 'Leave types', icon: 'leave' },
   { href: '/hr/holidays', label: 'Holidays', icon: 'calendar' },
   { href: '/hr/settings', label: 'Working days', icon: 'settings' },

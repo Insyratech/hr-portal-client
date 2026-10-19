@@ -2,6 +2,7 @@
 
 import { useState, Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { CompOffSection } from '@/features/comp-off-work/comp-off-section';
 import { ApplyLeaveForm } from '@/features/leave/apply-leave-form';
 import { HandoverReviewCard } from '@/features/leave/handover-review-card';
 import { ProjectLeadReviewCard } from '@/features/leave/project-lead-review-card';
@@ -173,6 +174,7 @@ function LeavePageBody() {
       <div className="mb-10">
         <LeaveBalanceCard items={balances} variant="rings" />
       </div>
+      <CompOffSection />
       <Button type="button" className="mb-10" onClick={() => setApplyOpen(true)}>
         Apply leave
       </Button>
