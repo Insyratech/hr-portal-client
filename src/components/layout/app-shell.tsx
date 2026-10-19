@@ -13,9 +13,12 @@ import { FaqHelpChatbot } from '@/features/faq/faq-help-chatbot';
 
 export function AppShell({
   variant,
+  roles = [],
   children,
 }: {
   variant: ShellVariant;
+  /** Full role list so multi-hat users get every Responsibility section in the sidebar. */
+  roles?: readonly string[];
   children: ReactNode;
 }) {
   if (variant === 'employee') {
@@ -34,7 +37,7 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-surface">
-      <Sidebar variant={variant} />
+      <Sidebar variant={variant} roles={roles} />
       <div className="flex min-w-0 flex-1 flex-col bg-background">
         <Topbar variant={variant} />
         <main className="flex-1 px-4 py-8 pb-28 md:px-8 md:py-10 lg:pb-10">{children}</main>

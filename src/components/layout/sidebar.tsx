@@ -52,7 +52,11 @@ import {
   type NavItem,
 } from '@/constants/nav';
 import { cn } from '@/lib/utils';
-import type { ShellVariant } from '@/features/auth/role-access';
+import {
+  managerialShellVariantsForRoles,
+  type ManagerialShellVariant,
+  type ShellVariant,
+} from '@/features/auth/role-access';
 import { useMyProjectNavItems } from '@/features/work/my-projects';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toggleSidebar } from '@/store/slices/ui-slice';
@@ -222,7 +226,7 @@ function ManagerialNavGroups({
   variant,
   collapsed,
 }: {
-  variant: Exclude<ShellVariant, 'employee' | 'super-admin'>;
+  variant: ManagerialShellVariant;
   collapsed: boolean;
 }) {
   if (variant === 'hr') {
@@ -275,18 +279,30 @@ function ManagerialNavGroups({
   );
 }
 
-export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'> }) {
+export function Sidebar({
+  variant,
+  roles = [],
+}: {
+  variant: Exclude<ShellVariant, 'employee'>;
+  roles?: readonly string[];
+}) {
   const collapsed = useAppSelector((state) => state.ui.sidebarCollapsed);
   const dispatch = useAppDispatch();
   const pathname = usePathname();
   const projectItems = useMyProjectNavItems();
+  const sessionRoles = useAppSelector((state) => state.auth.user?.roles ?? []);
+  const effectiveRoles = roles.length > 0 ? [...roles] : sessionRoles;
   const portalSections =
-    variant === 'super-admin' ? [] : shellMobileNavSections(variant, projectItems);
-  const responsibilityTitle =
-    variant === 'super-admin' ? '' : managerialSectionTitle(variant);
-  const managerialSection = responsibilityTitle
-    ? portalSections.find((section) => section.title === responsibilityTitle)
-    : undefined;
+    variant === 'super-admin' ? [] : shellMobileNavSections(variant, projectItems, effectiveRoles);
+  const fromRoles = managerialShellVariantsForRoles(effectiveRoles);
+  const managerialVariants: ManagerialShellVariant[] =
+    variant === 'super-admin'
+      ? []
+      : fromRoles.length > 0
+        ? fromRoles
+        : variant === 'admin'
+          ? ['gm']
+          : [variant];
   const myProjectSection = portalSections.find((section) => section.title === 'My project');
   const employeeSection = portalSections.find((section) => section.title === 'Employee Features');
 
@@ -325,17 +341,23 @@ export function Sidebar({ variant }: { variant: Exclude<ShellVariant, 'employee'
           </>
         ) : (
           <>
-            {managerialSection ? (
-              <NavSection
-                title={responsibilityTitle}
-                collapsed={collapsed}
-                showDivider={false}
-                tone="gold"
-                containsActive={sectionContainsActive(pathname, managerialSection)}
-              >
-                <ManagerialNavGroups variant={variant} collapsed={collapsed} />
-              </NavSection>
-            ) : null}
+            {managerialVariants.map((managerialVariant, index) => {
+              const title = managerialSectionTitle(managerialVariant);
+              const section = portalSections.find((item) => item.title === title);
+              if (!section) return null;
+              return (
+                <NavSection
+                  key={managerialVariant}
+                  title={title}
+                  collapsed={collapsed}
+                  showDivider={index > 0}
+                  tone="gold"
+                  containsActive={sectionContainsActive(pathname, section)}
+                >
+                  <ManagerialNavGroups variant={managerialVariant} collapsed={collapsed} />
+                </NavSection>
+              );
+            })}
             {myProjectSection && projectItems.length > 0 ? (
               <NavSection
                 title="My project"

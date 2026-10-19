@@ -20,7 +20,7 @@ import { useGetNotificationUnreadCountQuery } from '@/store/api/api';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { openConfirmDialog, setCommandPaletteOpen, toggleNotificationsOpen } from '@/store/slices/ui-slice';
 import { cn } from '@/lib/utils';
-import { primaryRoleCode, type ShellVariant } from '@/features/auth/role-access';
+import { displayRoleCodes, type ShellVariant } from '@/features/auth/role-access';
 import { roleLabel } from '@/features/employees/onboarding-roles';
 import { useMyProjectNavItems } from '@/features/work/my-projects';
 
@@ -277,7 +277,9 @@ function UserAccountMenu({
         <span className="hidden min-w-0 flex-col items-start text-left leading-tight lg:flex">
           <span className="max-w-[12rem] truncate font-medium">{displayName}</span>
           {displayRole ? (
-            <span className="max-w-[12rem] truncate text-[11px] text-muted">{displayRole}</span>
+            <span className="max-w-[16rem] truncate text-[11px] text-muted" title={displayRole ?? undefined}>
+              {displayRole}
+            </span>
           ) : null}
         </span>
         <Icon name="chevron-down" className={cn('hidden h-3 w-3 shrink-0 opacity-70 transition lg:block', open && 'rotate-180')} />
@@ -346,7 +348,11 @@ export function Topbar({ variant }: { variant: ShellVariant }) {
   const dispatch = useAppDispatch();
   const displayName = user?.name ?? 'Guest';
   const roles = user?.roles ?? [];
-  const displayRole = roles.length ? roleLabel(primaryRoleCode(roles)) : null;
+  const displayRole = roles.length
+    ? displayRoleCodes(roles)
+        .map((code) => roleLabel(code))
+        .join(' · ')
+    : null;
   const isSuperAdmin = roles.includes('SUPER_ADMIN');
   const { data: unread } = useGetNotificationUnreadCountQuery(undefined, {
     skip: !user,

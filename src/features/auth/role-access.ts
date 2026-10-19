@@ -8,6 +8,9 @@ export type ShellVariant =
   | 'inventory'
   | 'super-admin';
 
+/** Managerial shells that can appear as separate sidebar “Responsibility” blocks. */
+export type ManagerialShellVariant = Exclude<ShellVariant, 'employee' | 'super-admin'>;
+
 export function isSuperAdmin(roles: string[]): boolean {
   return roles.includes('SUPER_ADMIN');
 }
@@ -100,6 +103,35 @@ export function shellVariantForRoles(roles: string[]): ShellVariant {
   if (isFinanceManager(roles)) return 'finance';
   if (isInventoryManager(roles)) return 'inventory';
   return 'employee';
+}
+
+/**
+ * Every managerial hat the user holds, in shell priority order.
+ * Used so multi-role users get a Responsibility section per hat (e.g. CSO + Inventory).
+ */
+export function managerialShellVariantsForRoles(roles: string[]): ManagerialShellVariant[] {
+  if (roles.includes('SUPER_ADMIN')) return [];
+  const variants: ManagerialShellVariant[] = [];
+  if (isHrManager(roles)) variants.push('hr');
+  if (isGeneralManager(roles)) variants.push('gm');
+  if (isCso(roles)) variants.push('cso');
+  if (isFinanceManager(roles)) variants.push('finance');
+  if (isInventoryManager(roles)) variants.push('inventory');
+  return variants;
+}
+
+/** Managerial role codes for display (excludes EMPLOYEE; Super Admin alone returns SA). */
+export function displayRoleCodes(roles: string[]): string[] {
+  if (roles.includes('SUPER_ADMIN')) return ['SUPER_ADMIN'];
+  const codes: string[] = [];
+  if (isHrManager(roles)) codes.push('HR_MANAGER');
+  if (isGeneralManager(roles)) codes.push('GENERAL_MANAGER');
+  if (isCso(roles)) codes.push('CSO');
+  if (isFinanceManager(roles)) codes.push('FINANCE_MANAGER');
+  if (isInventoryManager(roles)) codes.push('INVENTORY_MANAGER');
+  if (codes.length > 0) return codes;
+  if (roles.includes('EMPLOYEE')) return ['EMPLOYEE'];
+  return roles[0] ? [roles[0]] : [];
 }
 
 export function isSharedPersonalPath(pathname: string): boolean {

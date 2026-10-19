@@ -7,5 +7,9 @@ import { useAppSelector } from '@/store/hooks';
 
 export function RoleAwareAppShell({ children }: { children: ReactNode }) {
   const roles = useAppSelector((state) => state.auth.user?.roles ?? []);
-  return <AppShell variant={shellVariantForRoles(roles)}>{children}</AppShell>;
+  return (
+    <AppShell variant={shellVariantForRoles(roles)} roles={roles}>
+      {children}
+    </AppShell>
+  );
 }

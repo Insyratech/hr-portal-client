@@ -43,7 +43,11 @@ import {
   isNavActive,
   type NavItem,
 } from '@/constants/nav';
-import type { ShellVariant } from '@/features/auth/role-access';
+import {
+  managerialShellVariantsForRoles,
+  type ManagerialShellVariant,
+  type ShellVariant,
+} from '@/features/auth/role-access';
 
 export type NavMenuGroup = {
   label?: string;
@@ -151,6 +155,7 @@ function managerialSection(variant: Exclude<ShellVariant, 'employee' | 'super-ad
 export function shellMobileNavSections(
   variant: Exclude<ShellVariant, 'employee'>,
   myProjectItems: readonly NavItem[] = [],
+  roles: readonly string[] = [],
 ): NavMenuSection[] {
   if (variant === 'super-admin') {
     return [
@@ -168,7 +173,13 @@ export function shellMobileNavSections(
       },
     ];
   }
-  const sections: NavMenuSection[] = [managerialSection(variant)];
+  const fallbackVariant: ManagerialShellVariant = variant === 'admin' ? 'gm' : variant;
+  const managerialVariants: ManagerialShellVariant[] =
+    roles.length > 0 ? managerialShellVariantsForRoles([...roles]) : [fallbackVariant];
+  const sections: NavMenuSection[] =
+    managerialVariants.length > 0
+      ? managerialVariants.map((item) => managerialSection(item))
+      : [managerialSection(fallbackVariant)];
   if (myProjectItems.length > 0) sections.push(myProjectSection(myProjectItems));
   sections.push(employeeSection());
   return sections;

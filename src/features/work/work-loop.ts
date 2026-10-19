@@ -1,6 +1,10 @@
-/** Mirrors Backend skipsWorkApprovalLoop — SA / HR / GM / Finance / Inventory skip personal work loop. CSO still participates. */
+/**
+ * Mirrors Backend skipsWorkApprovalLoop — SA / HR / GM / Finance / Inventory skip personal work loop.
+ * CSO still participates even when they also hold another managerial hat (e.g. Inventory).
+ */
 export function skipsWorkApprovalLoop(roles: readonly string[]): boolean {
   if (roles.includes('SUPER_ADMIN')) return true;
+  if (roles.includes('CSO')) return false;
   if (roles.includes('HR_MANAGER')) return true;
   if (roles.includes('GENERAL_MANAGER') || roles.includes('ADMIN')) return true;
   if (roles.includes('FINANCE_MANAGER')) return true;
