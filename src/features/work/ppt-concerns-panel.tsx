@@ -57,6 +57,7 @@ export function PptRaiseConcernPanel({
   const toast = useToast();
   const { data, isLoading, refetch } = useGetMyPptConcernsQuery();
   const [createConcern, createState] = useCreatePptConcernMutation();
+  const [formOpen, setFormOpen] = useState(false);
   const [reason, setReason] = useState('');
   const [screenshot, setScreenshot] = useState<File | null>(null);
 
@@ -69,6 +70,12 @@ export function PptRaiseConcernPanel({
       (!weekStart || row.weekStart === weekStart) &&
       (row.status === 'pending' || (row.status === 'approved' && !row.lateUploadUsed)),
   );
+
+  function closeForm() {
+    setFormOpen(false);
+    setReason('');
+    setScreenshot(null);
+  }
 
   async function onSubmit() {
     const trimmed = reason.trim();
@@ -100,25 +107,18 @@ export function PptRaiseConcernPanel({
       } else {
         toast.success('Concern submitted. Waiting for CSO review.');
       }
-      setReason('');
-      setScreenshot(null);
+      closeForm();
       await refetch();
     } catch (error) {
       toast.error(apiErrorMessage(error, 'Could not submit the concern.'));
     }
   }
 
-  return (
-    <section className="border border-border bg-background p-5 shadow-card">
-      <Meta>Missed the window? Raise a concern</Meta>
-      <p className="mt-2 max-w-2xl text-sm text-muted">
-        After Sunday 11:59 pm IST, upload is locked until CSO approves a one-time late reopen for this week. Pending or
-        rejected concerns show as a RED FLAG on the General Manager monthly report.
-      </p>
-
-      {isLoading ? <PageLoading compact message="Loading concerns…" /> : null}
-
-      {openForWeek ? (
+  // Existing open concern for this week — always show status (no form).
+  if (openForWeek) {
+    return (
+      <section className="border border-border bg-background p-5 shadow-card">
+        <Meta>Late upload concern</Meta>
         <div className="mt-4 space-y-2 text-sm">
           <StatusBadge
             status={concernStatusTone(openForWeek.status)}
@@ -135,54 +135,102 @@ export function PptRaiseConcernPanel({
             <p className="text-xs text-muted">CSO note: {openForWeek.reviewNote}</p>
           ) : null}
         </div>
-      ) : (
-        <div className="mt-4 space-y-3">
-          <div>
-            <Label htmlFor={`ppt-concern-reason-${kind}`}>What went wrong?</Label>
-            <textarea
-              id={`ppt-concern-reason-${kind}`}
-              className="mt-1 min-h-[96px] w-full rounded border border-border bg-background px-3 py-2 text-sm text-foreground shadow-card outline-none placeholder:text-muted focus:border-foreground"
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              placeholder="Explain why the PPT was not uploaded in the Saturday 2:00 pm – Sunday 11:59 pm IST window."
-              maxLength={4000}
-            />
-          </div>
-          <div>
-            <Label htmlFor={`ppt-concern-shot-${kind}`}>Screenshot (optional, max 5 MB)</Label>
-            <Input
-              id={`ppt-concern-shot-${kind}`}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              className="mt-1"
-              onChange={(event) => setScreenshot(event.target.files?.[0] ?? null)}
-            />
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            disabled={createState.isLoading}
-            onClick={() => void onSubmit()}
-          >
-            {createState.isLoading ? 'Submitting…' : 'Submit concern to CSO'}
+        {mine.length > 1 ? (
+          <ul className="mt-6 space-y-2 border-t border-border pt-4">
+            {mine.slice(0, 8).map((row) => (
+              <li key={row.id} className="text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge status={concernStatusTone(row.status)} label={row.status} />
+                  <span className="text-muted">
+                    {row.weekStart} → {row.weekEnd} · {formatWhen(row.createdAt)}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+    );
+  }
+
+  // No open concern — button first; form card only after click.
+  return (
+    <section className="space-y-3">
+      {!formOpen ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="button" size="sm" variant="outline" onClick={() => setFormOpen(true)}>
+            Missed the window? Raise a concern
           </Button>
+          {isLoading ? <span className="text-sm text-muted">Loading…</span> : null}
+          {!isLoading && mine.length > 0 ? (
+            <span className="text-sm text-muted">
+              {mine.length} earlier concern{mine.length === 1 ? '' : 's'} on record
+            </span>
+          ) : null}
+        </div>
+      ) : (
+        <div className="border border-border bg-background p-5 shadow-card">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <Meta>Missed the window? Raise a concern</Meta>
+              <p className="mt-2 max-w-2xl text-sm text-muted">
+                After Sunday 11:59 pm IST, upload is locked until CSO approves a one-time late reopen for this week.
+                Pending or rejected concerns show as a RED FLAG on the General Manager monthly report.
+              </p>
+            </div>
+            <Button type="button" size="sm" variant="outline" onClick={closeForm}>
+              Cancel
+            </Button>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            <div>
+              <Label htmlFor={`ppt-concern-reason-${kind}`}>What went wrong?</Label>
+              <textarea
+                id={`ppt-concern-reason-${kind}`}
+                className="mt-1 min-h-[96px] w-full rounded border border-border bg-background px-3 py-2 text-sm text-foreground shadow-card outline-none placeholder:text-muted focus:border-foreground"
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder="Explain why the PPT was not uploaded in the Saturday 2:00 pm – Sunday 11:59 pm IST window."
+                maxLength={4000}
+              />
+            </div>
+            <div>
+              <Label htmlFor={`ppt-concern-shot-${kind}`}>Screenshot (optional, max 5 MB)</Label>
+              <Input
+                id={`ppt-concern-shot-${kind}`}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="mt-1"
+                onChange={(event) => setScreenshot(event.target.files?.[0] ?? null)}
+              />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              disabled={createState.isLoading}
+              onClick={() => void onSubmit()}
+            >
+              {createState.isLoading ? 'Submitting…' : 'Submit concern to CSO'}
+            </Button>
+          </div>
+
+          {mine.length > 0 ? (
+            <ul className="mt-6 space-y-2 border-t border-border pt-4">
+              {mine.slice(0, 8).map((row) => (
+                <li key={row.id} className="text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusBadge status={concernStatusTone(row.status)} label={row.status} />
+                    <span className="text-muted">
+                      {row.weekStart} → {row.weekEnd} · {formatWhen(row.createdAt)}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       )}
-
-      {mine.length > 0 ? (
-        <ul className="mt-6 space-y-2 border-t border-border pt-4">
-          {mine.slice(0, 8).map((row) => (
-            <li key={row.id} className="text-sm">
-              <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge status={concernStatusTone(row.status)} label={row.status} />
-                <span className="text-muted">
-                  {row.weekStart} → {row.weekEnd} · {formatWhen(row.createdAt)}
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : null}
     </section>
   );
 }
