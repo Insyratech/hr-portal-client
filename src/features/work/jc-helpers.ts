@@ -67,8 +67,7 @@ export function jcStatusTone(status: string): 'approved' | 'pending' | 'rejected
 }
 
 export function jcStatusLabel(status: string): string {
-  if (status === 'uploaded') return 'With CSO';
-  if (status === 'with_gm') return 'With GM';
+  if (status === 'uploaded' || status === 'with_gm') return 'With GM';
   if (status === 'downloaded') return 'Downloaded';
   if (status === 'emailed') return 'Emailed';
   if (status === 'deleted') return 'Deleted';

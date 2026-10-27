@@ -173,9 +173,9 @@ function GmWeeklyUpdatesInner() {
     <>
       <PageHeader kicker="Work" title="Weekly updates" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
-        Weekly wrap PPTs uploaded by employees (max 15 MB per file). They arrive here directly — JC PPTs still come via
-        CSO transfer. Use View to open in the browser without removing the file. Download, email, or delete each removes
-        the file from portal storage and keeps history for audit.
+        Weekly wrap PPTs uploaded by employees (max 15 MB per file). They arrive here directly, same as JC PPTs. Use View
+        to open in the browser without removing the file. Download, email, or delete each removes the file from portal
+        storage and keeps history for audit.
       </p>
 
       {isLoading ? <PageLoading compact message="Loading…" /> : null}

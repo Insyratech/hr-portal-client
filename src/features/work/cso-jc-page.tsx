@@ -1,34 +1,19 @@
 'use client';
 
-import { useCallback, useState, type ReactNode } from 'react';
 import { PageLoading } from '@/components/ui/page-loading';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
-import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/dashboard/status-badge';
-import { useToast } from '@/hooks/use-toast';
-import { apiErrorMessage } from '@/lib/api-error';
 import {
   formatJcWhen,
   jcStatusLabel,
   jcStatusTone,
-  openPptView,
 } from '@/features/work/jc-helpers';
 import { PptConcernsReviewDesk } from '@/features/work/ppt-concerns-panel';
 import type { JcPptItem } from '@/types/api';
-import {
-  useGetJcPptCsoBoardQuery,
-  useLazyGetJcPptPreviewQuery,
-  useTransferJcPptToGmMutation,
-} from '@/store/api/api';
+import { useGetJcPptCsoBoardQuery } from '@/store/api/api';
 
-function JcRow({
-  item,
-  actions,
-}: {
-  item: JcPptItem;
-  actions?: ReactNode;
-}) {
+function JcTrackRow({ item }: { item: JcPptItem }) {
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 border border-border bg-background px-4 py-3 shadow-card">
       <div>
@@ -55,63 +40,30 @@ function JcRow({
           {item.systemFileName}
           {item.weekStart && item.weekEnd ? ` · ${item.weekStart} → ${item.weekEnd}` : ''}
           {item.late ? ' · late' : ''} · Uploaded {formatJcWhen(item.uploadedAt)}
-          {item.transferredAt ? ` · Transferred ${formatJcWhen(item.transferredAt)}` : ''}
+          {item.transferredAt ? ` · Sent to GM ${formatJcWhen(item.transferredAt)}` : ''}
           {item.consumedAt
-            ? ` · ${item.status === 'emailed' ? 'Emailed' : 'Downloaded'} ${formatJcWhen(item.consumedAt)}`
+            ? ` · ${item.status === 'emailed' ? 'Emailed' : item.status === 'deleted' ? 'Deleted' : 'Downloaded'} ${formatJcWhen(item.consumedAt)}`
             : ''}
+          {item.consumedByName ? ` · ${item.consumedByName}` : ''}
           {item.emailRecipient ? ` · ${item.emailRecipient}` : ''}
         </p>
       </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <StatusBadge status={jcStatusTone(item.status)} label={jcStatusLabel(item.status)} />
-        {actions}
-      </div>
+      <StatusBadge status={jcStatusTone(item.status)} label={jcStatusLabel(item.status)} />
     </li>
   );
 }
 
 export function CsoJcPage() {
-  const toast = useToast();
-  const { data, isLoading, isError, refetch } = useGetJcPptCsoBoardQuery();
-  const [transfer, transferState] = useTransferJcPptToGmMutation();
-  const [fetchPreview] = useLazyGetJcPptPreviewQuery();
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const { data, isLoading, isError } = useGetJcPptCsoBoardQuery();
   const board = data?.data;
-
-  const onView = useCallback(
-    async (id: string) => {
-      try {
-        const result = await fetchPreview(id).unwrap();
-        openPptView(result.data.url);
-      } catch (error) {
-        toast.error(apiErrorMessage(error, 'Could not open the PPT for viewing.'));
-      }
-    },
-    [fetchPreview, toast],
-  );
-
-  async function onTransfer(id: string) {
-    setBusyId(id);
-    try {
-      const result = await transfer(id).unwrap();
-      toast.success(
-        `Transferred to General Manager${result.data.recipients ? ` (${result.data.recipients} notified)` : ''}.`,
-      );
-      await refetch();
-    } catch (error) {
-      toast.error(apiErrorMessage(error, 'Could not transfer JC PPT.'));
-    } finally {
-      setBusyId(null);
-    }
-  }
 
   return (
     <>
       <PageHeader kicker="Work" title="Team JC" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
-        Review employee JC PowerPoints (paper name + DOI) with View, then transfer each file to General Manager. Same
-        Sat 2:00 pm–Sun 11:59 pm IST window as weekly PPT. After transfer, the file leaves this desk (history remains).
-        Review late-upload concerns below for one-time reopens.
+        Track employee JC PowerPoints (paper name + DOI). Uploads go directly to General Manager — this desk shows
+        status, history, and the audit log. Same Sat 2:00 pm–Sun 11:59 pm IST window as weekly PPT. Review late-upload
+        concerns below for one-time reopens.
       </p>
 
       <div className="mb-8">
@@ -123,11 +75,7 @@ export function CsoJcPage() {
 
       {board ? (
         <div className="space-y-8">
-          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="border border-border bg-background p-4 shadow-card">
-              <Meta>Pending</Meta>
-              <p className="mt-2 text-2xl font-medium">{board.counts.pending}</p>
-            </div>
+          <section className="grid gap-4 sm:grid-cols-3">
             <div className="border border-border bg-background p-4 shadow-card">
               <Meta>With GM</Meta>
               <p className="mt-2 text-2xl font-medium">{board.counts.withGm}</p>
@@ -143,63 +91,26 @@ export function CsoJcPage() {
           </section>
 
           <section className="space-y-3">
-            <Meta>Pending with CSO</Meta>
-            {board.pending.length === 0 ? (
-              <p className="text-sm text-muted">No JC PPTs waiting for transfer.</p>
-            ) : (
-              <ul className="space-y-3">
-                {board.pending.map((item) => (
-                  <JcRow
-                    key={item.id}
-                    item={item}
-                    actions={
-                      <>
-                        {item.fileAvailable ? (
-                          <Button type="button" size="sm" variant="outline" onClick={() => void onView(item.id)}>
-                            View
-                          </Button>
-                        ) : null}
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={transferState.isLoading && busyId === item.id}
-                          onClick={() => void onTransfer(item.id)}
-                        >
-                          {busyId === item.id ? 'Transferring…' : 'Transfer to GM'}
-                        </Button>
-                      </>
-                    }
-                  />
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="space-y-3">
             <Meta>With General Manager</Meta>
             {board.withGm.length === 0 ? (
               <p className="text-sm text-muted">Nothing waiting with General Manager.</p>
             ) : (
               <ul className="space-y-3">
                 {board.withGm.map((item) => (
-                  <JcRow
-                    key={item.id}
-                    item={item}
-                    actions={<span className="text-xs text-muted">With GM — view closed</span>}
-                  />
+                  <JcTrackRow key={item.id} item={item} />
                 ))}
               </ul>
             )}
           </section>
 
           <section className="space-y-3">
-            <Meta>Completed / audit</Meta>
+            <Meta>Completed / history</Meta>
             {board.history.length === 0 ? (
-              <p className="text-sm text-muted">No completed JC transfers yet.</p>
+              <p className="text-sm text-muted">No completed JC files yet.</p>
             ) : (
               <ul className="space-y-3">
                 {board.history.map((item) => (
-                  <JcRow key={item.id} item={item} />
+                  <JcTrackRow key={item.id} item={item} />
                 ))}
               </ul>
             )}

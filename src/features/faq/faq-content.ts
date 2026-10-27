@@ -95,6 +95,12 @@ const EMPLOYEE_CATEGORIES: FaqCategory[] = [
         answer:
           'Open My projects / Work desk for goals, milestones, and status updates assigned to you. Leads manage membership and milestones from their project desk.',
       },
+      {
+        id: 'work-jc',
+        question: 'Where does my JC PPT go?',
+        answer:
+          'Work → JC. Upload a PowerPoint with the research paper name and DOI. It goes directly to General Manager. You can view or replace it while it is still with GM. CSO tracks status and history; there is no CSO transfer step.',
+      },
     ],
   },
   {
@@ -207,7 +213,7 @@ const GM_CATEGORIES: FaqCategory[] = [
         id: 'gm-work',
         question: 'How do I review weekly work and JC materials?',
         answer:
-          'GM Work areas cover weekly wrap PPTs (uploaded straight to you) and JC PPT boards transferred by CSO, including download and email actions where enabled.',
+          'GM Work areas cover weekly wrap PPTs and JC PPTs — both upload straight to you. Download, email, or delete from the GM boards; each action removes the file from portal storage.',
       },
       {
         id: 'gm-reports',
@@ -230,13 +236,13 @@ const CSO_CATEGORIES: FaqCategory[] = [
         id: 'cso-jc',
         question: 'How do JC PPT uploads work?',
         answer:
-          'On the CSO JC board, upload JC presentations for the required cadence. Transfer to GM when ready so leadership can review from the GM JC board.',
+          'Employees upload JC presentations on their JC page; files go directly to General Manager. Use the CSO Team JC board to track status, history, and the audit log — there is no transfer step.',
       },
       {
         id: 'cso-weekly',
         question: 'How do weekly update PPTs work for CSO?',
         answer:
-          'Weekly wrap PPTs go directly to General Manager on upload — this desk shows who submitted and timing. JC PPTs still transfer through CSO. Use Sync missing to GM if older files need a one-time push.',
+          'Weekly wrap PPTs and JC PPTs both go directly to General Manager on upload. This desk shows who submitted and timing. Use Sync missing to GM if older weekly files need a one-time push. Track JC status on Team JC.',
       },
       {
         id: 'cso-projects',

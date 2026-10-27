@@ -115,11 +115,10 @@ export function JcPage() {
     <>
       <PageHeader kicker="Work" title="JC" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
-        Upload a JC PowerPoint for CSO review (Tuesday → Monday week). Include the research paper name and DOI/link.
+        Upload a JC PowerPoint for General Manager (Tuesday → Monday week). Include the research paper name and DOI/link.
         Upload window <span className="font-medium text-foreground">Saturday 2:00 pm → Sunday 23:59 IST</span>; up to{' '}
-        {maxUploads} replaces. After the deadline, raise a concern for CSO approval to reopen one late upload.
-        Unapproved concerns are a RED FLAG on the GM monthly report. Use View before CSO transfers the file to General
-        Manager.
+        {maxUploads} replaces while the file is still with GM. After the deadline, raise a concern for CSO approval to
+        reopen one late upload. Unapproved concerns are a RED FLAG on the GM monthly report.
       </p>
 
       {isLoading ? <PageLoading compact message="Loading…" /> : null}
@@ -141,7 +140,7 @@ export function JcPage() {
           ) : null}
 
           <section className="border border-border bg-background p-5 shadow-card">
-            <Meta>Pending with CSO</Meta>
+            <Meta>This week with GM</Meta>
             {board.pending ? (
               <div className="mt-4 space-y-2 text-sm">
                 <div className="flex flex-wrap items-center gap-3">
@@ -180,7 +179,7 @@ export function JcPage() {
                 ) : null}
               </div>
             ) : (
-              <p className="mt-4 text-sm text-muted">No JC PPT waiting with CSO for this week.</p>
+              <p className="mt-4 text-sm text-muted">No JC PPT with General Manager for this week yet.</p>
             )}
           </section>
 
@@ -188,7 +187,7 @@ export function JcPage() {
 
           <section className="border border-border bg-background p-5 shadow-card">
             <Meta>Paper details</Meta>
-            <p className="mt-2 text-sm text-muted">Required for every JC upload from now on (kept for CSO / future reference).</p>
+            <p className="mt-2 text-sm text-muted">Required for every JC upload (sent to General Manager with the file).</p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
                 <Label htmlFor="jc-paper-title">Research paper name</Label>
@@ -258,7 +257,7 @@ export function JcPage() {
           </section>
 
           <section className="space-y-3">
-            <Meta>History</Meta>
+            <Meta>My uploads</Meta>
             {board.items.length === 0 ? (
               <p className="text-sm text-muted">No JC uploads yet.</p>
             ) : (
@@ -291,11 +290,9 @@ export function JcPage() {
                       <p className="mt-1 text-xs text-muted">
                         {item.weekStart && item.weekEnd ? `${item.weekStart} → ${item.weekEnd} · ` : ''}
                         Uploaded {formatJcWhen(item.uploadedAt)}
-                        {item.transferredAt ? ` · Transferred ${formatJcWhen(item.transferredAt)}` : ''}
                         {item.consumedAt
-                          ? ` · ${item.status === 'emailed' ? 'Emailed' : 'Downloaded'} ${formatJcWhen(item.consumedAt)}`
+                          ? ` · ${item.status === 'emailed' ? 'Emailed' : item.status === 'deleted' ? 'Deleted' : 'Downloaded'} ${formatJcWhen(item.consumedAt)}`
                           : ''}
-                        {item.emailRecipient ? ` · ${item.emailRecipient}` : ''}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -304,8 +301,6 @@ export function JcPage() {
                         <Button type="button" size="sm" variant="outline" onClick={() => void onView(item.id)}>
                           View
                         </Button>
-                      ) : item.status === 'with_gm' ? (
-                        <span className="text-xs text-muted">With GM — view closed</span>
                       ) : null}
                     </div>
                   </li>
@@ -314,25 +309,6 @@ export function JcPage() {
             )}
           </section>
 
-          {board.events.length > 0 ? (
-            <section className="space-y-3">
-              <Meta>Audit log</Meta>
-              <ul className="space-y-2">
-                {board.events.slice(0, 40).map((event) => (
-                  <li key={event.id} className="border border-border bg-background px-4 py-3 text-sm shadow-card">
-                    <p className="font-medium">
-                      {event.eventType.replaceAll('_', ' ')}
-                      {event.actorName ? ` · ${event.actorName}` : ''}
-                    </p>
-                    <p className="mt-1 text-xs text-muted">
-                      {formatJcWhen(event.createdAt)}
-                      {event.note ? ` — ${event.note}` : ''}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
         </div>
       ) : null}
 
@@ -342,8 +318,8 @@ export function JcPage() {
         description={
           pendingFile
             ? board?.pending
-              ? `Upload “${pendingFile.name}” for “${paperTitle.trim()}”? This replaces the JC file currently pending with CSO.`
-              : `Upload “${pendingFile.name}” for “${paperTitle.trim()}” for CSO review?`
+              ? `Upload “${pendingFile.name}” for “${paperTitle.trim()}”? This replaces the JC file currently with General Manager.`
+              : `Upload “${pendingFile.name}” for “${paperTitle.trim()}”? It goes directly to General Manager.`
             : 'Confirm upload.'
         }
         confirmLabel={board?.pending ? 'OK, replace' : 'OK, upload'}

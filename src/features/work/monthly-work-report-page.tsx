@@ -15,6 +15,7 @@ import {
   useGetMonthlyWorkReportPeriodsQuery,
   useGetMonthlyWorkReportQuery,
 } from '@/store/api/api';
+import { jcStatusLabel } from '@/features/work/jc-helpers';
 import type { MonthlyWorkReportDetail } from '@/types/api';
 
 function timingLabel(timing: 'on_time' | 'last_hour' | 'late' | null): string {
@@ -172,7 +173,7 @@ function EmployeeReport({ detail }: { detail: MonthlyWorkReportDetail }) {
               <li key={upload.id} className="text-foreground">
                 <span>
                   {upload.uploadedAt.slice(0, 10)}
-                  <span className="text-muted"> · {upload.status}</span>
+                  <span className="text-muted"> · {jcStatusLabel(upload.status)}</span>
                   {upload.late || upload.timing === 'late' ? (
                     <span className="text-muted"> · late</span>
                   ) : null}

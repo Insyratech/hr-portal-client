@@ -58,7 +58,7 @@ function JcRow({
           {item.systemFileName}
           {item.weekStart && item.weekEnd ? ` · ${item.weekStart} → ${item.weekEnd}` : ''}
           {item.late ? ' · late' : ''} · Uploaded {formatJcWhen(item.uploadedAt)}
-          {item.transferredAt ? ` · Transferred ${formatJcWhen(item.transferredAt)}` : ''}
+          {item.transferredAt ? ` · Arrived ${formatJcWhen(item.transferredAt)}` : ''}
           {item.consumedAt
             ? ` · ${
                 item.status === 'emailed'
@@ -182,8 +182,8 @@ export function GmJcPage() {
     <>
       <PageHeader kicker="Work" title="Team JC" />
       <p className="mb-8 max-w-2xl text-sm text-muted">
-        JC PowerPoints transferred by CSO (max 15 MB each). Download, email, or delete — each removes the file from
-        portal storage and keeps an audit row here.
+        JC PowerPoints uploaded by employees (max 15 MB each) arrive here directly. Download, email, or delete — each
+        removes the file from portal storage. CSO tracks status and history separately.
       </p>
 
       {isLoading ? <PageLoading compact message="Loading…" /> : null}
@@ -244,9 +244,8 @@ export function GmJcPage() {
                         <div>
                           <p className="text-sm font-medium">{item.employeeName ?? 'Employee'}</p>
                           <p className="mt-1 text-xs text-muted">
-                            {item.systemFileName} · Transferred{' '}
-                            {item.transferredAt ? formatJcWhen(item.transferredAt) : '—'}
-                            {item.transferredByName ? ` by ${item.transferredByName}` : ''}
+                            {item.systemFileName} · Uploaded{' '}
+                            {item.uploadedAt ? formatJcWhen(item.uploadedAt) : '—'}
                           </p>
                         </div>
                         <StatusBadge status={jcStatusTone(item.status)} label={jcStatusLabel(item.status)} />
@@ -301,7 +300,7 @@ export function GmJcPage() {
           </section>
 
           <section className="space-y-3">
-            <Meta>Completed / audit</Meta>
+            <Meta>Completed</Meta>
             {board.history.length === 0 ? (
               <p className="text-sm text-muted">No completed JC files yet.</p>
             ) : (
@@ -312,26 +311,6 @@ export function GmJcPage() {
               </ul>
             )}
           </section>
-
-          {board.events.length > 0 ? (
-            <section className="space-y-3">
-              <Meta>Audit log</Meta>
-              <ul className="space-y-2">
-                {board.events.slice(0, 60).map((event) => (
-                  <li key={event.id} className="border border-border bg-background px-4 py-3 text-sm shadow-card">
-                    <p className="font-medium">
-                      {event.eventType.replaceAll('_', ' ')}
-                      {event.actorName ? ` · ${event.actorName}` : ''}
-                    </p>
-                    <p className="mt-1 text-xs text-muted">
-                      {formatJcWhen(event.createdAt)}
-                      {event.note ? ` — ${event.note}` : ''}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
         </div>
       ) : null}
 

@@ -191,7 +191,6 @@ import type {
   JcPptCsoBoard,
   JcPptGmBoard,
   JcPptConsumeResult,
-  JcPptItem,
   WeeklyPptConsumeResult,
   WeeklyPptAdminBoard,
   WeeklyPptGmShares,
@@ -3163,16 +3162,6 @@ export const api = createApi({
       query: () => '/api/v1/work/jc/gm',
       providesTags: ['Work'],
     }),
-    transferJcPptToGm: builder.mutation<
-      ApiSuccess<{ item: JcPptItem; recipients: number }>,
-      string
-    >({
-      query: (id) => ({ url: `/api/v1/work/jc/${id}/transfer-to-gm`, method: 'POST' }),
-      invalidatesTags: ['Work', 'Notifications'],
-    }),
-    getJcPptPreview: builder.query<ApiSuccess<{ url: string; fileName: string }>, string>({
-      query: (id) => `/api/v1/work/jc/${id}/preview`,
-    }),
     gmDownloadJcPpt: builder.mutation<ApiSuccess<JcPptConsumeResult>, string>({
       query: (id) => ({ url: `/api/v1/work/jc/${id}/gm-download`, method: 'POST' }),
       invalidatesTags: ['Work', 'Notifications'],
@@ -4294,8 +4283,6 @@ export const {
   useLazyGetJcPptDownloadQuery,
   useGetJcPptCsoBoardQuery,
   useGetJcPptGmBoardQuery,
-  useTransferJcPptToGmMutation,
-  useLazyGetJcPptPreviewQuery,
   useGmDownloadJcPptMutation,
   useGmEmailJcPptMutation,
   useGmDeleteJcPptMutation,
