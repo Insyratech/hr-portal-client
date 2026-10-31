@@ -7,11 +7,13 @@ import { StatusBadge } from '@/components/dashboard/status-badge';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import { shiftChangeDateLabel } from '@/features/shift-changes/shift-change-journey';
+import { useMyProjects } from '@/features/work/my-projects';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
+  useAcceptShiftChangeProjectLeadMutation,
   useApproveShiftChangeMutation,
   useGetShiftChangesQuery,
   useRejectShiftChangeMutation,
@@ -48,11 +50,14 @@ function ShiftChangeQueueBody({
   const canDecide = useAppSelector((state) =>
     state.permissions.permissions.includes(PERMISSIONS.SHIFT_CHANGE_APPROVE),
   );
+  const { projects } = useMyProjects();
+  const ledProjectIds = new Set(projects.filter((project) => project.isLead).map((project) => project.id));
   const { data, isLoading } = useGetShiftChangesQuery({ status });
   const [approve, { isLoading: approving }] = useApproveShiftChangeMutation();
   const [reject, { isLoading: rejecting }] = useRejectShiftChangeMutation();
+  const [acceptLead, { isLoading: acceptingLead }] = useAcceptShiftChangeProjectLeadMutation();
   const toast = useToast();
-  const busy = approving || rejecting;
+  const busy = approving || rejecting || acceptingLead;
 
   async function onDecide(id: string, action: 'approve' | 'reject') {
     try {
@@ -65,6 +70,15 @@ function ShiftChangeQueueBody({
       }
     } catch (cause) {
       toast.error(apiErrorMessage(cause, 'Unable to update this request.'));
+    }
+  }
+
+  async function onApproveAsLead(id: string) {
+    try {
+      await acceptLead(id).unwrap();
+      toast.success('Approved as project lead. HR can review next.');
+    } catch (cause) {
+      toast.error(apiErrorMessage(cause, 'Unable to approve as project lead.'));
     }
   }
 
@@ -141,6 +155,19 @@ function ShiftChangeQueueBody({
                           Decline
                         </Button>
                       </div>
+                    ) : row.status === 'PENDING' &&
+                      row.projectLeadRequired &&
+                      !row.projectLeadAccepted &&
+                      row.projectId &&
+                      ledProjectIds.has(row.projectId) ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => void onApproveAsLead(row.id)}
+                      >
+                        Approve as lead
+                      </Button>
                     ) : row.status === 'PENDING' ? (
                       'Waiting on lead'
                     ) : (

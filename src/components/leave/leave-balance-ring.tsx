@@ -19,6 +19,7 @@ type LeaveBalanceRingProps = {
   code: string;
   available: number;
   allocated: number;
+  earned?: number;
   className?: string;
 };
 
@@ -26,9 +27,9 @@ type LeaveBalanceRingProps = {
  * One ring segment per allocated day; colored segments equal remaining balance.
  * Tone/colors unchanged — only segment count follows entitlement.
  */
-export function LeaveBalanceRing({ code, available, allocated, className }: LeaveBalanceRingProps) {
+export function LeaveBalanceRing({ code, available, allocated, earned, className }: LeaveBalanceRingProps) {
   const remaining = Math.max(0, Number(available) || 0);
-  const total = Math.max(0, Number(allocated) || 0);
+  const total = Math.max(0, Number(allocated) || 0) + Math.max(0, Number(earned) || 0);
   const tone = leaveBalanceTone(remaining, total);
 
   const segments = Math.max(0, Math.round(total));

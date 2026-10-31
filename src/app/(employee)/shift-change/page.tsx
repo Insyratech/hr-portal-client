@@ -30,6 +30,7 @@ export default function ShiftChangePage() {
   );
   const { data: mine, isLoading } = useGetMyShiftChangesQuery(undefined, { skip: !canApply });
   const { data: leadInbox } = useGetShiftChangeLeadInboxQuery();
+  const leadRows = leadInbox?.data ?? [];
   const [cancel, { isLoading: cancelling }] = useCancelShiftChangeMutation();
   const [open, setOpen] = useState(false);
   const toast = useToast();
@@ -49,7 +50,7 @@ export default function ShiftChangePage() {
     }
   }
 
-  if (!canApply) {
+  if (!canApply && leadRows.length === 0) {
     return (
       <div className="space-y-6">
         <PageHeader kicker="Attendance" title="Shift change" />
@@ -66,19 +67,22 @@ export default function ShiftChangePage() {
         first, then HR. Other days keep your normal shift.
       </p>
 
-      {(leadInbox?.data ?? []).length > 0 ? (
+      {leadRows.length > 0 ? (
         <section className="space-y-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-sm font-medium uppercase tracking-[0.2em] text-meta">Lead inbox</h2>
+            <h2 className="text-sm font-medium uppercase tracking-[0.2em] text-meta">Team requests</h2>
             <Link href="/work/team-permissions" className="text-sm text-muted hover:text-foreground">
-              Open Team permissions
+              Open Team requests
             </Link>
           </div>
-          {(leadInbox?.data ?? []).map((row) => (
+          {leadRows.map((row) => (
             <ShiftChangeLeadReviewCard key={row.id} row={row} />
           ))}
         </section>
       ) : null}
+
+      {!canApply ? null : (
+        <>
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -156,6 +160,8 @@ export default function ShiftChangePage() {
           />
         </DialogContent>
       </Dialog>
+        </>
+      )}
     </div>
   );
 }

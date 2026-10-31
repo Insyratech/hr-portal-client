@@ -28,7 +28,7 @@ export const EMPLOYEE_WORK_SUBNAV: readonly NavItem[] = [
 export const MY_PROJECT_NAV: readonly NavItem[] = [
   { href: '/work/projects', label: 'Project desk', icon: 'building' },
   { href: '/work/priorities/review', label: 'Team priorities', icon: 'users' },
-  { href: '/work/team-permissions', label: 'Team permissions', icon: 'shield' },
+  { href: '/work/team-permissions', label: 'Team requests', icon: 'shield' },
 ];
 
 /** Read-only project view for members who are not the project lead. */

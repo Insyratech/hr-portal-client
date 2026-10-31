@@ -306,7 +306,7 @@ export type LeadDailyWorkBoard = {
 
 export type LeadPermissionHistoryItem = {
   id: string;
-  kind: 'leave' | 'shift_change';
+  kind: 'leave' | 'shift_change' | 'comp_off';
   employeeName: string;
   projectName: string | null;
   projectCode: string | null;
@@ -319,6 +319,7 @@ export type LeadPermissionHistoryItem = {
 export type LeadPermissionsBoard = {
   pendingLeaves: LeaveApplication[];
   pendingShiftChanges: ShiftChangeRequest[];
+  pendingCompOffWork: CompOffWork[];
   pendingPrioritiesCount: number;
   history: LeadPermissionHistoryItem[];
 };
@@ -1014,6 +1015,9 @@ export type LeaveBalance = {
   period: string;
   allocated: number;
   used: number;
+  adjusted?: number;
+  earned?: number;
+  expired?: number;
   available: number;
 };
 
@@ -1029,6 +1033,8 @@ export type LeaveAllocation = {
   carriedForward: number;
   adjusted: number;
   used: number;
+  earned?: number;
+  expired?: number;
   available: number;
 };
 
@@ -1119,17 +1125,50 @@ export type WorkPermissionMine = {
 
 export type CompOffWork = {
   id: string;
+  kind: 'EARN' | 'LEGACY_OFFSET';
+  employeeId: string;
+  employeeName: string | null;
+  leaveApplicationId: string | null;
+  leaveTypeCode: string | null;
+  leaveTypeName: string | null;
+  workDate: string;
+  leaveDate: string | null;
+  quantity: number;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+  waitingOn: 'PROJECT_LEAD' | 'HR' | 'WORK_CONFIRM' | null;
+  balanceRestored: number;
+  projectId: string | null;
+  projectName: string | null;
+  projectCode: string | null;
+  projectLeadEmployeeId: string | null;
+  projectLeadName: string | null;
+  projectLeadRequired: boolean;
+  projectLeadAccepted: boolean;
+  projectLeadActedAt: string | null;
+  hrAccepted: boolean;
+  hrActedAt: string | null;
+  workConfirmedAt: string | null;
+  creditedAt: string | null;
+  creditedQuantity: number;
+  actorId: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+};
+
+export type CompOffAdjustment = {
+  id: string;
   employeeId: string;
   employeeName: string | null;
   leaveApplicationId: string;
   leaveTypeCode: string | null;
   leaveTypeName: string | null;
-  workDate: string;
   leaveDate: string;
   quantity: number;
   reason: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
-  balanceRestored: number;
+  compConsumed: number;
+  originalRestored: number;
   actorId: string | null;
   decidedAt: string | null;
   createdAt: string;

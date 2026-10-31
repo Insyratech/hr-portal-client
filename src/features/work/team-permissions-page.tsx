@@ -7,8 +7,7 @@ import { Meta } from '@/components/layout/meta';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import { PageLoading } from '@/components/ui/page-loading';
-import { ProjectLeadReviewCard } from '@/features/leave/project-lead-review-card';
-import { ShiftChangeLeadReviewCard } from '@/features/shift-changes/shift-change-lead-review-card';
+import { LeadTeamRequestsPanel } from '@/features/work/lead-team-requests-panel';
 import { useGetLeadPermissionsQuery } from '@/store/api/api';
 
 function historyTone(status: string): 'approved' | 'pending' | 'rejected' {
@@ -18,8 +17,10 @@ function historyTone(status: string): 'approved' | 'pending' | 'rejected' {
   return 'pending';
 }
 
-function kindLabel(kind: 'leave' | 'shift_change'): string {
-  return kind === 'leave' ? 'Leave' : 'Shift change';
+function kindLabel(kind: 'leave' | 'shift_change' | 'comp_off'): string {
+  if (kind === 'leave') return 'Leave';
+  if (kind === 'comp_off') return 'Compensatory work';
+  return 'Shift change';
 }
 
 export function TeamPermissionsPage() {
@@ -29,8 +30,9 @@ export function TeamPermissionsPage() {
   const board = data?.data;
   const pendingLeaves = board?.pendingLeaves ?? [];
   const pendingShifts = board?.pendingShiftChanges ?? [];
+  const pendingCompOff = board?.pendingCompOffWork ?? [];
   const history = board?.history ?? [];
-  const pendingTotal = pendingLeaves.length + pendingShifts.length;
+  const pendingTotal = pendingLeaves.length + pendingShifts.length + pendingCompOff.length;
   const prioritiesCount = board?.pendingPrioritiesCount ?? 0;
 
   if (isLoading && !board) {
@@ -40,7 +42,7 @@ export function TeamPermissionsPage() {
   if (isError || !board) {
     return (
       <div className="space-y-4">
-        <PageHeader kicker="My project" title="Team permissions" />
+        <PageHeader kicker="My project" title="Team requests" />
         <p className="text-sm text-muted">Unable to load approvals for your projects. Try again.</p>
         <Button type="button" size="sm" variant="outline" onClick={() => void refetch()}>
           Retry
@@ -53,10 +55,10 @@ export function TeamPermissionsPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-2xl">
-          <PageHeader kicker="My project" title="Team permissions" />
+          <PageHeader kicker="My project" title="Team requests" />
           <p className="mt-2 text-sm text-muted">
-            Leave and shift-change requests that need your approval as project lead. History shows what you already
-            approved.
+            Leave, shift-change, and compensatory-work requests from your team that need your approval as project
+            lead. History shows what you already approved.
             {isFetching ? ' Refreshing…' : ''}
           </p>
         </div>
@@ -65,7 +67,7 @@ export function TeamPermissionsPage() {
         </Button>
       </div>
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <div className="rounded border border-border bg-background p-3 shadow-card">
           <Meta>Waiting for you</Meta>
           <p className="mt-2 text-2xl font-semibold tracking-tight">{pendingTotal}</p>
@@ -77,6 +79,10 @@ export function TeamPermissionsPage() {
         <div className="rounded border border-border bg-background p-3 shadow-card">
           <Meta>Shift changes</Meta>
           <p className="mt-2 text-2xl font-semibold tracking-tight">{pendingShifts.length}</p>
+        </div>
+        <div className="rounded border border-border bg-background p-3 shadow-card">
+          <Meta>Compensatory work</Meta>
+          <p className="mt-2 text-2xl font-semibold tracking-tight">{pendingCompOff.length}</p>
         </div>
         <div className="rounded border border-border bg-background p-3 shadow-card">
           <Meta>Priorities to review</Meta>
@@ -96,32 +102,14 @@ export function TeamPermissionsPage() {
             Approve here to send the request to HR. Weekly priorities stay under Team priorities.
           </p>
         </div>
-        {pendingTotal === 0 ? (
-          <p className="rounded border border-dashed border-border px-4 py-8 text-center text-sm text-muted">
-            Nothing waiting for project-lead approval right now.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {pendingLeaves.map((row) => (
-              <ProjectLeadReviewCard
-                key={`leave-${row.id}`}
-                application={row}
-                backHref="/work/team-permissions"
-                backLabel="Stay on Team permissions"
-              />
-            ))}
-            {pendingShifts.map((row) => (
-              <ShiftChangeLeadReviewCard key={`shift-${row.id}`} row={row} onDone={() => void refetch()} />
-            ))}
-          </div>
-        )}
+        <LeadTeamRequestsPanel />
       </section>
 
       <section className="space-y-4">
         <div>
           <Meta>Previous history</Meta>
           <p className="mt-1 text-sm text-muted">
-            Leave and shift changes you approved as project lead (newest first).
+            Leave, shift changes, and compensatory work you approved as project lead (newest first).
           </p>
         </div>
         <DataTable
@@ -151,7 +139,7 @@ export function TeamPermissionsPage() {
           ]}
           rows={history}
           emptyTitle="No history yet"
-          emptyDescription="After you approve leave or shift changes, they appear here."
+          emptyDescription="After you approve leave, shift changes, or compensatory work, they appear here."
         />
       </section>
     </div>

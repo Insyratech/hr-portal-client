@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { LeadDailyWorkPanel } from '@/features/work/lead-daily-work-panel';
+import { LeadTeamRequestsPanel } from '@/features/work/lead-team-requests-panel';
 import { ProjectGoalsMilestonesManage } from '@/features/work/project-goals-milestones-manage';
 import { ProjectReportingChainSection } from '@/features/work/project-reporting-chain';
 import { ProjectMembersList } from '@/features/work/project-members-card';
@@ -178,6 +179,8 @@ export function LeadProjectDeskPage({ projectId }: { projectId: string }) {
       </div>
 
       <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 md:gap-5 xl:grid-cols-3">
+        <LeadTeamRequestsPanel projectId={projectId} variant="desk" />
+
         <WorkDeskSection
           title="Planning week"
           description="Priorities, daily work, and the reporting chain follow this week."

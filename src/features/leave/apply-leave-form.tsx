@@ -97,7 +97,11 @@ export function ApplyLeaveForm({
 
   const allocatedTypeIds = new Set((balances?.data ?? []).map((item) => item.leaveTypeId));
   const activeTypes = (types?.data ?? []).filter(
-    (item) => item.active && (allocatedTypeIds.has(item.id) || item.id === editing?.leaveTypeId),
+    (item) =>
+      item.active &&
+      (allocatedTypeIds.has(item.id) ||
+        item.id === editing?.leaveTypeId ||
+        item.code === 'COMP'),
   );
 
   useEffect(() => {
@@ -305,6 +309,13 @@ export function ApplyLeaveForm({
         </select>
         {selectedType?.description ? (
           <p className="mt-2 text-sm text-muted">{selectedType.description}</p>
+        ) : null}
+        {selectedType?.code === 'COMP' ? (
+          <p className="mt-2 text-sm text-muted">
+            Available COMP:{' '}
+            {(balances?.data ?? []).find((item) => item.leaveTypeId === selectedType.id)?.available ?? 0} day(s).
+            Earn more by working an approved holiday or week-off.
+          </p>
         ) : null}
       </div>
       <div>

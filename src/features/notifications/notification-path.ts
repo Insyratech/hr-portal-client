@@ -86,7 +86,10 @@ export function pathForNotification(item: NotificationItem, roles: string[]): st
     return id ? `/permission?permissionId=${encodeURIComponent(id)}` : '/permission';
   }
 
-  if (item.referenceType === 'comp_off_work_request') {
+  if (item.referenceType === 'comp_off_work_request' || item.referenceType === 'comp_off_adjustment') {
+    const leadRequest =
+      /project lead approval/i.test(item.title) || /project-lead approval/i.test(item.message);
+    if (leadRequest) return '/work/team-permissions';
     if (hrManager) return '/hr/comp-off';
     return '/leave';
   }

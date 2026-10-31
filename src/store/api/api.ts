@@ -198,6 +198,7 @@ import type {
   WorkPermission,
   WorkPermissionMine,
   CompOffWork,
+  CompOffAdjustment,
   CompOffEligibleLeave,
   ShiftChangeRequest,
   PptUploadConcern,
@@ -2442,6 +2443,10 @@ export const api = createApi({
       query: () => '/api/v1/comp-off-work/me',
       providesTags: ['CompOffWork'],
     }),
+    getCompOffProjects: builder.query<ApiSuccess<LeaveProjectOption[]>, void>({
+      query: () => '/api/v1/comp-off-work/projects',
+      providesTags: ['CompOffWork'],
+    }),
     getCompOffEligibleLeaves: builder.query<ApiSuccess<CompOffEligibleLeave[]>, { month: string }>({
       query: ({ month }) => ({
         url: '/api/v1/comp-off-work/eligible-leaves',
@@ -2458,14 +2463,22 @@ export const api = createApi({
     }),
     applyCompOffWork: builder.mutation<
       ApiSuccess<CompOffWork>,
-      { workDate: string; leaveApplicationId: string; leaveDate: string; reason?: string }
+      { workDate: string; reason?: string; projectId?: string }
     >({
       query: (body) => ({ url: '/api/v1/comp-off-work', method: 'POST', body }),
       invalidatesTags: ['CompOffWork', 'LeaveBalances', 'Notifications'],
     }),
+    acceptCompOffProjectLead: builder.mutation<ApiSuccess<CompOffWork>, string>({
+      query: (id) => ({ url: `/api/v1/comp-off-work/${id}/project-lead-accept`, method: 'POST' }),
+      invalidatesTags: ['CompOffWork', 'Notifications', 'Work'],
+    }),
     approveCompOffWork: builder.mutation<ApiSuccess<CompOffWork>, string>({
       query: (id) => ({ url: `/api/v1/comp-off-work/${id}/approve`, method: 'POST' }),
       invalidatesTags: ['CompOffWork', 'LeaveBalances', 'LeaveApplications', 'AttendanceImports', 'Notifications'],
+    }),
+    confirmCompOffWork: builder.mutation<ApiSuccess<CompOffWork>, string>({
+      query: (id) => ({ url: `/api/v1/comp-off-work/${id}/confirm-work`, method: 'POST' }),
+      invalidatesTags: ['CompOffWork', 'LeaveBalances', 'AttendanceImports', 'Notifications'],
     }),
     rejectCompOffWork: builder.mutation<ApiSuccess<CompOffWork>, string>({
       query: (id) => ({ url: `/api/v1/comp-off-work/${id}/reject`, method: 'POST' }),
@@ -2473,6 +2486,39 @@ export const api = createApi({
     }),
     cancelCompOffWork: builder.mutation<ApiSuccess<CompOffWork>, string>({
       query: (id) => ({ url: `/api/v1/comp-off-work/${id}/cancel`, method: 'POST' }),
+      invalidatesTags: ['CompOffWork', 'Notifications'],
+    }),
+    getMyCompOffAdjustments: builder.query<ApiSuccess<CompOffAdjustment[]>, void>({
+      query: () => '/api/v1/comp-off-work/adjustments/me',
+      providesTags: ['CompOffWork'],
+    }),
+    getCompOffAdjustmentQueue: builder.query<
+      ApiSuccess<CompOffAdjustment[]>,
+      { status?: CompOffAdjustment['status'] } | void
+    >({
+      query: (arg) => ({
+        url: '/api/v1/comp-off-work/adjustments',
+        params: arg?.status ? { status: arg.status } : undefined,
+      }),
+      providesTags: ['CompOffWork'],
+    }),
+    applyCompOffAdjustment: builder.mutation<
+      ApiSuccess<CompOffAdjustment>,
+      { leaveApplicationId: string; leaveDate: string; reason?: string }
+    >({
+      query: (body) => ({ url: '/api/v1/comp-off-work/adjustments', method: 'POST', body }),
+      invalidatesTags: ['CompOffWork', 'LeaveBalances', 'LeaveApplications', 'Notifications'],
+    }),
+    approveCompOffAdjustment: builder.mutation<ApiSuccess<CompOffAdjustment>, string>({
+      query: (id) => ({ url: `/api/v1/comp-off-work/adjustments/${id}/approve`, method: 'POST' }),
+      invalidatesTags: ['CompOffWork', 'LeaveBalances', 'LeaveApplications', 'AttendanceImports', 'Notifications'],
+    }),
+    rejectCompOffAdjustment: builder.mutation<ApiSuccess<CompOffAdjustment>, string>({
+      query: (id) => ({ url: `/api/v1/comp-off-work/adjustments/${id}/reject`, method: 'POST' }),
+      invalidatesTags: ['CompOffWork', 'Notifications'],
+    }),
+    cancelCompOffAdjustment: builder.mutation<ApiSuccess<CompOffAdjustment>, string>({
+      query: (id) => ({ url: `/api/v1/comp-off-work/adjustments/${id}/cancel`, method: 'POST' }),
       invalidatesTags: ['CompOffWork', 'Notifications'],
     }),
     getMyShiftChanges: builder.query<ApiSuccess<ShiftChangeRequest[]>, void>({
@@ -2770,7 +2816,7 @@ export const api = createApi({
     }),
     getLeadPermissions: builder.query<ApiSuccess<LeadPermissionsBoard>, void>({
       query: () => '/api/v1/work/lead/permissions',
-      providesTags: ['Work', 'LeaveApplications', 'ShiftChanges'],
+      providesTags: ['Work', 'LeaveApplications', 'ShiftChanges', 'CompOffWork'],
     }),
     getProjectStatusUpdates: builder.query<ApiSuccess<ProjectStatusUpdate[]>, string>({
       query: (projectId) => `/api/v1/work/projects/${projectId}/updates`,
@@ -4201,12 +4247,21 @@ export const {
   useRejectWorkPermissionMutation,
   useCancelWorkPermissionMutation,
   useGetMyCompOffWorkQuery,
+  useGetCompOffProjectsQuery,
   useGetCompOffEligibleLeavesQuery,
   useGetCompOffWorkQueueQuery,
   useApplyCompOffWorkMutation,
+  useAcceptCompOffProjectLeadMutation,
   useApproveCompOffWorkMutation,
+  useConfirmCompOffWorkMutation,
   useRejectCompOffWorkMutation,
   useCancelCompOffWorkMutation,
+  useGetMyCompOffAdjustmentsQuery,
+  useGetCompOffAdjustmentQueueQuery,
+  useApplyCompOffAdjustmentMutation,
+  useApproveCompOffAdjustmentMutation,
+  useRejectCompOffAdjustmentMutation,
+  useCancelCompOffAdjustmentMutation,
   useGetMyShiftChangesQuery,
   useGetShiftChangeLeadInboxQuery,
   useGetShiftChangesQuery,

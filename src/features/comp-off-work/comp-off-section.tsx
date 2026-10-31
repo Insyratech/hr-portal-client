@@ -5,6 +5,7 @@ import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { CompOffStatusList } from '@/features/comp-off-work/comp-off-status-list';
+import { RequestCompOffAdjustForm } from '@/features/comp-off-work/request-comp-off-adjust-form';
 import { RequestCompOffForm } from '@/features/comp-off-work/request-comp-off-form';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
@@ -13,7 +14,8 @@ export function CompOffSection() {
   const canApply = useAppSelector((state) =>
     state.permissions.permissions.includes(PERMISSIONS.COMP_OFF_APPLY),
   );
-  const [open, setOpen] = useState(false);
+  const [workOpen, setWorkOpen] = useState(false);
+  const [adjustOpen, setAdjustOpen] = useState(false);
 
   if (!canApply) return null;
 
@@ -23,22 +25,39 @@ export function CompOffSection() {
         <div>
           <Meta>Compensatory work</Meta>
           <p className="mt-1 max-w-2xl text-sm text-muted">
-            Offset an approved leave day this month by working a week-off or holiday. HR approval required.
+            Earn COMP leave by working a week-off or holiday (project lead then HR). Apply COMP from Apply leave, or
+            adjust a leave day already taken this month.
           </p>
         </div>
-        <Button type="button" variant="outline" onClick={() => setOpen(true)}>
-          Request compensatory work
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={() => setAdjustOpen(true)}>
+            Adjust leave this month
+          </Button>
+          <Button type="button" variant="outline" onClick={() => setWorkOpen(true)}>
+            Request compensatory work
+          </Button>
+        </div>
       </div>
       <CompOffStatusList />
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={workOpen} onOpenChange={setWorkOpen}>
         <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
           <DialogTitle>Compensatory work</DialogTitle>
           <DialogDescription className="sr-only">
-            Request compensatory work on a week-off or holiday to offset a leave day.
+            Request permission to work on a week-off or holiday to earn compensatory leave.
           </DialogDescription>
           <div className="mt-4">
-            <RequestCompOffForm onApplied={() => setOpen(false)} />
+            <RequestCompOffForm onApplied={() => setWorkOpen(false)} />
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+          <DialogTitle>Adjust leave against COMP</DialogTitle>
+          <DialogDescription className="sr-only">
+            Cover an approved leave day already taken this month using compensatory leave.
+          </DialogDescription>
+          <div className="mt-4">
+            <RequestCompOffAdjustForm onApplied={() => setAdjustOpen(false)} />
           </div>
         </DialogContent>
       </Dialog>

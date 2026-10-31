@@ -159,7 +159,7 @@ const HR_CATEGORIES: FaqCategory[] = [
         id: 'hr-leave-queue',
         question: 'Where do I review leave applications?',
         answer:
-          'Use Leave review queues to approve or reject applications in the configured journey (lead → HR as applicable). Always check balances and overlapping dates before deciding.',
+          'Use Leave review queues to approve or reject applications in the configured journey (lead → HR as applicable). If you are also the project lead, approve that step first — Team requests under My project, or Approve as project lead on the leave/shift review screen. Always check balances and overlapping dates before deciding.',
       },
       {
         id: 'hr-attendance',

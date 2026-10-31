@@ -63,6 +63,7 @@ export default function EmployeeDashboardPage() {
     code: item.code,
     available: item.available,
     allocated: item.allocated,
+    earned: item.earned ?? 0,
   }));
 
   const myLeaves = (applicationsData?.data ?? []).filter(

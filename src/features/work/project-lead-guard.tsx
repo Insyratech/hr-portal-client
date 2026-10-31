@@ -20,7 +20,7 @@ export function ProjectLeadGuard({ children }: { children: ReactNode }) {
         <PageHeader kicker="My project" title="Project lead only" />
         <p className="max-w-xl text-sm text-muted">
           This page is for the current lead of an active project. When CSO assigns you as project lead,
-          <span className="text-foreground"> My project</span> gains Team priorities and Team permissions
+          <span className="text-foreground"> My project</span> gains Team priorities and Team requests
           alongside the project desk.
         </p>
         <Button asChild type="button" variant="outline" size="sm">

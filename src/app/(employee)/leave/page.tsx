@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, Suspense, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CompOffSection } from '@/features/comp-off-work/comp-off-section';
 import { ApplyLeaveForm } from '@/features/leave/apply-leave-form';
@@ -99,6 +100,7 @@ function LeavePageBody() {
     code: item.code,
     available: item.available,
     allocated: item.allocated,
+    earned: item.earned ?? 0,
   }));
 
   return (
@@ -121,7 +123,12 @@ function LeavePageBody() {
       ) : null}
       {leadInbox.length > 0 ? (
         <section className="mb-10 space-y-4">
-          <Meta>Project lead approvals</Meta>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <Meta>Team requests</Meta>
+            <Link href="/work/team-permissions" className="text-sm text-muted hover:text-foreground">
+              Open Team requests
+            </Link>
+          </div>
           {leadInbox.map((row) => (
             <div
               key={row.id}

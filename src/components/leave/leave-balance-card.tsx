@@ -11,6 +11,8 @@ export type LeaveBalanceItem = {
   available: number;
   /** Annual / period entitlement. */
   allocated: number;
+  /** Extra days earned (COMP). */
+  earned?: number;
 };
 
 type LeaveBalanceCardProps = {
@@ -49,6 +51,7 @@ export function LeaveBalanceCard({
                 code={item.code}
                 available={item.available}
                 allocated={item.allocated}
+                earned={item.earned}
               />
             </li>
           ))}

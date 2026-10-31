@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
 import { leaveJourneySteps } from '@/features/leave/leave-journey';
+import { ProjectLeadReviewCard } from '@/features/leave/project-lead-review-card';
 import { useToast } from '@/hooks/use-toast';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useAppSelector } from '@/store/hooks';
@@ -19,6 +20,7 @@ import { PERMISSIONS } from '@/types/permissions';
 import {
   useApproveLeaveMutation,
   useGetLeaveApplicationQuery,
+  useGetMeQuery,
   useRejectLeaveMutation,
   useRequestLeaveChangesMutation,
 } from '@/store/api/api';
@@ -33,6 +35,7 @@ export function LeaveReviewPage({ listHref }: { listHref: string }) {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const { data, isLoading, isError, error } = useGetLeaveApplicationQuery(id);
+  const { data: me } = useGetMeQuery();
   const [approveLeave, { isLoading: approving }] = useApproveLeaveMutation();
   const [rejectLeave, { isLoading: rejecting }] = useRejectLeaveMutation();
   const [requestChanges, { isLoading: requesting }] = useRequestLeaveChangesMutation();
@@ -48,6 +51,9 @@ export function LeaveReviewPage({ listHref }: { listHref: string }) {
   const waitingLead = Boolean(row?.hasProjectLeadStep && !row.projectLeadAccepted);
   const waitingPrior = waitingHandover || waitingLead;
   const needsHrDecision = Boolean(row?.hasHrManagerStep);
+  const iAmProjectLead = Boolean(
+    me?.data.employeeId && row?.projectLeadEmployeeId === me.data.employeeId,
+  );
 
   async function onApprove(): Promise<void> {
     try {
@@ -134,7 +140,10 @@ export function LeaveReviewPage({ listHref }: { listHref: string }) {
           {pending && waitingHandover && canDecide && needsHrDecision ? (
             <p className="text-sm text-muted">Waiting for handover acceptance before you can approve.</p>
           ) : null}
-          {pending && !waitingHandover && waitingLead && canDecide && needsHrDecision ? (
+          {pending && !waitingHandover && waitingLead && iAmProjectLead ? (
+            <ProjectLeadReviewCard application={row} backHref={listHref} backLabel="Back to applications" />
+          ) : null}
+          {pending && !waitingHandover && waitingLead && canDecide && needsHrDecision && !iAmProjectLead ? (
             <p className="text-sm text-muted">Waiting for project-lead approval before you can approve.</p>
           ) : null}
           {pending && !needsHrDecision ? (
