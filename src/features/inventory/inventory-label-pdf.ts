@@ -22,59 +22,83 @@ function stationKind(station: InventoryStationPrint['station']): string {
 }
 
 async function qrImage(scanUrl: string): Promise<string> {
-  return toDataURL(scanUrl, { margin: 1, width: 280, errorCorrectionLevel: 'M' });
+  return toDataURL(scanUrl, { margin: 0, width: 320, errorCorrectionLevel: 'M' });
 }
 
+/** Landscape page whose width stays the first number. */
 function labelDoc(width: number, height: number): jsPDF {
   return new jsPDF({ unit: 'mm', format: [width, height], orientation: 'landscape' });
 }
 
-function drawRows(doc: jsPDF, rows: [string, string][], x: number, y: number, valueWidth: number): void {
+type MeasuredRow = { label: string; lines: string[]; height: number };
+
+function measureRows(doc: jsPDF, rows: [string, string][], valueWidth: number): MeasuredRow[] {
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  let cursor = y;
-  for (const [label, value] of rows) {
-    doc.setFont('helvetica', 'bold');
-    doc.text(label, x, cursor);
-    doc.setFont('helvetica', 'normal');
+  return rows.map(([label, value]) => {
     const lines = doc.splitTextToSize(value || '—', valueWidth);
-    doc.text(lines, x + 16, cursor);
-    cursor += 3.4 + Math.max(0, lines.length - 1) * 3.2;
+    return { label, lines, height: Math.max(3.8, lines.length * 3.3) };
+  });
+}
+
+/**
+ * One card: QR on the left, the same row layout as the lot label on the right.
+ * Page height is the content, so the sheet does not continue as blank paper.
+ */
+async function renderLabel(title: string, rows: [string, string][], scanUrl: string): Promise<jsPDF> {
+  const width = 86;
+  const pad = 3;
+  const qrMax = 28;
+  const textX = pad + qrMax + 3;
+  const valueWidth = width - textX - pad - 16;
+  const probe = labelDoc(width, width);
+  probe.setFont('helvetica', 'bold');
+  probe.setFontSize(11);
+  const titleLines: string[] = probe.splitTextToSize(title, width - textX - pad);
+  const titleHeight = titleLines.length * 4.4;
+  const measured = measureRows(probe, rows, valueWidth);
+  const textHeight = titleHeight + 1.6 + measured.reduce((sum, row) => sum + row.height, 0);
+  const block = Math.max(qrMax, textHeight);
+  const height = Math.round((pad + block + pad) * 10) / 10;
+
+  const doc = labelDoc(width, height);
+  const image = await qrImage(scanUrl);
+  const qrY = pad + (block - qrMax) / 2;
+  doc.addImage(image, 'PNG', pad, qrY, qrMax, qrMax);
+
+  let cursor = pad + (block - textHeight) / 2 + 3.6;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text(titleLines, textX, cursor);
+  cursor += titleHeight + 1.2;
+
+  for (const row of measured) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text(row.label, textX, cursor);
+    doc.setFont('helvetica', 'normal');
+    doc.text(row.lines, textX + 16, cursor);
+    cursor += row.height;
   }
+  return doc;
 }
 
 async function stationDoc(payload: InventoryStationPrint): Promise<jsPDF> {
-  const doc = labelDoc(90, 52);
-  const image = await qrImage(payload.scanUrl);
-  doc.addImage(image, 'PNG', 3, 4, 24, 24);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  const title = doc.splitTextToSize(payload.station.name, 58);
-  doc.text(title, 30, 8);
-  drawRows(
-    doc,
+  return renderLabel(
+    payload.station.name,
     [
       ['Kind', stationKind(payload.station)],
       ['Store', `${payload.station.locationName} (${payload.station.locationCode})`],
       ['Use', 'One visit, several items'],
     ],
-    30,
-    8 + title.length * 4.2 + 2,
-    40,
+    payload.scanUrl,
   );
-  return doc;
 }
 
 async function lotDoc(payload: InventoryLotPrint): Promise<jsPDF> {
   const { lot } = payload;
-  const doc = labelDoc(90, 62);
-  const image = await qrImage(payload.scanUrl);
-  doc.addImage(image, 'PNG', 3, 4, 24, 24);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  const title = doc.splitTextToSize(lot.catalogItemName, 58);
-  doc.text(title, 30, 8);
-  drawRows(
-    doc,
+  return renderLabel(
+    lot.catalogItemName,
     [
       ['Lot', lot.lotCode],
       ['Cat. no.', lot.catalogNumber || '—'],
@@ -83,20 +107,15 @@ async function lotDoc(payload: InventoryLotPrint): Promise<jsPDF> {
       [lot.origin === 'prep' ? 'Prepared' : 'Mfg', showDate(lot.purchaseDate)],
       ['Store', lot.locationName],
     ],
-    30,
-    8 + title.length * 4.2 + 2,
-    40,
+    payload.scanUrl,
   );
-  return doc;
 }
 
 function openForPrint(doc: jsPDF): void {
   doc.autoPrint();
   const url = doc.output('bloburl');
   const win = window.open(url, '_blank');
-  if (!win) {
-    doc.save('qr-label.pdf');
-  }
+  if (!win) doc.save('qr-label.pdf');
 }
 
 export async function printInventoryStationLabel(payload: InventoryStationPrint): Promise<void> {
