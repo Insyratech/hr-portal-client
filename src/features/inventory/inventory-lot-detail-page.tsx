@@ -18,7 +18,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import { formatQtyChips } from '@/features/inventory/inventory-constants';
-import { printInventoryLotLabel } from '@/features/inventory/inventory-lot-print';
+import {
+  downloadInventoryLotLabel,
+  printInventoryLotLabel,
+} from '@/features/inventory/inventory-lot-print';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
@@ -49,11 +52,20 @@ export function InventoryLotDetailPage() {
   const lot = data?.data;
   const expense = expenseData?.data;
 
+  async function onDownload() {
+    if (!lot) return;
+    try {
+      const print = await fetchPrint(lot.id).unwrap();
+      await downloadInventoryLotLabel(print.data);
+    } catch (cause) {
+      toast.error(apiErrorMessage(cause, 'Unable to download the QR label.'));
+    }
+  }
   async function onPrint() {
     if (!lot) return;
     try {
       const print = await fetchPrint(lot.id).unwrap();
-      printInventoryLotLabel(print.data);
+      await printInventoryLotLabel(print.data);
     } catch (cause) {
       toast.error(apiErrorMessage(cause, 'Unable to open label print.'));
     }
@@ -118,7 +130,10 @@ export function InventoryLotDetailPage() {
         title={lot.lotCode}
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={onPrint}>
+            <Button type="button" variant="outline" onClick={() => void onDownload()}>
+              Download QR
+            </Button>
+            <Button type="button" onClick={() => void onPrint()}>
               Print QR label
             </Button>
             {canAdjust ? (

@@ -94,7 +94,7 @@ export function InventoryPrepDetailPage() {
       if (lotId) {
         try {
           const print = await fetchPrint(lotId).unwrap();
-          printInventoryLotLabel(print.data);
+          await printInventoryLotLabel(print.data);
         } catch {
           // Prep succeeded even if print window failed.
         }

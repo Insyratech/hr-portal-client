@@ -16,7 +16,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import { SELECT_CLASS } from '@/features/inventory/inventory-constants';
-import { printInventoryStationLabel } from '@/features/inventory/inventory-station-print';
+import {
+  downloadInventoryStationLabel,
+  printInventoryStationLabel,
+} from '@/features/inventory/inventory-station-print';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
@@ -66,7 +69,7 @@ export function InventoryStationsPage() {
       toast.success('Station saved.');
       try {
         const print = await fetchPrint(created.data.id).unwrap();
-        printInventoryStationLabel(print.data);
+        await printInventoryStationLabel(print.data);
       } catch {
         // Station created even if print blocked.
       }
@@ -75,10 +78,18 @@ export function InventoryStationsPage() {
     }
   }
 
+  async function onDownload(id: string) {
+    try {
+      const print = await fetchPrint(id).unwrap();
+      await downloadInventoryStationLabel(print.data);
+    } catch (cause) {
+      toast.error(apiErrorMessage(cause, 'Unable to download the station QR.'));
+    }
+  }
   async function onPrint(id: string) {
     try {
       const print = await fetchPrint(id).unwrap();
-      printInventoryStationLabel(print.data);
+      await printInventoryStationLabel(print.data);
     } catch (cause) {
       toast.error(apiErrorMessage(cause, 'Unable to open station label.'));
     }
@@ -129,9 +140,14 @@ export function InventoryStationsPage() {
             id: 'actions',
             header: '',
             cell: (row) => (
-              <Button type="button" variant="outline" size="sm" onClick={() => void onPrint(row.id)}>
-                Print QR
-              </Button>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => void onDownload(row.id)}>
+                  Download
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => void onPrint(row.id)}>
+                  Print QR
+                </Button>
+              </div>
             ),
           },
         ]}

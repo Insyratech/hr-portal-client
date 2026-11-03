@@ -4,14 +4,28 @@ import Link from 'next/link';
 import { DataTable } from '@/components/dashboard/data-table';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
+import { downloadInventoryLotLabel } from '@/features/inventory/inventory-lot-print';
+import { apiErrorMessage } from '@/lib/api-error';
+import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
-import { useGetInventoryLotsQuery } from '@/store/api/api';
+import { useGetInventoryLotsQuery, useLazyGetInventoryLotPrintQuery } from '@/store/api/api';
 
 export function InventoryLotsPage() {
   const permissions = useAppSelector((state) => state.permissions.permissions);
   const canManage = permissions.includes(PERMISSIONS.INVENTORY_LOTS_MANAGE);
   const { data, isLoading, isError } = useGetInventoryLotsQuery(undefined, { skip: !canManage });
+  const [fetchPrint] = useLazyGetInventoryLotPrintQuery();
+  const toast = useToast();
+
+  async function onDownload(id: string) {
+    try {
+      const print = await fetchPrint(id).unwrap();
+      await downloadInventoryLotLabel(print.data);
+    } catch (cause) {
+      toast.error(apiErrorMessage(cause, 'Unable to download the QR label.'));
+    }
+  }
 
   if (!canManage) {
     return (
@@ -73,9 +87,14 @@ export function InventoryLotsPage() {
             id: 'actions',
             header: '',
             cell: (row) => (
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/inventory/lots/${row.id}`}>View</Link>
-              </Button>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => void onDownload(row.id)}>
+                  Download
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/inventory/lots/${row.id}`}>View</Link>
+                </Button>
+              </div>
             ),
           },
         ]}

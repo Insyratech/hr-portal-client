@@ -96,7 +96,7 @@ export function InventoryReceivePage() {
 
       try {
         const print = await fetchPrint(lot.id).unwrap();
-        printInventoryLotLabel(print.data);
+        await printInventoryLotLabel(print.data);
       } catch {
         // Receipt succeeded even if print window failed (popup blocked).
       }
