@@ -204,7 +204,7 @@ function slipSheetHtml(slip: SalarySlip, logoHtml: string): string {
         <td>LOP</td><td class="num">${esc(formatInr(slip.lopAmount))}</td>
       </tr>
       <tr>
-        <td class="strong" colspan="2">CTC for the month</td>
+        <td class="strong" colspan="2">Gross pay</td>
         <td class="num strong" colspan="2">${esc(formatInr(slip.gross))}</td>
       </tr>
       <tr>
@@ -647,7 +647,7 @@ export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
   );
   drawRow(
     [
-      { text: 'CTC for the month', bold: true, colSpan: 2 },
+      { text: 'Gross pay', bold: true, colSpan: 2 },
       { text: formatInrPdf(slip.gross), bold: true, align: 'right', colSpan: 2 },
     ],
     6,

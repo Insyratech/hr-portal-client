@@ -124,7 +124,7 @@ export function PayrollRunPreview({
                 cell: (row) => String(row.workingDays ?? row.calendarDays),
               },
               { id: 'lop', header: 'LOP days', cell: (row) => String(row.lopDays) },
-              { id: 'salary', header: 'Salary (CTC)', cell: (row) => formatInr(row.gross) },
+              { id: 'salary', header: 'Gross pay', cell: (row) => formatInr(row.gross) },
               { id: 'net', header: 'Net pay', cell: (row) => formatInr(row.net) },
               {
                 id: 'actions',

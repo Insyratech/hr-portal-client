@@ -198,7 +198,7 @@ export function SalarySlipDocument({ slip }: { slip: SalarySlip }) {
           </tr>
           <tr>
             <td className={`${cell} px-2 py-1 text-[11px] font-semibold`} colSpan={2}>
-              CTC for the month
+              Gross pay
             </td>
             <td className={`${cell} px-2 py-1 text-right text-[11px] font-semibold tabular-nums`} colSpan={2}>
               {formatInr(slip.gross)}
