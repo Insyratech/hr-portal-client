@@ -81,6 +81,7 @@ export function InventoryReceivePage() {
         unit: selectedItem.unit,
         totalCost: Number(form.get('totalCost') ?? 0) || 0,
         expiryDate: String(form.get('expiryDate') ?? '').trim() || null,
+        openedOn: String(form.get('openedOn') ?? '').trim() || null,
         qtyChips: chips,
         notes: String(form.get('notes') ?? '').trim(),
       }).unwrap();
@@ -236,6 +237,10 @@ export function InventoryReceivePage() {
             <div>
               <Label htmlFor="expiryDate">Expiry date</Label>
               <Input id="expiryDate" name="expiryDate" type="date" />
+            </div>
+            <div>
+              <Label htmlFor="openedOn">Opened date</Label>
+              <Input id="openedOn" name="openedOn" type="date" />
             </div>
           </div>
           <div>

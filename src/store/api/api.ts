@@ -108,6 +108,7 @@ import type {
   InventoryPlasticStock,
   InventoryPublicScanPayload,
   InventoryPublicIssueResult,
+  InventoryPublicPlasticIssueBatchResult,
   InventoryPublicPlasticIssueResult,
   InventoryStation,
   InventoryStationPrint,
@@ -3740,6 +3741,7 @@ export const api = createApi({
         unit?: string;
         totalCost?: number;
         expiryDate?: string | null;
+        openedOn?: string | null;
         qtyChips?: number[];
         notes?: string;
       }
@@ -3910,6 +3912,19 @@ export const api = createApi({
         body,
       }),
     }),
+    issueInventoryPublicPlasticBatch: builder.mutation<
+      ApiSuccess<InventoryPublicPlasticIssueBatchResult>,
+      {
+        token: string;
+        body: { employeeId: string; lines: { plasticStockId: string; boxes: number }[] };
+      }
+    >({
+      query: ({ token, body }) => ({
+        url: `/api/v1/inventory/public/scan/${encodeURIComponent(token)}/plastic-issue-batch`,
+        method: 'POST',
+        body,
+      }),
+    }),
     getInventoryAlerts: builder.query<ApiSuccess<InventoryAlert[]>, void>({
       query: () => '/api/v1/inventory/alerts',
       providesTags: ['InventoryAlerts'],
@@ -3979,6 +3994,9 @@ export const api = createApi({
     createHrInvoice: builder.mutation<ApiSuccess<HrInvoiceDetail>, CreateHrInvoiceBody>({
       query: (body) => ({ url: '/api/v1/hr/invoices', method: 'POST', body }),
       invalidatesTags: ['HrInvoices'],
+    }),
+    sendHrInvoice: builder.mutation<ApiSuccess<{ sent: true; to: string }>, { id: string; to: string }>({
+      query: ({ id, to }) => ({ url: `/api/v1/hr/invoices/${id}/send`, method: 'POST', body: { to } }),
     }),
   }),
 });
@@ -4460,6 +4478,7 @@ export const {
   useGetInventoryPublicScanQuery,
   useIssueInventoryPublicScanMutation,
   useIssueInventoryPublicPlasticMutation,
+  useIssueInventoryPublicPlasticBatchMutation,
   useGetInventoryAlertsQuery,
   useGetInventoryAlertLogQuery,
   useGetInventoryReportsQuery,
@@ -4470,4 +4489,5 @@ export const {
   useGetHrInvoiceQuery,
   useLazyGetHrInvoiceQuery,
   useCreateHrInvoiceMutation,
+  useSendHrInvoiceMutation,
 } = api;

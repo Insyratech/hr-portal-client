@@ -11,7 +11,7 @@ import { SELECT_CLASS } from '@/features/inventory/inventory-constants';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
   useGetInventoryPublicScanQuery,
-  useIssueInventoryPublicPlasticMutation,
+  useIssueInventoryPublicPlasticBatchMutation,
   useIssueInventoryPublicScanMutation,
 } from '@/store/api/api';
 import type { InventoryPublicLotScanCard, InventoryPublicStationCard } from '@/types/api';
@@ -188,14 +188,25 @@ function LotScanCard({
       <OfflineBanner online={online} />
       <p className="text-xs uppercase tracking-[0.2em] text-meta">Lab inventory</p>
       <h1 className="mt-2 text-xl font-medium">{card.itemName}</h1>
-      <p className="mt-1 text-sm text-muted">
-        {card.categoryName} · {card.lotCode} · {card.locationName}
-      </p>
+      <p className="mt-1 text-sm text-muted">{card.categoryName}</p>
+      <dl className="mt-4 grid grid-cols-[5.5rem_1fr] gap-x-3 gap-y-1 text-sm">
+        <dt className="text-muted">Lot</dt>
+        <dd>{card.lotCode}</dd>
+        <dt className="text-muted">Cat. no.</dt>
+        <dd>{card.catalogNumber?.trim() || '—'}</dd>
+        <dt className="text-muted">Expiry</dt>
+        <dd>{card.expiryDate || '—'}</dd>
+        <dt className="text-muted">Opened</dt>
+        <dd>{card.openedOn || '—'}</dd>
+        <dt className="text-muted">{card.madeLabel ?? 'Mfg'}</dt>
+        <dd>{card.madeOn || '—'}</dd>
+        <dt className="text-muted">Store</dt>
+        <dd>{card.locationName}</dd>
+      </dl>
       <p className="mt-4 text-2xl font-medium tabular-nums">
         {card.remainingQty}{' '}
         <span className="text-sm font-normal text-muted">{card.unit} left</span>
       </p>
-      {card.expiryDate ? <p className="mt-1 text-xs text-muted">Expiry {card.expiryDate}</p> : null}
 
       {depleted ? (
         <p className="mt-6 text-sm text-danger">This lot is empty.</p>
@@ -281,6 +292,17 @@ function LotScanCard({
   );
 }
 
+type DraftPlasticLine = {
+  key: string;
+  plasticStockId: string;
+  boxes: number | null;
+  custom: string;
+};
+
+function emptyPlasticLine(): DraftPlasticLine {
+  return { key: crypto.randomUUID(), plasticStockId: '', boxes: null, custom: '' };
+}
+
 function StationScanCard({
   token,
   card,
@@ -292,23 +314,15 @@ function StationScanCard({
   online: boolean;
   onDone: () => void;
 }) {
-  const [issue, { isLoading: submitting }] = useIssueInventoryPublicPlasticMutation();
+  const [issueBatch, { isLoading: submitting }] = useIssueInventoryPublicPlasticBatchMutation();
   const [employeeId, setEmployeeId] = useState('');
-  const [plasticStockId, setPlasticStockId] = useState('');
-  const [boxes, setBoxes] = useState<number | null>(null);
-  const [customBoxes, setCustomBoxes] = useState('');
+  const [lines, setLines] = useState<DraftPlasticLine[]>([emptyPlasticLine()]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const selectedItem = card.items.find((item) => item.id === plasticStockId);
-
-  const selectedBoxes = useMemo(() => {
-    if (customBoxes.trim()) {
-      const parsed = Number(customBoxes);
-      return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
-    }
-    return boxes;
-  }, [customBoxes, boxes]);
+  function updateLine(key: string, patch: Partial<DraftPlasticLine>) {
+    setLines((current) => current.map((line) => (line.key === key ? { ...line, ...patch } : line)));
+  }
 
   async function onSubmit() {
     setError(null);
@@ -321,24 +335,37 @@ function StationScanCard({
       setError('Select your name.');
       return;
     }
-    if (!plasticStockId) {
-      setError('Select an item.');
+    const parsed = lines.map((line) => {
+      const custom = line.custom.trim();
+      const boxes = custom ? Math.trunc(Number(custom)) : line.boxes;
+      return { plasticStockId: line.plasticStockId, boxes };
+    });
+    if (parsed.some((line) => !line.plasticStockId)) {
+      setError('Choose an item on every row, or remove the empty row.');
       return;
     }
-    if (selectedBoxes == null || selectedBoxes <= 0) {
-      setError('Choose how many boxes.');
+    if (parsed.some((line) => line.boxes == null || !Number.isFinite(line.boxes) || line.boxes <= 0)) {
+      setError('Enter how many boxes for each item.');
+      return;
+    }
+    const ids = parsed.map((line) => line.plasticStockId);
+    if (new Set(ids).size !== ids.length) {
+      setError('Each item can be entered once. Combine the boxes on one row.');
       return;
     }
     try {
-      const result = await issue({
+      const result = await issueBatch({
         token,
-        body: { employeeId, plasticStockId, boxes: selectedBoxes },
+        body: {
+          employeeId,
+          lines: parsed.map((line) => ({ plasticStockId: line.plasticStockId, boxes: line.boxes as number })),
+        },
       }).unwrap();
-      setSuccess(
-        `Recorded ${result.data.boxesIssued} ${result.data.unit} of ${result.data.itemName} (${result.data.sizeLabel}) for ${result.data.employeeName}. Remaining ${result.data.boxesOnHand} ${result.data.unit}.`,
-      );
-      setBoxes(null);
-      setCustomBoxes('');
+      const summary = result.data.lines
+        .map((line) => `${line.boxesIssued} ${line.unit} of ${line.itemName} (${line.sizeLabel})`)
+        .join('; ');
+      setSuccess(`Recorded for ${result.data.employeeName}: ${summary}.`);
+      setLines([emptyPlasticLine()]);
       onDone();
     } catch (cause) {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -346,6 +373,7 @@ function StationScanCard({
         return;
       }
       setError(apiErrorMessage(cause, 'Unable to submit usage.'));
+      onDone();
     }
   }
 
@@ -354,9 +382,15 @@ function StationScanCard({
   return (
     <main className="mx-auto min-h-screen max-w-md bg-background px-4 py-8">
       <OfflineBanner online={online} />
-      <p className="text-xs uppercase tracking-[0.2em] text-meta">Lab inventory</p>
+      <p className="text-xs uppercase tracking-[0.2em] text-meta">Plasticware</p>
       <h1 className="mt-2 text-xl font-medium">{card.stationName}</h1>
-      <p className="mt-1 text-sm text-muted">{card.locationName} · plastic station</p>
+      <dl className="mt-4 grid grid-cols-[5.5rem_1fr] gap-x-3 gap-y-1 text-sm">
+        <dt className="text-muted">Store</dt>
+        <dd>{card.locationName}</dd>
+        <dt className="text-muted">QR</dt>
+        <dd>One code for this room</dd>
+      </dl>
+      <p className="mt-3 text-sm text-muted">Add every item you take, then submit once.</p>
 
       {empty ? (
         <p className="mt-6 text-sm text-danger">No plastic boxes left at this station.</p>
@@ -379,83 +413,92 @@ function StationScanCard({
             </select>
           </div>
 
-          <div>
-            <Label htmlFor="plasticStockId">2. Item (type + size)</Label>
-            <select
-              id="plasticStockId"
-              className={SELECT_CLASS}
-              value={plasticStockId}
-              onChange={(event) => {
-                setPlasticStockId(event.target.value);
-                setBoxes(null);
-                setCustomBoxes('');
-              }}
-            >
-              <option value="">Select item</option>
-              {card.items.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.itemName} · {item.sizeLabel}
-                  {item.manufacturer ? ` · ${item.manufacturer}` : ''} ({item.boxesOnHand}{' '}
-                  {item.unit})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {selectedItem ? (
-            <div>
-              <Label>3. Boxes</Label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {selectedItem.qtyChips.map((chip) => (
-                  <button
-                    key={chip}
-                    type="button"
-                    className={`rounded border px-3 py-2 text-sm tabular-nums ${
-                      boxes === chip && !customBoxes.trim()
-                        ? 'border-foreground bg-foreground text-background'
-                        : 'border-border bg-background'
-                    }`}
-                    onClick={() => {
-                      setBoxes(chip);
-                      setCustomBoxes('');
-                    }}
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-3">
-                <Label htmlFor="customBoxes">Or enter boxes</Label>
-                <Input
-                  id="customBoxes"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={customBoxes}
-                  onChange={(event) => {
-                    setCustomBoxes(event.target.value);
-                    setBoxes(null);
-                  }}
-                  placeholder={`Max ${selectedItem.boxesOnHand}`}
-                />
-              </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <Label>2. Items</Label>
+              <button
+                type="button"
+                className="text-sm underline-offset-2 hover:underline"
+                onClick={() => setLines((current) => (current.length >= 12 ? current : [...current, emptyPlasticLine()]))}
+              >
+                Add item
+              </button>
             </div>
-          ) : null}
+            {lines.map((line, index) => {
+              const selected = card.items.find((item) => item.id === line.plasticStockId);
+              const takenElsewhere = new Set(
+                lines.filter((other) => other.key !== line.key && other.plasticStockId).map((other) => other.plasticStockId),
+              );
+              return (
+                <div key={line.key} className="space-y-3 rounded border border-border p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-muted">Item {index + 1}</p>
+                    {lines.length > 1 ? (
+                      <button
+                        type="button"
+                        className="text-xs underline-offset-2 hover:underline"
+                        onClick={() => setLines((current) => current.filter((item) => item.key !== line.key))}
+                      >
+                        Remove
+                      </button>
+                    ) : null}
+                  </div>
+                  <select
+                    className={SELECT_CLASS}
+                    value={line.plasticStockId}
+                    onChange={(event) =>
+                      updateLine(line.key, { plasticStockId: event.target.value, boxes: null, custom: '' })
+                    }
+                  >
+                    <option value="">Select item</option>
+                    {card.items.map((item) => (
+                      <option key={item.id} value={item.id} disabled={takenElsewhere.has(item.id)}>
+                        {item.itemName} · {item.sizeLabel}
+                        {item.manufacturer ? ` · ${item.manufacturer}` : ''} ({item.boxesOnHand} {item.unit})
+                      </option>
+                    ))}
+                  </select>
+                  {selected ? (
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        {selected.qtyChips.map((chip) => (
+                          <button
+                            key={chip}
+                            type="button"
+                            className={`rounded border px-3 py-2 text-sm tabular-nums ${
+                              line.boxes === chip && !line.custom.trim()
+                                ? 'border-foreground bg-foreground text-background'
+                                : 'border-border bg-background'
+                            }`}
+                            onClick={() => updateLine(line.key, { boxes: chip, custom: '' })}
+                          >
+                            {chip}
+                          </button>
+                        ))}
+                      </div>
+                      <Input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={line.custom}
+                        onChange={(event) => updateLine(line.key, { custom: event.target.value, boxes: null })}
+                        placeholder={`Boxes, max ${selected.boxesOnHand}`}
+                      />
+                    </>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
 
           {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
           {success ? <StatusMessage tone="success">{success}</StatusMessage> : null}
 
-          <Button
-            type="button"
-            className="w-full"
-            disabled={submitting || !selectedItem || !online}
-            onClick={() => void onSubmit()}
-          >
-            {submitting ? 'Submitting…' : '4. Submit'}
+          <Button type="button" className="w-full" disabled={submitting || !online} onClick={() => void onSubmit()}>
+            {submitting ? 'Submitting…' : '3. Submit all'}
           </Button>
           <p className="text-xs text-muted">
-            No login needed. Pick your name, item, and boxes — usage is recorded against that
-            employee.
+            No login needed. One name covers every item on this visit.
           </p>
           <p className="text-xs text-muted">
             <Link href="/scan" className="underline-offset-2 hover:underline">

@@ -17,32 +17,41 @@ function shortScanPath(scanUrl: string): string {
   }
 }
 
+function showDate(value: string | null | undefined): string {
+  if (!value) return '—';
+  const [year, month, day] = value.slice(0, 10).split('-');
+  if (!year || !month || !day) return value;
+  return `${day}/${month}/${year}`;
+}
+
 /** Opens a printable QR label window (browser print → PDF / thermal). */
 export function printInventoryLotLabel(payload: InventoryLotPrint): void {
   const { lot, scanUrl, labelTitle } = payload;
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=8&data=${encodeURIComponent(scanUrl)}`;
   const path = shortScanPath(scanUrl);
+  const madeLabel = lot.origin === 'prep' ? 'Prepared' : 'Mfg';
   const html = `<!DOCTYPE html><html><head><title>${esc(labelTitle)}</title>
 <style>
-  @page { size: 80mm 50mm; margin: 2mm; }
+  @page { size: 90mm 68mm; margin: 3mm; }
   * { box-sizing: border-box; }
   body { font-family: ui-sans-serif, system-ui, sans-serif; color: #111; margin: 0; padding: 0; }
   .card {
     display: grid;
-    grid-template-columns: 34mm 1fr;
+    grid-template-columns: 32mm 1fr;
     gap: 3mm;
-    align-items: center;
-    width: 76mm;
-    min-height: 46mm;
-    padding: 2mm;
+    align-items: start;
+    width: 84mm;
+    min-height: 62mm;
+    padding: 2.5mm;
     border: 0.4mm solid #222;
   }
-  img { width: 32mm; height: 32mm; display: block; }
+  img { width: 30mm; height: 30mm; display: block; }
   .copy { min-width: 0; }
-  h1 { font-size: 11pt; margin: 0 0 1.5mm; line-height: 1.15; font-weight: 650; }
-  .code { font-size: 10pt; font-weight: 700; margin: 0 0 1mm; letter-spacing: 0.02em; }
-  p { margin: 0.4mm 0; font-size: 7.5pt; line-height: 1.25; }
-  .hint { margin-top: 1.5mm; font-size: 6.5pt; color: #333; }
+  h1 { font-size: 10pt; margin: 0 0 1.5mm; line-height: 1.15; font-weight: 650; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { font-size: 7pt; line-height: 1.25; text-align: left; vertical-align: top; padding: 0.3mm 0; }
+  th { width: 16mm; font-weight: 650; color: #222; }
+  .hint { margin-top: 1.5mm; font-size: 6pt; color: #333; }
   .meta { color: #444; word-break: break-all; font-size: 5.5pt; margin-top: 1mm; }
   @media print { .no-print { display: none !important; } body { padding: 0; } }
 </style></head><body>
@@ -50,11 +59,15 @@ export function printInventoryLotLabel(payload: InventoryLotPrint): void {
     <img src="${esc(qrSrc)}" alt="QR" />
     <div class="copy">
       <h1>${esc(lot.catalogItemName)}</h1>
-      <p class="code">${esc(lot.lotCode)}</p>
-      <p>${esc(lot.categoryName)} · ${esc(lot.unit)}</p>
-      <p>${lot.receivedQty} ${esc(lot.unit)}${lot.expiryDate ? ` · Exp ${esc(lot.expiryDate)}` : ''}</p>
-      <p>${esc(lot.locationName)}</p>
-      <p class="hint">Phone camera / portal Scan — no QR app</p>
+      <table>
+        <tr><th>Lot</th><td>${esc(lot.lotCode)}</td></tr>
+        <tr><th>Cat. no.</th><td>${esc(lot.catalogNumber || '—')}</td></tr>
+        <tr><th>Expiry</th><td>${esc(showDate(lot.expiryDate))}</td></tr>
+        <tr><th>Opened</th><td>${esc(showDate(lot.openedOn))}</td></tr>
+        <tr><th>${madeLabel}</th><td>${esc(showDate(lot.purchaseDate))}</td></tr>
+        <tr><th>Store</th><td>${esc(lot.locationName)}</td></tr>
+      </table>
+      <p class="hint">One item on this QR. Phone camera — no QR app</p>
       <p class="meta">${esc(path)}</p>
     </div>
   </div>

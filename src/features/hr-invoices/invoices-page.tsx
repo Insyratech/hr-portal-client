@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
 import { formatInvoiceDate, formatInvoiceMoney } from '@/features/hr-invoices/invoice-document';
+import { InvoiceEmailDialog } from '@/features/hr-invoices/invoice-email-dialog';
 import { downloadInvoicePdf } from '@/features/hr-invoices/invoice-pdf';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +21,7 @@ import {
   useGetHrInvoicesQuery,
   useLazyGetHrInvoiceQuery,
 } from '@/store/api/api';
-import type { HrInvoiceCurrency } from '@/types/api';
+import type { HrInvoiceCurrency, HrInvoiceSummary } from '@/types/api';
 
 type DraftLine = {
   key: string;
@@ -67,6 +68,7 @@ export function HrInvoicesPage() {
   const [lines, setLines] = useState<DraftLine[]>([emptyLine()]);
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [emailTarget, setEmailTarget] = useState<HrInvoiceSummary | null>(null);
 
   const activeCompanies = useMemo(
     () => (companies?.data ?? []).filter((company) => company.status === 'active'),
@@ -450,6 +452,13 @@ export function HrInvoicesPage() {
                 </Link>
                 <button
                   type="button"
+                  className="text-sm underline"
+                  onClick={() => setEmailTarget(row)}
+                >
+                  Email
+                </button>
+                <button
+                  type="button"
                   className="text-sm underline disabled:opacity-40"
                   disabled={downloadingId === row.id}
                   onClick={() => void onDownload(row.id)}
@@ -460,6 +469,13 @@ export function HrInvoicesPage() {
             ),
           },
         ]}
+      />
+      <InvoiceEmailDialog
+        invoice={emailTarget}
+        open={emailTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setEmailTarget(null);
+        }}
       />
     </>
   );

@@ -3549,6 +3549,8 @@ export type InventoryLot = {
   origin: InventoryLotOrigin;
   countsTowardPurchaseExpense: boolean;
   prepSessionId: string | null;
+  catalogNumber: string;
+  openedOn: string | null;
   expiryDate: string | null;
   qtyChips: number[];
   status: InventoryLotStatus;
@@ -3602,6 +3604,10 @@ export type InventoryPublicScanCard = {
   remainingQty: number;
   qtyChips: number[];
   expiryDate: string | null;
+  catalogNumber?: string;
+  openedOn?: string | null;
+  madeOn?: string;
+  madeLabel?: 'Mfg' | 'Prepared';
   status: InventoryLotStatus;
   employees: InventoryEmployeeOption[];
 };
@@ -3750,6 +3756,11 @@ export type InventoryPublicPlasticIssueResult = {
   boxesOnHand: number;
   unit: string;
   employeeName: string;
+};
+
+export type InventoryPublicPlasticIssueBatchResult = {
+  employeeName: string;
+  lines: InventoryPublicPlasticIssueResult[];
 };
 
 export type InventoryAlertKind = 'expiry' | 'reorder' | 'velocity';

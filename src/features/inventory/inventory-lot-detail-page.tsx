@@ -174,7 +174,13 @@ export function InventoryLotDetailPage() {
           <Meta>Item</Meta>
           <p className="mt-1 text-sm font-medium">{lot.catalogItemName}</p>
           <p className="text-xs text-muted">
+            {lot.catalogNumber?.trim() ? `Cat. no. ${lot.catalogNumber.trim()} · ` : ''}
             {lot.categoryName} · {lot.locationName} ({lot.locationCode})
+          </p>
+          <p className="text-xs text-muted">
+            {lot.origin === 'prep' ? 'Prepared' : 'Mfg'} {lot.purchaseDate}
+            {lot.expiryDate ? ` · Expiry ${lot.expiryDate}` : ''}
+            {lot.openedOn ? ` · Opened ${lot.openedOn}` : ''}
           </p>
         </div>
         <div className="rounded border border-border px-4 py-3">

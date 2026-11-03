@@ -24,24 +24,25 @@ export function printInventoryStationLabel(payload: InventoryStationPrint): void
   const path = shortScanPath(scanUrl);
   const html = `<!DOCTYPE html><html><head><title>${esc(labelTitle)}</title>
 <style>
-  @page { size: 80mm 50mm; margin: 2mm; }
+  @page { size: 90mm 58mm; margin: 3mm; }
   * { box-sizing: border-box; }
   body { font-family: ui-sans-serif, system-ui, sans-serif; color: #111; margin: 0; padding: 0; }
   .card {
     display: grid;
-    grid-template-columns: 34mm 1fr;
+    grid-template-columns: 32mm 1fr;
     gap: 3mm;
-    align-items: center;
-    width: 76mm;
-    min-height: 46mm;
-    padding: 2mm;
+    align-items: start;
+    width: 84mm;
+    min-height: 52mm;
+    padding: 2.5mm;
     border: 0.4mm solid #222;
   }
-  img { width: 32mm; height: 32mm; display: block; }
+  img { width: 30mm; height: 30mm; display: block; }
   .copy { min-width: 0; }
-  h1 { font-size: 11pt; margin: 0 0 1.5mm; line-height: 1.15; font-weight: 650; }
-  .code { font-size: 10pt; font-weight: 700; margin: 0 0 1mm; letter-spacing: 0.02em; }
-  p { margin: 0.4mm 0; font-size: 7.5pt; line-height: 1.25; }
+  h1 { font-size: 10pt; margin: 0 0 1.5mm; line-height: 1.15; font-weight: 650; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { font-size: 7.5pt; line-height: 1.25; text-align: left; vertical-align: top; padding: 0.4mm 0; }
+  th { width: 14mm; font-weight: 650; }
   .hint { margin-top: 1.5mm; font-size: 6.5pt; color: #333; }
   .meta { color: #444; word-break: break-all; font-size: 5.5pt; margin-top: 1mm; }
   @media print { .no-print { display: none !important; } body { padding: 0; } }
@@ -50,10 +51,12 @@ export function printInventoryStationLabel(payload: InventoryStationPrint): void
     <img src="${esc(qrSrc)}" alt="QR" />
     <div class="copy">
       <h1>${esc(station.name)}</h1>
-      <p class="code">Station QR</p>
-      <p>${esc(station.locationName)} (${esc(station.locationCode)})</p>
-      <p>Pick plastic type, size, boxes</p>
-      <p class="hint">Phone camera / portal Scan — no QR app</p>
+      <table>
+        <tr><th>Kind</th><td>Plasticware</td></tr>
+        <tr><th>Store</th><td>${esc(station.locationName)} (${esc(station.locationCode)})</td></tr>
+        <tr><th>Use</th><td>One visit, several items</td></tr>
+      </table>
+      <p class="hint">Scan once, then add each item you take</p>
       <p class="meta">${esc(path)}</p>
     </div>
   </div>

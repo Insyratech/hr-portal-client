@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { PageLoading } from '@/components/ui/page-loading';
 import { StatusMessage } from '@/components/ui/status-message';
 import { buildInvoiceHtml, printInvoice } from '@/features/hr-invoices/invoice-document';
+import { InvoiceEmailDialog } from '@/features/hr-invoices/invoice-email-dialog';
 import { downloadInvoicePdf } from '@/features/hr-invoices/invoice-pdf';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +18,7 @@ export function HrInvoiceViewPage({ invoiceId }: { invoiceId: string }) {
   const invoice = data?.data;
   const toast = useToast();
   const [downloading, setDownloading] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
 
   function onPrint() {
     if (!invoice) return;
@@ -46,6 +48,9 @@ export function HrInvoiceViewPage({ invoiceId }: { invoiceId: string }) {
         </Link>
         {invoice ? (
           <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setEmailOpen(true)}>
+              Email
+            </Button>
             <Button type="button" variant="outline" size="sm" onClick={onPrint}>
               Print
             </Button>
@@ -64,6 +69,11 @@ export function HrInvoiceViewPage({ invoiceId }: { invoiceId: string }) {
           srcDoc={buildInvoiceHtml(invoice)}
         />
       ) : null}
+      <InvoiceEmailDialog
+        invoice={invoice ?? null}
+        open={emailOpen && Boolean(invoice)}
+        onOpenChange={setEmailOpen}
+      />
     </>
   );
 }
