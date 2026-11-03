@@ -3637,11 +3637,26 @@ export const api = createApi({
       query: () => '/api/v1/inventory/categories',
       providesTags: ['InventoryCategories'],
     }),
+    createInventoryCategory: builder.mutation<
+      ApiSuccess<InventoryCategory>,
+      {
+        name: string;
+        deductionMode: 'measured' | 'box';
+        defaultAlertMode?: InventoryCategory['defaultAlertMode'];
+        defaultReorderQty?: number | null;
+        defaultVelocityDays?: number;
+        defaultExpiryLeadDays?: number;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/inventory/categories', method: 'POST', body }),
+      invalidatesTags: ['InventoryCategories', 'InventoryOverview'],
+    }),
     updateInventoryCategory: builder.mutation<
       ApiSuccess<InventoryCategory>,
       {
         id: string;
         body: Partial<{
+          name: string;
           defaultAlertMode: InventoryCategory['defaultAlertMode'];
           defaultReorderQty: number | null;
           defaultVelocityDays: number;
@@ -3828,7 +3843,7 @@ export const api = createApi({
     }),
     createInventoryStation: builder.mutation<
       ApiSuccess<InventoryStation>,
-      { locationId: string; name: string; notes?: string }
+      { locationId: string; name: string; notes?: string; categoryId?: string }
     >({
       query: (body) => ({ url: '/api/v1/inventory/stations', method: 'POST', body }),
       invalidatesTags: ['InventoryStations', 'InventoryOverview'],
@@ -4444,6 +4459,7 @@ export const {
   useCreateInventoryLocationMutation,
   useUpdateInventoryLocationMutation,
   useGetInventoryCategoriesQuery,
+  useCreateInventoryCategoryMutation,
   useUpdateInventoryCategoryMutation,
   useGetInventoryCatalogQuery,
   useCreateInventoryCatalogItemMutation,

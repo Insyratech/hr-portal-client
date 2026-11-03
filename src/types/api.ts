@@ -3666,6 +3666,8 @@ export type InventoryStation = {
   name: string;
   qrToken: string;
   status: InventoryStationStatus;
+  categoryId: string | null;
+  categoryName: string;
   notes: string;
   scanPath: string;
   createdAt: string;
@@ -3741,6 +3743,7 @@ export type InventoryPublicStationCard = {
   kind: 'station';
   stationName: string;
   locationName: string;
+  categoryName?: string;
   status: InventoryStationStatus;
   items: InventoryPublicStationItem[];
   employees: InventoryEmployeeOption[];

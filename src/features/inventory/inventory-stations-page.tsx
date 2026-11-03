@@ -23,6 +23,7 @@ import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
   useCreateInventoryStationMutation,
+  useGetInventoryCategoriesQuery,
   useGetInventoryLocationsQuery,
   useGetInventoryStationsQuery,
   useLazyGetInventoryStationPrintQuery,
@@ -36,6 +37,7 @@ export function InventoryStationsPage() {
     permissions.includes(PERMISSIONS.INVENTORY_LOTS_MANAGE);
   const { data, isLoading, isError } = useGetInventoryStationsQuery(undefined, { skip: !canManage });
   const { data: locationsData } = useGetInventoryLocationsQuery(undefined, { skip: !canManage });
+  const { data: categoriesData } = useGetInventoryCategoriesQuery(undefined, { skip: !canManage });
   const [createStation, { isLoading: creating }] = useCreateInventoryStationMutation();
   const [fetchPrint, { isFetching: printing }] = useLazyGetInventoryStationPrintQuery();
   const [open, setOpen] = useState(false);
@@ -43,6 +45,11 @@ export function InventoryStationsPage() {
   const locations = useMemo(
     () => (locationsData?.data ?? []).filter((item) => item.status === 'active'),
     [locationsData?.data],
+  );
+
+  const boxCategories = useMemo(
+    () => (categoriesData?.data ?? []).filter((category) => category.deductionMode === 'box'),
+    [categoriesData?.data],
   );
 
   async function onCreate(event: FormEvent<HTMLFormElement>) {
@@ -53,6 +60,7 @@ export function InventoryStationsPage() {
         locationId: String(form.get('locationId') ?? ''),
         name: String(form.get('name') ?? '').trim(),
         notes: String(form.get('notes') ?? '').trim(),
+        categoryId: String(form.get('categoryId') ?? '').trim() || undefined,
       }).unwrap();
       setOpen(false);
       toast.success('Station saved.');
@@ -116,6 +124,7 @@ export function InventoryStationsPage() {
             cell: (row) => `${row.locationName} (${row.locationCode})`,
           },
           { id: 'status', header: 'Status', cell: (row) => row.status },
+          { id: 'kind', header: 'Kind', cell: (row) => row.categoryName || '—' },
           {
             id: 'actions',
             header: '',
@@ -155,6 +164,19 @@ export function InventoryStationsPage() {
                 {locations.map((location) => (
                   <option key={location.id} value={location.id}>
                     {location.name} ({location.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="categoryId">Kind</Label>
+              <select id="categoryId" name="categoryId" className={SELECT_CLASS} required defaultValue="">
+                <option value="" disabled>
+                  Select kind
+                </option>
+                {boxCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
                   </option>
                 ))}
               </select>

@@ -22,12 +22,11 @@ import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
   useGetInventoryCatalogQuery,
+  useGetInventoryCategoriesQuery,
   useGetInventoryLocationsQuery,
   useLazyGetInventoryLotPrintQuery,
   useReceiveInventoryLotMutation,
 } from '@/store/api/api';
-
-const MEASURED_CODES = new Set(['MATERIALS', 'CHEMICALS', 'SOLVENTS', 'REAGENTS']);
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -39,17 +38,25 @@ export function InventoryReceivePage() {
   const permissions = useAppSelector((state) => state.permissions.permissions);
   const canManage = permissions.includes(PERMISSIONS.INVENTORY_LOTS_MANAGE);
   const { data: catalogData } = useGetInventoryCatalogQuery(undefined, { skip: !canManage });
+  const { data: categoriesData } = useGetInventoryCategoriesQuery(undefined, { skip: !canManage });
   const { data: locationsData } = useGetInventoryLocationsQuery(undefined, { skip: !canManage });
   const [receiveLot, { isLoading }] = useReceiveInventoryLotMutation();
   const [fetchPrint] = useLazyGetInventoryLotPrintQuery();
   const [selectedCatalogId, setSelectedCatalogId] = useState('');
 
+  const measuredCategoryIds = useMemo(
+    () =>
+      new Set(
+        (categoriesData?.data ?? []).filter((category) => category.deductionMode === 'measured').map((category) => category.id),
+      ),
+    [categoriesData?.data],
+  );
   const catalogItems = useMemo(
     () =>
       (catalogData?.data ?? []).filter(
-        (item) => item.status === 'active' && MEASURED_CODES.has(item.categoryCode),
+        (item) => item.status === 'active' && measuredCategoryIds.has(item.categoryId),
       ),
-    [catalogData?.data],
+    [catalogData?.data, measuredCategoryIds],
   );
   const locations = useMemo(
     () => (locationsData?.data ?? []).filter((item) => item.status === 'active'),

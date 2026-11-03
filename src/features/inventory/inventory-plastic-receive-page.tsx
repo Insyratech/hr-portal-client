@@ -20,6 +20,7 @@ import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
   useGetInventoryCatalogQuery,
+  useGetInventoryCategoriesQuery,
   useGetInventoryLocationsQuery,
   useReceiveInventoryPlasticStockMutation,
 } from '@/store/api/api';
@@ -36,16 +37,26 @@ export function InventoryPlasticReceivePage() {
     permissions.includes(PERMISSIONS.INVENTORY_PLASTIC_MANAGE) ||
     permissions.includes(PERMISSIONS.INVENTORY_LOTS_MANAGE);
   const { data: catalogData } = useGetInventoryCatalogQuery(undefined, { skip: !canManage });
+  const { data: categoriesData } = useGetInventoryCategoriesQuery(undefined, { skip: !canManage });
   const { data: locationsData } = useGetInventoryLocationsQuery(undefined, { skip: !canManage });
   const [receiveStock, { isLoading }] = useReceiveInventoryPlasticStockMutation();
   const [selectedCatalogId, setSelectedCatalogId] = useState('');
 
+  const boxCategoryIds = useMemo(
+    () =>
+      new Set(
+        (categoriesData?.data ?? []).filter((category) => category.deductionMode === 'box').map((category) => category.id),
+      ),
+    [categoriesData?.data],
+  );
   const catalogItems = useMemo(
     () =>
-      (catalogData?.data ?? []).filter(
-        (item) => item.status === 'active' && item.categoryCode === 'PLASTIC_WARES',
-      ),
-    [catalogData?.data],
+      (catalogData?.data ?? []).filter((item) => {
+        if (item.status !== 'active') return false;
+        if (boxCategoryIds.size > 0) return boxCategoryIds.has(item.categoryId);
+        return item.categoryCode === 'PLASTIC_WARES' || item.categoryCode === 'MISCELLANEOUS';
+      }),
+    [boxCategoryIds, catalogData?.data],
   );
   const locations = useMemo(
     () => (locationsData?.data ?? []).filter((item) => item.status === 'active'),

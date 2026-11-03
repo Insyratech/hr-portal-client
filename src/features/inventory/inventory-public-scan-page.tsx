@@ -382,7 +382,7 @@ function StationScanCard({
   return (
     <main className="mx-auto min-h-screen max-w-md bg-background px-4 py-8">
       <OfflineBanner online={online} />
-      <p className="text-xs uppercase tracking-[0.2em] text-meta">Plasticware</p>
+      <p className="text-xs uppercase tracking-[0.2em] text-meta">{card.categoryName || 'Station'}</p>
       <h1 className="mt-2 text-xl font-medium">{card.stationName}</h1>
       <dl className="mt-4 grid grid-cols-[5.5rem_1fr] gap-x-3 gap-y-1 text-sm">
         <dt className="text-muted">Store</dt>

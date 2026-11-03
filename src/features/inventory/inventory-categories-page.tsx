@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import {
+  useCreateInventoryCategoryMutation,
   useGetInventoryCategoriesQuery,
   useUpdateInventoryCategoryMutation,
 } from '@/store/api/api';
@@ -36,7 +37,9 @@ export function InventoryCategoriesPage() {
   const canManage = permissions.includes(PERMISSIONS.INVENTORY_CATEGORIES_MANAGE);
   const { data, isLoading, isError } = useGetInventoryCategoriesQuery(undefined, { skip: !canManage });
   const [updateCategory, { isLoading: updating }] = useUpdateInventoryCategoryMutation();
+  const [createCategory, { isLoading: creating }] = useCreateInventoryCategoryMutation();
   const [editing, setEditing] = useState<InventoryCategory | null>(null);
+  const [creatingOpen, setCreatingOpen] = useState(false);
 
   async function onUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,6 +50,7 @@ export function InventoryCategoriesPage() {
       await updateCategory({
         id: editing.id,
         body: {
+          name: String(form.get('name') ?? '').trim(),
           defaultAlertMode: String(form.get('defaultAlertMode') ?? 'both') as InventoryCategory['defaultAlertMode'],
           defaultReorderQty: reorderRaw === '' ? null : Number(reorderRaw),
           defaultVelocityDays: Number(form.get('defaultVelocityDays') ?? 15),
@@ -54,9 +58,29 @@ export function InventoryCategoriesPage() {
         },
       }).unwrap();
       setEditing(null);
-      toast.success('Category defaults saved.');
+      toast.success('Category saved.');
     } catch (cause) {
-      toast.error(apiErrorMessage(cause, 'Unable to update category defaults.'));
+      toast.error(apiErrorMessage(cause, 'Unable to update category.'));
+    }
+  }
+
+  async function onCreate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const reorderRaw = String(form.get('defaultReorderQty') ?? '').trim();
+    try {
+      await createCategory({
+        name: String(form.get('name') ?? '').trim(),
+        deductionMode: String(form.get('deductionMode') ?? 'measured') as 'measured' | 'box',
+        defaultAlertMode: String(form.get('defaultAlertMode') ?? 'both') as InventoryCategory['defaultAlertMode'],
+        defaultReorderQty: reorderRaw === '' ? null : Number(reorderRaw),
+        defaultVelocityDays: Number(form.get('defaultVelocityDays') ?? 15),
+        defaultExpiryLeadDays: Number(form.get('defaultExpiryLeadDays') ?? 15),
+      }).unwrap();
+      setCreatingOpen(false);
+      toast.success('Category added.');
+    } catch (cause) {
+      toast.error(apiErrorMessage(cause, 'Unable to add category.'));
     }
   }
 
@@ -71,11 +95,19 @@ export function InventoryCategoriesPage() {
 
   return (
     <>
-      <DelayedLoadingOverlay active={updating} />
-      <PageHeader kicker="Inventory" title="Categories" />
+      <DelayedLoadingOverlay active={updating || creating} />
+      <PageHeader
+        kicker="Inventory"
+        title="Categories"
+        actions={
+          <Button type="button" onClick={() => setCreatingOpen(true)}>
+            Add category
+          </Button>
+        }
+      />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Fixed lab categories. Tune default alert mode, reorder qty, velocity days, and expiry lead days.
-        Catalog items inherit these unless overridden.
+        Add a category when the lab needs a new kind of stock. Measured categories are received as lots.
+        Box categories, such as Plastic wares and Miscellaneous, use the room QR.
       </p>
       {isError ? <p className="mb-4 text-sm">Unable to load categories.</p> : null}
 
@@ -112,10 +144,18 @@ export function InventoryCategoriesPage() {
 
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent>
-          <DialogTitle>Alert defaults — {editing?.name}</DialogTitle>
-          <DialogDescription>System category code stays fixed ({editing?.code}).</DialogDescription>
+          <DialogTitle>Edit {editing?.name}</DialogTitle>
+          <DialogDescription>
+            {editing?.isSystem
+              ? `System code stays ${editing.code}. You can change the name and alert defaults.`
+              : `Code ${editing?.code}. Deduction stays ${editing?.deductionMode}.`}
+          </DialogDescription>
           {editing ? (
             <form className="mt-4 space-y-4" onSubmit={onUpdate}>
+              <div>
+                <Label htmlFor="name">Name</Label>
+                <Input id="name" name="name" defaultValue={editing.name} required />
+              </div>
               <div>
                 <Label htmlFor="defaultAlertMode">Alert mode</Label>
                 <select
@@ -179,6 +219,60 @@ export function InventoryCategoriesPage() {
               </div>
             </form>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={creatingOpen} onOpenChange={setCreatingOpen}>
+        <DialogContent>
+          <DialogTitle>Add category</DialogTitle>
+          <DialogDescription>
+            Measured stock is received as a lot. Box stock uses a room QR and can include several items.
+          </DialogDescription>
+          <form className="mt-4 space-y-4" onSubmit={onCreate}>
+            <div>
+              <Label htmlFor="new-name">Name</Label>
+              <Input id="new-name" name="name" required placeholder="Miscellaneous" />
+            </div>
+            <div>
+              <Label htmlFor="deductionMode">Deduction</Label>
+              <select id="deductionMode" name="deductionMode" className={SELECT_CLASS} defaultValue="box">
+                <option value="measured">Measured (one lot QR)</option>
+                <option value="box">Box (room QR, several items)</option>
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="new-alert">Alert mode</Label>
+              <select id="new-alert" name="defaultAlertMode" className={SELECT_CLASS} defaultValue="reorder">
+                {ALERT_MODES.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <Label htmlFor="new-reorder">Reorder qty</Label>
+                <Input id="new-reorder" name="defaultReorderQty" type="number" min={0} step="any" />
+              </div>
+              <div>
+                <Label htmlFor="new-velocity">Velocity days</Label>
+                <Input id="new-velocity" name="defaultVelocityDays" type="number" min={1} max={365} defaultValue={15} required />
+              </div>
+              <div>
+                <Label htmlFor="new-expiry">Expiry lead days</Label>
+                <Input id="new-expiry" name="defaultExpiryLeadDays" type="number" min={0} max={365} defaultValue={0} required />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setCreatingOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={creating}>
+                {creating ? 'Adding…' : 'Add'}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </>
