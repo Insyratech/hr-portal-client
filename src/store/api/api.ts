@@ -20,6 +20,10 @@ import type {
   PayrollPreview,
   Company,
   CompanyLogoUpload,
+  CreateHrInvoiceBody,
+  HrInvoiceClient,
+  HrInvoiceDetail,
+  HrInvoiceSummary,
   Compensation,
   DirectoryEditRequest,
   DirectoryEditRequestForEmployee,
@@ -298,6 +302,7 @@ export const api = createApi({
     'InventoryPlastic',
     'InventoryStations',
     'InventoryAlerts',
+    'HrInvoices',
   ],
   endpoints: (builder) => ({
     getHealth: builder.query<ApiSuccess<HealthData>, void>({
@@ -3959,6 +3964,22 @@ export const api = createApi({
         return `/api/v1/inventory/audit-export?${params.toString()}`;
       },
     }),
+    getHrInvoiceClients: builder.query<ApiSuccess<HrInvoiceClient[]>, void>({
+      query: () => '/api/v1/hr/invoice-clients',
+      providesTags: ['HrInvoices'],
+    }),
+    getHrInvoices: builder.query<ApiSuccess<HrInvoiceSummary[]>, void>({
+      query: () => '/api/v1/hr/invoices',
+      providesTags: ['HrInvoices'],
+    }),
+    getHrInvoice: builder.query<ApiSuccess<HrInvoiceDetail>, string>({
+      query: (id) => `/api/v1/hr/invoices/${id}`,
+      providesTags: (_result, _error, id) => [{ type: 'HrInvoices', id }],
+    }),
+    createHrInvoice: builder.mutation<ApiSuccess<HrInvoiceDetail>, CreateHrInvoiceBody>({
+      query: (body) => ({ url: '/api/v1/hr/invoices', method: 'POST', body }),
+      invalidatesTags: ['HrInvoices'],
+    }),
   }),
 });
 
@@ -4444,4 +4465,9 @@ export const {
   useGetInventoryReportsQuery,
   useGetInventoryAdminDashboardQuery,
   useLazyExportInventoryAuditQuery,
+  useGetHrInvoiceClientsQuery,
+  useGetHrInvoicesQuery,
+  useGetHrInvoiceQuery,
+  useLazyGetHrInvoiceQuery,
+  useCreateHrInvoiceMutation,
 } = api;
