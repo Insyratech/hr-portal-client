@@ -80,6 +80,13 @@ async function renderLabel(title: string, rows: [string, string][], scanUrl: str
     doc.text(row.lines, textX + 16, cursor);
     cursor += row.height;
   }
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const inset = 0.7;
+  doc.setDrawColor(17);
+  doc.setLineWidth(0.4);
+  doc.rect(inset, inset, pageWidth - inset * 2, pageHeight - inset * 2);
   return doc;
 }
 
