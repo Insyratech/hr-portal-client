@@ -184,7 +184,7 @@ function slipSheetHtml(slip: SalarySlip, logoHtml: string): string {
       </tr>
       <tr>
         <td>HRA</td><td class="num">${esc(formatInr(slip.hra))}</td>
-        <td>Welfare</td><td class="num">${esc(formatInr(slip.employeeWelfare))}</td>
+        <td>Employee welfare</td><td class="num">${esc(formatInr(slip.employeeWelfare))}</td>
       </tr>
       <tr>
         <td>Fuel</td><td class="num">${esc(formatInr(slip.fuel))}</td>
@@ -619,7 +619,7 @@ export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
   const moneyRows: [string, string, string, string][] = [
     ['Basic', formatInrPdf(slip.basic), 'Professional tax', formatInrPdf(slip.professionalTax)],
     ['DA', formatInrPdf(slip.da), 'TDS', formatInrPdf(slip.tds)],
-    ['HRA', formatInrPdf(slip.hra), 'Welfare', formatInrPdf(slip.employeeWelfare)],
+    ['HRA', formatInrPdf(slip.hra), 'Employee welfare', formatInrPdf(slip.employeeWelfare)],
     ['Fuel', formatInrPdf(slip.fuel), 'KPI', formatInrPdf(slip.kpi)],
     ['Incentives', formatInrPdf(slip.incentives), 'Other', formatInrPdf(slip.otherDeductions)],
     [

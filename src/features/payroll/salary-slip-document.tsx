@@ -158,7 +158,7 @@ export function SalarySlipDocument({ slip }: { slip: SalarySlip }) {
           <tr>
             <td className={`${cell} px-2 py-0.5 text-[11px]`}>HRA</td>
             <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(slip.hra)}</td>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Welfare</td>
+            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Employee welfare</td>
             <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>
               {formatInr(slip.employeeWelfare)}
             </td>
