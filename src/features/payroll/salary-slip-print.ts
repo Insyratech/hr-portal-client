@@ -199,6 +199,14 @@ function slipSheetHtml(slip: SalarySlip, logoHtml: string): string {
         <td>Non-working days (${esc(String(slip.nonWorkingDays))})</td>
         <td class="num">${esc(formatInr(slip.nonWorkingAmount))}</td>
       </tr>
+      ${
+        (slip.trainingSupport ?? 0) > 0
+          ? `<tr>
+        <td>Training support</td><td class="num">${esc(formatInr(slip.trainingSupport))}</td>
+        <td>Training support</td><td class="num">${esc(formatInr(slip.trainingSupport))}</td>
+      </tr>`
+          : ''
+      }
       <tr>
         <td colspan="2"></td>
         <td>LOP</td><td class="num">${esc(formatInr(slip.lopAmount))}</td>
@@ -621,6 +629,14 @@ export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
       formatInrPdf(slip.nonWorkingAmount),
     ],
   ];
+  if ((slip.trainingSupport ?? 0) > 0) {
+    moneyRows.push([
+      'Training support',
+      formatInrPdf(slip.trainingSupport),
+      'Training support',
+      formatInrPdf(slip.trainingSupport),
+    ]);
+  }
   for (const [a, b, c, d] of moneyRows) {
     drawRow(
       [

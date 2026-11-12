@@ -189,6 +189,18 @@ export function SalarySlipDocument({ slip }: { slip: SalarySlip }) {
               {formatInr(slip.nonWorkingAmount)}
             </td>
           </tr>
+          {(slip.trainingSupport ?? 0) > 0 ? (
+            <tr>
+              <td className={`${cell} px-2 py-0.5 text-[11px]`}>Training support</td>
+              <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>
+                {formatInr(slip.trainingSupport)}
+              </td>
+              <td className={`${cell} px-2 py-0.5 text-[11px]`}>Training support</td>
+              <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>
+                {formatInr(slip.trainingSupport)}
+              </td>
+            </tr>
+          ) : null}
           <tr>
             <td className={`${cell} px-2 py-0.5 text-[11px]`} colSpan={2} />
             <td className={`${cell} px-2 py-0.5 text-[11px]`}>LOP</td>

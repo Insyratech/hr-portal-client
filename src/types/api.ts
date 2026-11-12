@@ -1847,6 +1847,8 @@ export type SalarySlip = {
   lopDays: number;
   lopAmount: number;
   net: number;
+  /** CTC support shown on both sides of this slip. Zero for everyone else. */
+  trainingSupport: number;
   particulars: LeaveParticulars;
 };
 
