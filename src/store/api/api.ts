@@ -3677,7 +3677,7 @@ export const api = createApi({
         categoryId: string;
         name: string;
         brandName?: string;
-        catalogNumber: string;
+        catalogNumber?: string;
         unit: string;
         defaultQtyChips?: number[];
         alertMode?: InventoryCatalogItem['alertMode'];
