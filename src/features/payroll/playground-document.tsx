@@ -3,19 +3,24 @@
 import type { PayslipPlaygroundPreview } from '@/types/api';
 import { formatInr } from '@/features/payroll/format';
 
+/** Compact A4-oriented slip: tight cells, fixed column ratios, no stretched gaps. */
 const cell = 'border border-black';
 const head = 'border border-black bg-neutral-50';
+const td = `${cell} px-1.5 py-px text-[10px] leading-tight text-black`;
+const th = `${head} px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-black`;
 
 function InfoCell({ label, value }: { label: string; value: string }) {
   return (
-    <td className={`${cell} px-2 py-1 align-top text-[11px] leading-snug text-black`}>
+    <td className={`${td} align-top`}>
       <span className="font-semibold">{label}</span> {value}
     </td>
   );
 }
 
-function MoneyCell({ value }: { value: number }) {
-  return <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{formatInr(value)}</td>;
+function MoneyCell({ value, className = '' }: { value: number; className?: string }) {
+  return (
+    <td className={`${td} text-right tabular-nums ${className}`}>{formatInr(value)}</td>
+  );
 }
 
 /** Excel-style new-regime playground slip. Ephemeral — not a published salary slip. */
@@ -26,41 +31,45 @@ export function PayslipPlaygroundDocument({ preview }: { preview: PayslipPlaygro
   return (
     <article
       id="payslip-playground-print-root"
-      className={`mx-auto w-full max-w-5xl ${cell} bg-white p-2 text-black shadow-none sm:p-3`}
+      className={`mx-auto w-full max-w-[210mm] ${cell} bg-white p-1.5 text-black shadow-none print:max-w-none`}
     >
-      <table className="w-full border-collapse">
+      <table className="w-full table-fixed border-collapse">
         <tbody>
           <tr>
-            <td className={`w-[34%] ${cell} px-2 py-2 align-middle`}>
+            <td className={`w-[32%] ${cell} px-1.5 py-1 align-middle`}>
               {preview.company.logoUrl ? (
                 <img
                   src={preview.company.logoUrl}
                   alt=""
-                  className="max-h-14 max-w-full object-contain object-left"
+                  className="max-h-9 max-w-full object-contain object-left"
                 />
               ) : (
-                <div className="flex h-12 items-center justify-center text-[11px] text-neutral-500">Logo</div>
+                <div className="flex h-8 items-center justify-center text-[10px] text-neutral-500">Logo</div>
               )}
             </td>
-            <td className={`${cell} px-3 py-2 align-middle text-right`}>
-              <p className="whitespace-pre-line text-[11px] leading-snug text-neutral-800">
+            <td className={`${cell} px-2 py-1 align-middle text-right`}>
+              <p className="whitespace-pre-line text-[9px] leading-snug text-neutral-800">
                 {preview.company.address}
               </p>
-              <p className="mt-1 text-sm font-bold text-black">{preview.company.name}</p>
+              <p className="mt-0.5 text-[11px] font-bold text-black">{preview.company.name}</p>
             </td>
           </tr>
           <tr>
-            <td className={`${head} px-2 py-1 text-center text-xs font-bold uppercase tracking-wide text-black`}>
+            <td className={`${th} text-center text-[10px] font-bold uppercase tracking-wide`}>
               Salary slip · playground
             </td>
-            <td className={`${head} px-2 py-1 text-center text-xs font-semibold text-black`}>
+            <td className={`${th} text-center text-[10px] font-semibold`}>
               Month · {preview.monthLabel} · FY {preview.financialYear} · New regime
             </td>
           </tr>
         </tbody>
       </table>
 
-      <table className="w-full border-collapse">
+      <table className="w-full table-fixed border-collapse">
+        <colgroup>
+          <col className="w-1/2" />
+          <col className="w-1/2" />
+        </colgroup>
         <tbody>
           <tr>
             <InfoCell label="Employee name:" value={preview.employee.fullName} />
@@ -80,55 +89,54 @@ export function PayslipPlaygroundDocument({ preview }: { preview: PayslipPlaygro
           </tr>
           <tr>
             <InfoCell label="Department:" value={preview.employee.departmentName ?? '—'} />
-            <td className={`${cell} px-2 py-1 text-[11px] text-black`} />
+            <td className={td} />
           </tr>
         </tbody>
       </table>
 
-      <table className="w-full border-collapse">
+      <table className="w-full table-fixed border-collapse">
         <thead>
           <tr>
-            <th
-              colSpan={4}
-              className={`${head} px-2 py-1 text-left text-[11px] font-bold uppercase tracking-wide text-black`}
-            >
+            <th colSpan={4} className={`${th} text-left font-bold uppercase tracking-wide`}>
               Attendance
             </th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>
-              Calendar days: {preview.attendance.calendarDays}
-            </td>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>
-              Working / paid days: {preview.attendance.workingDays}
-            </td>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>
-              Non-working: {preview.attendance.nonWorkingDays}
-            </td>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>LOP: {preview.attendance.lopDays}</td>
+            <td className={td}>Calendar days: {preview.attendance.calendarDays}</td>
+            <td className={td}>Working / paid days: {preview.attendance.workingDays}</td>
+            <td className={td}>Non-working: {preview.attendance.nonWorkingDays}</td>
+            <td className={td}>LOP: {preview.attendance.lopDays}</td>
           </tr>
         </tbody>
       </table>
 
-      <table className="w-full border-collapse">
+      <table className="w-full table-fixed border-collapse">
+        <colgroup>
+          <col className="w-[18%]" />
+          <col className="w-[15%]" />
+          <col className="w-[15%]" />
+          <col className="w-[22%]" />
+          <col className="w-[15%]" />
+          <col className="w-[15%]" />
+        </colgroup>
         <thead>
           <tr>
-            <th className={`${head} px-2 py-1 text-center text-[11px] font-bold text-black`} colSpan={3}>
+            <th className={`${th} text-center font-bold`} colSpan={3}>
               Income
             </th>
-            <th className={`${head} px-2 py-1 text-center text-[11px] font-bold text-black`} colSpan={3}>
+            <th className={`${th} text-center font-bold`} colSpan={3}>
               Deductions
             </th>
           </tr>
           <tr>
-            <th className={`w-[18%] ${head} px-2 py-0.5 text-left text-[11px] font-semibold`}>Particulars</th>
-            <th className={`w-[16%] ${head} px-2 py-0.5 text-right text-[11px] font-semibold`}>Amount (₹)</th>
-            <th className={`w-[16%] ${head} px-2 py-0.5 text-right text-[11px] font-semibold`}>YTD (₹)</th>
-            <th className={`w-[18%] ${head} px-2 py-0.5 text-left text-[11px] font-semibold`}>Particulars</th>
-            <th className={`w-[16%] ${head} px-2 py-0.5 text-right text-[11px] font-semibold`}>Amount (₹)</th>
-            <th className={`w-[16%] ${head} px-2 py-0.5 text-right text-[11px] font-semibold`}>YTD (₹)</th>
+            <th className={`${th} text-left`}>Particulars</th>
+            <th className={`${th} text-right`}>Amount (₹)</th>
+            <th className={`${th} text-right`}>YTD (₹)</th>
+            <th className={`${th} text-left`}>Particulars</th>
+            <th className={`${th} text-right`}>Amount (₹)</th>
+            <th className={`${th} text-right`}>YTD (₹)</th>
           </tr>
         </thead>
         <tbody>
@@ -137,166 +145,164 @@ export function PayslipPlaygroundDocument({ preview }: { preview: PayslipPlaygro
             const ded = preview.deductions[i];
             return (
               <tr key={i}>
-                <td className={`${cell} px-2 py-0.5 text-[11px]`}>{earn?.label ?? ''}</td>
-                {earn ? <MoneyCell value={earn.amount} /> : <td className={cell} />}
-                {earn ? <MoneyCell value={earn.ytd} /> : <td className={cell} />}
-                <td className={`${cell} px-2 py-0.5 text-[11px]`}>{ded?.label ?? ''}</td>
-                {ded ? <MoneyCell value={ded.amount} /> : <td className={cell} />}
-                {ded ? <MoneyCell value={ded.ytd} /> : <td className={cell} />}
+                <td className={td}>{earn?.label ?? ''}</td>
+                {earn ? <MoneyCell value={earn.amount} /> : <td className={td} />}
+                {earn ? <MoneyCell value={earn.ytd} /> : <td className={td} />}
+                <td className={td}>{ded?.label ?? ''}</td>
+                {ded ? <MoneyCell value={ded.amount} /> : <td className={td} />}
+                {ded ? <MoneyCell value={ded.ytd} /> : <td className={td} />}
               </tr>
             );
           })}
           <tr>
-            <td className={`${cell} px-2 py-1 text-[11px] font-semibold`} colSpan={1}>
-              Gross pay
-            </td>
-            <MoneyCell value={preview.gross} />
-            <MoneyCell value={preview.grossYtd} />
-            <td className={`${cell} px-2 py-1 text-[11px] font-bold`} colSpan={1}>
-              Net pay for the month
-            </td>
-            <td className={`${cell} px-2 py-1 text-right text-sm font-bold tabular-nums`} colSpan={2}>
+            <td className={`${td} font-semibold`}>Gross pay</td>
+            <MoneyCell value={preview.gross} className="font-semibold" />
+            <MoneyCell value={preview.grossYtd} className="font-semibold" />
+            <td className={`${td} font-bold`}>Net pay for the month</td>
+            <td className={`${td} text-right text-[11px] font-bold tabular-nums`} colSpan={2}>
               {formatInr(preview.net)}
             </td>
           </tr>
           <tr>
-            <td className={`${cell} px-2 py-1 text-[11px]`} colSpan={6}>
+            <td className={td} colSpan={6}>
               <span className="font-semibold">Net pay in words:</span> {preview.netInWords}
             </td>
           </tr>
         </tbody>
       </table>
 
-      <table className="w-full border-collapse">
+      <table className="w-full table-fixed border-collapse">
+        <colgroup>
+          <col className="w-[44%]" />
+          <col className="w-[14%]" />
+          <col className="w-[14%]" />
+          <col className="w-[14%]" />
+          <col className="w-[14%]" />
+        </colgroup>
         <thead>
           <tr>
-            <th
-              colSpan={5}
-              className={`${head} px-2 py-1 text-left text-[11px] font-bold uppercase tracking-wide text-black`}
-            >
+            <th colSpan={5} className={`${th} text-left font-bold uppercase tracking-wide`}>
               Leave particulars
             </th>
           </tr>
           <tr>
-            <th className={`${head} px-2 py-0.5 text-left text-[11px]`}>Type</th>
-            <th className={`${head} px-2 py-0.5 text-right text-[11px]`}>Opening</th>
-            <th className={`${head} px-2 py-0.5 text-right text-[11px]`}>Accrued</th>
-            <th className={`${head} px-2 py-0.5 text-right text-[11px]`}>Availed</th>
-            <th className={`${head} px-2 py-0.5 text-right text-[11px]`}>Closing</th>
+            <th className={`${th} text-left`}>Type</th>
+            <th className={`${th} text-right`}>Opening</th>
+            <th className={`${th} text-right`}>Accrued</th>
+            <th className={`${th} text-right`}>Availed</th>
+            <th className={`${th} text-right`}>Closing</th>
           </tr>
         </thead>
         <tbody>
           {preview.leave.length === 0 ? (
             <tr>
-              <td className={`${cell} px-2 py-0.5 text-[11px] text-neutral-600`} colSpan={5}>
+              <td className={`${td} text-neutral-600`} colSpan={5}>
                 No leave allocations for this calendar year.
               </td>
             </tr>
           ) : (
             preview.leave.map((row) => (
               <tr key={`${row.code}-${row.name}`}>
-                <td className={`${cell} px-2 py-0.5 text-[11px]`}>
-                  {row.code ? `${row.code} · ${row.name}` : row.name}
-                </td>
-                <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{row.opening}</td>
-                <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{row.accrued}</td>
-                <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{row.availed}</td>
-                <td className={`${cell} px-2 py-0.5 text-right text-[11px] tabular-nums`}>{row.closing}</td>
+                <td className={td}>{row.code ? `${row.code} · ${row.name}` : row.name}</td>
+                <td className={`${td} text-right tabular-nums`}>{row.opening}</td>
+                <td className={`${td} text-right tabular-nums`}>{row.accrued}</td>
+                <td className={`${td} text-right tabular-nums`}>{row.availed}</td>
+                <td className={`${td} text-right tabular-nums`}>{row.closing}</td>
               </tr>
             ))
           )}
         </tbody>
       </table>
 
-      <table className="w-full border-collapse">
+      <table className="w-full table-fixed border-collapse">
+        <colgroup>
+          <col className="w-[72%]" />
+          <col className="w-[28%]" />
+        </colgroup>
         <thead>
           <tr>
-            <th
-              colSpan={2}
-              className={`${head} px-2 py-1 text-left text-[11px] font-bold uppercase tracking-wide text-black`}
-            >
+            <th colSpan={2} className={`${th} text-left font-bold uppercase tracking-wide`}>
               Income tax · New regime · FY {preview.financialYear}
             </th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Projected annual gross</td>
+            <td className={td}>Projected annual gross</td>
             <MoneyCell value={tax.annualGrossSalary} />
           </tr>
           <tr>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Standard deduction</td>
+            <td className={td}>Standard deduction</td>
             <MoneyCell value={tax.standardDeduction} />
           </tr>
           <tr>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Other income</td>
+            <td className={td}>Other income</td>
             <MoneyCell value={tax.otherIncome} />
           </tr>
           <tr>
-            <td className={`${cell} px-2 py-0.5 text-[11px] font-semibold`}>Taxable income</td>
-            <MoneyCell value={tax.taxableIncome} />
+            <td className={`${td} font-semibold`}>Taxable income</td>
+            <MoneyCell value={tax.taxableIncome} className="font-semibold" />
           </tr>
           <tr>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Tax on total income</td>
+            <td className={td}>Tax on total income</td>
             <MoneyCell value={tax.taxOnTotalIncome} />
           </tr>
           <tr>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Rebate u/s 87A</td>
+            <td className={td}>Rebate u/s 87A</td>
             <MoneyCell value={tax.rebate87A} />
           </tr>
           <tr>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>
+            <td className={td}>
               Surcharge{tax.surchargeRate > 0 ? ` (${Math.round(tax.surchargeRate * 100)}%)` : ''}
             </td>
             <MoneyCell value={tax.surcharge} />
           </tr>
           <tr>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Health & education cess (4%)</td>
+            <td className={td}>Health & education cess (4%)</td>
             <MoneyCell value={tax.cess} />
           </tr>
           <tr>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Relief u/s 89</td>
+            <td className={td}>Relief u/s 89</td>
             <MoneyCell value={tax.relief89} />
           </tr>
           <tr>
-            <td className={`${cell} px-2 py-0.5 text-[11px] font-semibold`}>Net annual tax</td>
-            <MoneyCell value={tax.netAnnualTax} />
+            <td className={`${td} font-semibold`}>Net annual tax</td>
+            <MoneyCell value={tax.netAnnualTax} className="font-semibold" />
           </tr>
           <tr>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Tax deducted till previous month</td>
+            <td className={td}>Tax deducted till previous month</td>
             <MoneyCell value={tax.taxDeductedTillPreviousMonth} />
           </tr>
           <tr>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Balance tax</td>
+            <td className={td}>Balance tax</td>
             <MoneyCell value={tax.balanceTax} />
           </tr>
           <tr>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>
+            <td className={td}>
               Months left (incl. this) · TDS this month ({preview.tdsSource})
             </td>
             <MoneyCell value={tax.tdsThisMonth} />
           </tr>
           <tr>
-            <td className={`${cell} px-2 py-0.5 text-[11px]`}>Tax remaining after this month</td>
+            <td className={td}>Tax remaining after this month</td>
             <MoneyCell value={tax.taxRemainingAfterThisMonth} />
           </tr>
         </tbody>
       </table>
 
-      {preview.ytd.slipCount === 0 ? (
-        <p className="mt-1 text-[10px] text-neutral-600">
-          YTD = ₹0 — no published slips in FY {preview.financialYear} before {preview.monthLabel} (Apr
-          → prior month{preview.employee.joiningDate ? ', on/after joining' : ''}).
-        </p>
-      ) : (
-        <p className="mt-1 text-[10px] text-neutral-600">
-          YTD from {preview.ytd.slipCount} published slip(s) in FY {preview.financialYear}:{' '}
-          {preview.ytd.periods.join(', ')}.
-        </p>
-      )}
-      <p className="text-right text-[10px] text-neutral-600">
-        Ephemeral preview — refresh loses edits. Not a published payslip.
-      </p>
+      <div className="mt-0.5 flex flex-wrap items-start justify-between gap-x-3 gap-y-0.5 text-[8px] leading-tight text-neutral-600">
+        {preview.ytd.slipCount === 0 ? (
+          <p>
+            YTD = ₹0 — no published slips in FY {preview.financialYear} before {preview.monthLabel}.
+          </p>
+        ) : (
+          <p>
+            YTD from {preview.ytd.slipCount} published slip(s) in FY {preview.financialYear}:{' '}
+            {preview.ytd.periods.join(', ')}.
+          </p>
+        )}
+        <p className="text-right">Ephemeral preview — not a published payslip.</p>
+      </div>
     </article>
   );
 }

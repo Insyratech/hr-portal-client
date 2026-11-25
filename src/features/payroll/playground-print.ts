@@ -49,24 +49,38 @@ function styles(): string {
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
       -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .no-print { margin: 8px 12px; font-size: 12px; color: #444; }
-    .sheet { width: 277mm; margin: 0 auto; padding: 2mm; border: 1px solid #000; background: #fff; }
+    .sheet {
+      width: 190mm;
+      max-width: 100%;
+      margin: 0 auto;
+      padding: 2mm;
+      border: 1px solid #000;
+      background: #fff;
+    }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    td, th { border: 1px solid #000; padding: 2px 6px; font-size: 10px; line-height: 1.2;
-      vertical-align: top; color: #000; }
+    td, th {
+      border: 1px solid #000;
+      padding: 1px 4px;
+      font-size: 8.5px;
+      line-height: 1.15;
+      vertical-align: middle;
+      color: #000;
+    }
     th { background: #f5f5f5; font-weight: 700; text-align: left; }
     th.center { text-align: center; }
     .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .label { font-weight: 700; }
-    .logo { display: block; max-height: 12mm; max-width: 100%; object-fit: contain; object-position: left center; }
+    .logo { display: block; max-height: 8mm; max-width: 100%; object-fit: contain; object-position: left center; }
     .company { text-align: right; }
-    .company-name { margin: 2px 0 0; font-size: 12px; font-weight: 700; }
-    .addr { margin: 0; white-space: pre-line; font-size: 9.5px; color: #222; }
-    .note { margin: 2px 0 0; font-size: 8.5px; color: #555; }
-    @page { size: A4 landscape; margin: 6mm; }
+    .company-name { margin: 1px 0 0; font-size: 10px; font-weight: 700; }
+    .addr { margin: 0; white-space: pre-line; font-size: 8px; color: #222; line-height: 1.2; }
+    .note { margin: 1px 0 0; font-size: 7.5px; color: #555; line-height: 1.2; }
+    .foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 2px; }
+    @page { size: A4 portrait; margin: 8mm; }
     @media print {
       .no-print { display: none !important; }
       html, body { width: 100%; }
-      .sheet { width: 100%; margin: 0; padding: 1.5mm; border: 1px solid #000; }
+      .sheet { width: 100%; max-width: none; margin: 0; padding: 1.5mm; border: 1px solid #000; }
     }
   `;
 }
@@ -173,6 +187,10 @@ function sheetHtml(preview: PayslipPlaygroundPreview): string {
         </tr>
       </table>
       <table>
+        <colgroup>
+          <col style="width:18%" /><col style="width:15%" /><col style="width:15%" />
+          <col style="width:22%" /><col style="width:15%" /><col style="width:15%" />
+        </colgroup>
         <tr>
           <th class="center" colspan="3">Income</th>
           <th class="center" colspan="3">Deductions</th>
@@ -194,6 +212,10 @@ function sheetHtml(preview: PayslipPlaygroundPreview): string {
         </tr>
       </table>
       <table>
+        <colgroup>
+          <col style="width:44%" /><col style="width:14%" /><col style="width:14%" />
+          <col style="width:14%" /><col style="width:14%" />
+        </colgroup>
         <tr><th colspan="5">Leave particulars</th></tr>
         <tr>
           <th>Type</th><th class="num">Opening</th><th class="num">Accrued</th>
@@ -202,10 +224,20 @@ function sheetHtml(preview: PayslipPlaygroundPreview): string {
         ${leaveRows}
       </table>
       <table>
+        <colgroup><col style="width:72%" /><col style="width:28%" /></colgroup>
         <tr><th colspan="2">Income tax · New regime · FY ${esc(preview.financialYear)}</th></tr>
         ${taxRows}
       </table>
-      <p class="note">Ephemeral preview — not a published payslip.</p>
+      <div class="foot">
+        <p class="note" style="margin:0">
+          ${
+            preview.ytd.slipCount === 0
+              ? `YTD = ₹0 — no published slips in FY ${esc(preview.financialYear)} before ${esc(preview.monthLabel)}.`
+              : `YTD from ${preview.ytd.slipCount} published slip(s) in FY ${esc(preview.financialYear)}: ${esc(preview.ytd.periods.join(', '))}.`
+          }
+        </p>
+        <p class="note" style="margin:0;text-align:right">Ephemeral preview — not a published payslip.</p>
+      </div>
     </div>
   `;
 }
@@ -234,7 +266,7 @@ function pdfFileName(preview: PayslipPlaygroundPreview): string {
 export async function downloadPayslipPlaygroundPdf(preview: PayslipPlaygroundPreview): Promise<void> {
   const logoSrc = await resolveLogoDataUrl(preview.company.logoUrl);
   const pdf = new jsPDF({
-    orientation: 'landscape',
+    orientation: 'portrait',
     unit: 'mm',
     format: 'a4',
     compress: true,
@@ -242,8 +274,8 @@ export async function downloadPayslipPlaygroundPdf(preview: PayslipPlaygroundPre
 
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
-  const margin = 7;
-  const pad = 2;
+  const margin = 8;
+  const pad = 1.5;
   const x0 = margin + pad;
   const contentW = pageW - (margin + pad) * 2;
   let y = margin + pad;
@@ -286,14 +318,14 @@ export async function downloadPayslipPlaygroundPdf(preview: PayslipPlaygroundPre
       } else {
         pdf.rect(x, y, w, rowH);
       }
-      setFont(Boolean(cell.bold), 8);
-      const padX = 1.5;
+      setFont(Boolean(cell.bold), 7);
+      const padX = 1.2;
       let tx = x + padX;
       const align = cell.align ?? 'left';
       if (align === 'right') tx = x + w - padX;
       if (align === 'center') tx = x + w / 2;
       const lines = pdf.splitTextToSize(cell.text, Math.max(4, w - padX * 2)) as string[];
-      pdf.text(lines[0] ?? '', tx, y + rowH / 2 + 1.1, { align });
+      pdf.text(lines[0] ?? '', tx, y + rowH / 2 + 0.9, { align });
       x += w;
       col += span;
     }
@@ -302,14 +334,23 @@ export async function downloadPayslipPlaygroundPdf(preview: PayslipPlaygroundPre
 
   // Outer border drawn at end of page content via ensureSpace / finish
   const half = contentW / 2;
-  const sixth = contentW / 6;
-  const payWidths = [sixth, sixth, sixth, sixth, sixth, sixth];
-  const twoCol = [half, half];
+  const payWidths = [
+    contentW * 0.18,
+    contentW * 0.15,
+    contentW * 0.15,
+    contentW * 0.22,
+    contentW * 0.15,
+    contentW * 0.15,
+  ];
+  const twoCol = [contentW * 0.72, contentW * 0.28];
+  const infoCol = [half, half];
   const fourCol = [contentW / 4, contentW / 4, contentW / 4, contentW / 4];
-  const fiveCol = [contentW * 0.36, contentW * 0.16, contentW * 0.16, contentW * 0.16, contentW * 0.16];
+  const fiveCol = [contentW * 0.44, contentW * 0.14, contentW * 0.14, contentW * 0.14, contentW * 0.14];
+  const rh = 4.2;
+  const rhHead = 4.6;
 
   // Header
-  const headerH = 16;
+  const headerH = 11;
   ensureSpace(headerH);
   pdf.rect(x0, y, contentW * 0.34, headerH);
   if (logoSrc) {
@@ -346,8 +387,8 @@ export async function downloadPayslipPlaygroundPdf(preview: PayslipPlaygroundPre
         fill: true,
       },
     ],
-    twoCol,
-    6,
+    infoCol,
+    rhHead,
   );
 
   const info = (label: string, value: string) => `${label} ${value}`;
@@ -356,40 +397,36 @@ export async function downloadPayslipPlaygroundPdf(preview: PayslipPlaygroundPre
       { text: info('Employee name:', preview.employee.fullName) },
       { text: info('PAN:', preview.payment.pan ?? '—') },
     ],
-    twoCol,
-    5.5,
+    infoCol,
+    rh,
   );
   drawRow(
     [
       { text: info('Employee ID:', preview.employee.employeeCode) },
       { text: info('Account number:', preview.payment.bankAccountNumber ?? '—') },
     ],
-    twoCol,
-    5.5,
+    infoCol,
+    rh,
   );
   drawRow(
     [
       { text: info('Designation:', preview.employee.designationName ?? '—') },
       { text: info('Bank name:', preview.payment.bankName ?? '—') },
     ],
-    twoCol,
-    5.5,
+    infoCol,
+    rh,
   );
   drawRow(
     [
       { text: info('Date of joining:', preview.employee.joiningDate ?? '—') },
       { text: info('IFSC:', preview.payment.ifsc ?? '—') },
     ],
-    twoCol,
-    5.5,
+    infoCol,
+    rh,
   );
-  drawRow(
-    [{ text: info('Department:', preview.employee.departmentName ?? '—'), span: 2 }],
-    twoCol,
-    5.5,
-  );
+  drawRow([{ text: info('Department:', preview.employee.departmentName ?? '—'), span: 2 }], infoCol, rh);
 
-  drawRow([{ text: 'Attendance', bold: true, fill: true, span: 4 }], fourCol, 5.5);
+  drawRow([{ text: 'Attendance', bold: true, fill: true, span: 4 }], fourCol, rhHead);
   drawRow(
     [
       { text: `Calendar days: ${preview.attendance.calendarDays}` },
@@ -398,7 +435,7 @@ export async function downloadPayslipPlaygroundPdf(preview: PayslipPlaygroundPre
       { text: `LOP: ${preview.attendance.lopDays}` },
     ],
     fourCol,
-    5.5,
+    rh,
   );
 
   drawRow(
@@ -407,7 +444,7 @@ export async function downloadPayslipPlaygroundPdf(preview: PayslipPlaygroundPre
       { text: 'Deductions', align: 'center', bold: true, fill: true, span: 3 },
     ],
     payWidths,
-    5.5,
+    rhHead,
   );
   drawRow(
     [
@@ -419,7 +456,7 @@ export async function downloadPayslipPlaygroundPdf(preview: PayslipPlaygroundPre
       { text: 'YTD', align: 'right', bold: true, fill: true },
     ],
     payWidths,
-    5,
+    rh,
   );
 
   const maxRows = Math.max(preview.earnings.length, preview.deductions.length);
@@ -436,7 +473,7 @@ export async function downloadPayslipPlaygroundPdf(preview: PayslipPlaygroundPre
         { text: d ? formatInrPdf(d.ytd) : '', align: 'right' },
       ],
       payWidths,
-      5,
+      rh,
     );
   }
 
@@ -449,15 +486,11 @@ export async function downloadPayslipPlaygroundPdf(preview: PayslipPlaygroundPre
       { text: formatInrPdf(preview.net), align: 'right', bold: true, span: 2 },
     ],
     payWidths,
-    5.5,
+    rhHead,
   );
-  drawRow(
-    [{ text: `Net pay in words: ${preview.netInWords}`, span: 6 }],
-    payWidths,
-    6,
-  );
+  drawRow([{ text: `Net pay in words: ${preview.netInWords}`, span: 6 }], payWidths, rhHead);
 
-  drawRow([{ text: 'Leave particulars', bold: true, fill: true, span: 5 }], fiveCol, 5.5);
+  drawRow([{ text: 'Leave particulars', bold: true, fill: true, span: 5 }], fiveCol, rhHead);
   drawRow(
     [
       { text: 'Type', bold: true, fill: true },
@@ -467,10 +500,10 @@ export async function downloadPayslipPlaygroundPdf(preview: PayslipPlaygroundPre
       { text: 'Closing', align: 'right', bold: true, fill: true },
     ],
     fiveCol,
-    5,
+    rh,
   );
   if (preview.leave.length === 0) {
-    drawRow([{ text: 'No leave allocations for this calendar year.', span: 5 }], fiveCol, 5);
+    drawRow([{ text: 'No leave allocations for this calendar year.', span: 5 }], fiveCol, rh);
   } else {
     for (const row of preview.leave) {
       drawRow(
@@ -482,7 +515,7 @@ export async function downloadPayslipPlaygroundPdf(preview: PayslipPlaygroundPre
           { text: String(row.closing), align: 'right' },
         ],
         fiveCol,
-        5,
+        rh,
       );
     }
   }
@@ -507,16 +540,20 @@ export async function downloadPayslipPlaygroundPdf(preview: PayslipPlaygroundPre
   drawRow(
     [{ text: `Income tax · New regime · FY ${preview.financialYear}`, bold: true, fill: true, span: 2 }],
     twoCol,
-    5.5,
+    rhHead,
   );
   for (const [label, value] of taxLines) {
     drawRow(
       [
         { text: label, bold: label === 'Taxable income' || label === 'Net annual tax' },
-        { text: formatInrPdf(value), align: 'right', bold: label === 'Taxable income' || label === 'Net annual tax' },
+        {
+          text: formatInrPdf(value),
+          align: 'right',
+          bold: label === 'Taxable income' || label === 'Net annual tax',
+        },
       ],
       twoCol,
-      4.8,
+      rh,
     );
   }
 
