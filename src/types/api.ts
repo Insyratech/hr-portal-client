@@ -1806,6 +1806,168 @@ export type CalculatePayrollInput = {
   adjustments?: PayrollAdjustment[];
 };
 
+/** Sandip-only ephemeral new-regime payslip playground (no DB write). */
+export type PayslipPlaygroundSeed = {
+  employee: {
+    id: string;
+    employeeCode: string;
+    fullName: string;
+    designationName: string | null;
+    departmentName: string | null;
+    joiningDate: string | null;
+  };
+  company: {
+    name: string;
+    address: string;
+    logoPath: string | null;
+    logoUrl: string | null;
+  };
+  payment: {
+    pan: string | null;
+    bankAccountNumber: string | null;
+    bankName: string | null;
+    ifsc: string | null;
+  };
+  compensation: {
+    basic: number;
+    da: number;
+    hra: number;
+    fuel: number;
+    incentives: number;
+    other: number;
+    professionalTax: number;
+    tds: number;
+    employeeWelfare: number;
+    kpi: number;
+    otherDeductions: number;
+  };
+  leave: {
+    code: string;
+    name: string;
+    opening: number;
+    accrued: number;
+    availed: number;
+    closing: number;
+  }[];
+  /** Published slips (newest first) for YTD when previewing a month. */
+  publishedSlips: {
+    id: string;
+    period: string;
+    monthLabel: string;
+    gross: number;
+    net: number;
+    tds: number;
+    basic: number;
+    da: number;
+    hra: number;
+    fuel: number;
+    incentives: number;
+    other: number;
+    professionalTax: number;
+    employeeWelfare: number;
+    otherDeductions: number;
+    lopAmount: number;
+  }[];
+  suggestedPeriod: string;
+};
+
+export type PayslipPlaygroundPreviewInput = {
+  period: string;
+  calendarDays?: number;
+  workingDays: number;
+  lopDays: number;
+  basic: number;
+  da: number;
+  hra: number;
+  fuel: number;
+  incentives: number;
+  other: number;
+  professionalTax: number;
+  employeeWelfare: number;
+  otherDeductions: number;
+  tdsOverride?: number | null;
+  otherIncomeAnnual?: number;
+  relief89?: number;
+};
+
+export type PayslipPlaygroundLine = { label: string; amount: number; ytd: number };
+
+export type PayslipPlaygroundTax = {
+  annualGrossSalary: number;
+  standardDeduction: number;
+  otherIncome: number;
+  taxableIncome: number;
+  taxOnTotalIncome: number;
+  rebate87A: number;
+  taxAfterRebate: number;
+  surchargeRate: number;
+  surcharge: number;
+  cess: number;
+  taxBeforeRelief89: number;
+  relief89: number;
+  netAnnualTax: number;
+  taxDeductedTillPreviousMonth: number;
+  balanceTax: number;
+  monthsLeftIncludingThis: number;
+  tdsThisMonth: number;
+  taxRemainingAfterThisMonth: number;
+  slabRows: {
+    label: string;
+    from: number;
+    to: number | null;
+    rate: number;
+    taxableInSlab: number;
+    tax: number;
+  }[];
+};
+
+export type PayslipPlaygroundPreview = {
+  period: string;
+  monthLabel: string;
+  financialYear: string;
+  taxRegime: 'new';
+  ephemeral: true;
+  employee: PayslipPlaygroundSeed['employee'];
+  company: PayslipPlaygroundSeed['company'];
+  payment: PayslipPlaygroundSeed['payment'];
+  attendance: {
+    calendarDays: number;
+    workingDays: number;
+    nonWorkingDays: number;
+    lopDays: number;
+  };
+  earnings: PayslipPlaygroundLine[];
+  deductions: PayslipPlaygroundLine[];
+  gross: number;
+  grossYtd: number;
+  dailyRate: number;
+  nonWorkingAmount: number;
+  lopAmount: number;
+  net: number;
+  netInWords: string;
+  tdsSource: 'computed' | 'override';
+  tds: number;
+  leave: PayslipPlaygroundSeed['leave'];
+  ytd: {
+    basic: number;
+    da: number;
+    hra: number;
+    fuel: number;
+    incentives: number;
+    other: number;
+    professionalTax: number;
+    tds: number;
+    employeeWelfare: number;
+    otherDeductions: number;
+    lopAmount: number;
+    gross: number;
+    earnings: number;
+    slipCount: number;
+    periods: string[];
+  };
+  tax: PayslipPlaygroundTax;
+};
+
 export type SalarySlip = {
   id: string;
   runId: string;

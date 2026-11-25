@@ -158,6 +158,9 @@ import type {
   ReportsOverview,
   Role,
   SalarySlip,
+  PayslipPlaygroundPreview,
+  PayslipPlaygroundPreviewInput,
+  PayslipPlaygroundSeed,
   Shift,
   ShiftAssignment,
   WorkWeek,
@@ -3367,6 +3370,15 @@ export const api = createApi({
       query: (id) => `/api/v1/payroll/slips/${id}`,
       providesTags: (_r, _e, id) => [{ type: 'PayrollRuns', id }],
     }),
+    getPayslipPlaygroundSeed: builder.query<ApiSuccess<PayslipPlaygroundSeed>, void>({
+      query: () => '/api/v1/payroll/playground/seed',
+    }),
+    previewPayslipPlayground: builder.mutation<
+      ApiSuccess<PayslipPlaygroundPreview>,
+      PayslipPlaygroundPreviewInput
+    >({
+      query: (body) => ({ url: '/api/v1/payroll/playground/preview', method: 'POST', body }),
+    }),
     getShifts: builder.query<ApiSuccess<Shift[]>, void>({
       query: () => '/api/v1/shifts',
       providesTags: ['Shifts'],
@@ -4417,6 +4429,8 @@ export const {
   useCalculatePayrollMutation,
   usePublishPayrollMutation,
   useGetMyPayslipsQuery,
+  useGetPayslipPlaygroundSeedQuery,
+  usePreviewPayslipPlaygroundMutation,
   useGetPayslipQuery,
   useGetShiftsQuery,
   useCreateShiftMutation,
