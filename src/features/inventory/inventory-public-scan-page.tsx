@@ -10,12 +10,15 @@ import { StatusMessage } from '@/components/ui/status-message';
 import { SELECT_CLASS } from '@/features/inventory/inventory-constants';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
+  useGetInventoryPublicLabRecipesQuery,
   useGetInventoryPublicScanQuery,
   useIssueInventoryPublicPlasticBatchMutation,
   useIssueInventoryPublicScanMutation,
+  useSubmitInventoryPublicLabUsageMutation,
 } from '@/store/api/api';
 import type {
   InventoryPublicCentralCard,
+  InventoryPublicCentralLabCard,
   InventoryPublicCentralLotItem,
   InventoryPublicLotScanCard,
   InventoryPublicStationCard,
@@ -119,17 +122,7 @@ export function InventoryPublicScanPage() {
 
   if (payload.kind === 'central_lab') {
     return (
-      <main className="mx-auto max-w-md px-4 py-10">
-        <OfflineBanner online={online} />
-        <p className="text-xs uppercase tracking-[0.2em] text-meta">Lab inventory</p>
-        <h1 className="mt-2 text-xl font-medium">{payload.name}</h1>
-        <p className="mt-4 text-sm text-muted">{payload.message}</p>
-        <p className="mt-6 text-sm">
-          <Link href="/scan" className="underline-offset-2 hover:underline">
-            Scan another label
-          </Link>
-        </p>
-      </main>
+      <LabScanCard token={token} card={payload} online={online} onDone={() => void refetch()} />
     );
   }
 
@@ -928,6 +921,295 @@ function CentralScanCard({
             </>
           )}
 
+          <p className="text-xs text-muted">
+            <Link href="/scan" className="underline-offset-2 hover:underline">
+              Scan another label with camera
+            </Link>
+          </p>
+        </div>
+      )}
+    </main>
+  );
+}
+
+function LabScanCard({
+  token,
+  card,
+  online,
+  onDone,
+}: {
+  token: string;
+  card: InventoryPublicCentralLabCard;
+  online: boolean;
+  onDone: () => void;
+}) {
+  const [submitUsage, { isLoading: submitting }] = useSubmitInventoryPublicLabUsageMutation();
+  const [employeeId, setEmployeeId] = useState('');
+  const [activityId, setActivityId] = useState('');
+  const [recipeId, setRecipeId] = useState('');
+  const [outputQty, setOutputQty] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [components, setComponents] = useState<
+    Array<{
+      key: string;
+      name: string;
+      quantityValue: string;
+      quantityUnit: string;
+      notes: string;
+      catalogItemId: string | null;
+    }>
+  >([]);
+
+  const { data: recipesData, isFetching: loadingRecipes } = useGetInventoryPublicLabRecipesQuery(
+    activityId,
+    { skip: !activityId },
+  );
+  const recipes = recipesData?.data ?? [];
+  const selectedRecipe = recipes.find((recipe) => recipe.id === recipeId);
+
+  useEffect(() => {
+    setRecipeId('');
+    setComponents([]);
+    setOutputQty('');
+  }, [activityId]);
+
+  useEffect(() => {
+    if (!selectedRecipe) {
+      setComponents([]);
+      setOutputQty('');
+      return;
+    }
+    setOutputQty(
+      selectedRecipe.finalVolumeValue != null ? String(selectedRecipe.finalVolumeValue) : '',
+    );
+    setComponents(
+      selectedRecipe.components.map((component) => ({
+        key: component.id,
+        name: component.name,
+        quantityValue:
+          component.quantityValue === null || component.quantityValue === undefined
+            ? ''
+            : String(component.quantityValue),
+        quantityUnit: component.quantityUnit,
+        notes: component.notes,
+        catalogItemId: component.catalogItemId,
+      })),
+    );
+  }, [selectedRecipe]);
+
+  async function onSubmit() {
+    setError(null);
+    setSuccess(null);
+    if (!online) {
+      setError('You are offline. Connect to the network before submitting — usage was not recorded.');
+      return;
+    }
+    if (!employeeId) {
+      setError('Select your name.');
+      return;
+    }
+    if (!activityId) {
+      setError('Select what you are doing.');
+      return;
+    }
+    if (!recipeId) {
+      setError('Select a recipe / type.');
+      return;
+    }
+    const lines = components
+      .map((row) => {
+        const qtyRaw = row.quantityValue.trim();
+        return {
+          name: row.name.trim(),
+          quantityValue: qtyRaw ? Number(qtyRaw) : null,
+          quantityUnit: row.quantityUnit.trim(),
+          notes: row.notes.trim(),
+          catalogItemId: row.catalogItemId,
+        };
+      })
+      .filter((row) => row.name);
+    if (!lines.length) {
+      setError('Add at least one component.');
+      return;
+    }
+    if (lines.some((row) => row.quantityValue !== null && !Number.isFinite(row.quantityValue))) {
+      setError('Component quantities must be numbers (or blank).');
+      return;
+    }
+    try {
+      const result = await submitUsage({
+        token,
+        body: {
+          employeeId,
+          activityId,
+          recipeId,
+          outputQty: outputQty.trim() ? Number(outputQty) : null,
+          components: lines,
+        },
+      }).unwrap();
+      const deducted = result.data.components.filter((line) => line.qtyDeducted != null).length;
+      setSuccess(
+        `Recorded ${result.data.activityName} · ${result.data.recipeName} for ${result.data.employeeName} (${result.data.employeeCode}).${
+          result.data.outputLotCode ? ` New lot ${result.data.outputLotCode}.` : ''
+        }${deducted ? ` Deducted ${deducted} linked component(s).` : ''}`,
+      );
+      setRecipeId('');
+      setComponents([]);
+      onDone();
+    } catch (cause) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setError('You are offline. Connect to the network before submitting — usage was not recorded.');
+        return;
+      }
+      setError(apiErrorMessage(cause, 'Unable to submit lab usage.'));
+    }
+  }
+
+  return (
+    <main className="mx-auto min-h-screen max-w-md bg-background px-4 py-8">
+      <OfflineBanner online={online} />
+      <p className="text-xs uppercase tracking-[0.2em] text-meta">Lab inventory</p>
+      <h1 className="mt-2 text-xl font-medium">{card.name}</h1>
+      <p className="mt-1 text-sm text-muted">{card.message}</p>
+
+      {!card.activities.length ? (
+        <p className="mt-6 text-sm text-muted">
+          No work types yet. Ask Inventory Manager to add them under Lab recipes.
+        </p>
+      ) : (
+        <div className="mt-8 space-y-5">
+          <div>
+            <Label htmlFor="lab-employee">Employee</Label>
+            <select
+              id="lab-employee"
+              className={SELECT_CLASS}
+              value={employeeId}
+              onChange={(event) => setEmployeeId(event.target.value)}
+            >
+              <option value="">Select name (ID)</option>
+              {card.employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.fullName} ({employee.employeeCode})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <Label htmlFor="lab-activity">What are you doing?</Label>
+            <select
+              id="lab-activity"
+              className={SELECT_CLASS}
+              value={activityId}
+              onChange={(event) => setActivityId(event.target.value)}
+            >
+              <option value="">Select work type</option>
+              {card.activities.map((activity) => (
+                <option key={activity.id} value={activity.id}>
+                  {activity.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {activityId ? (
+            <div>
+              <Label htmlFor="lab-recipe">Recipe / type</Label>
+              <select
+                id="lab-recipe"
+                className={SELECT_CLASS}
+                value={recipeId}
+                onChange={(event) => setRecipeId(event.target.value)}
+                disabled={loadingRecipes}
+              >
+                <option value="">{loadingRecipes ? 'Loading…' : 'Select recipe'}</option>
+                {recipes.map((recipe) => (
+                  <option key={recipe.id} value={recipe.id}>
+                    {recipe.name}
+                    {recipe.finalVolumeValue != null
+                      ? ` (${recipe.finalVolumeValue} ${recipe.finalVolumeUnit})`
+                      : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
+          {selectedRecipe ? (
+            <>
+              {selectedRecipe.createsOutputLot ? (
+                <div>
+                  <Label htmlFor="lab-output-qty">
+                    Output qty ({selectedRecipe.finalVolumeUnit || selectedRecipe.outputCatalogItemName || 'units'})
+                  </Label>
+                  <Input
+                    id="lab-output-qty"
+                    type="number"
+                    min={0.0001}
+                    step="any"
+                    value={outputQty}
+                    onChange={(event) => setOutputQty(event.target.value)}
+                  />
+                </div>
+              ) : null}
+
+              <div className="space-y-3">
+                <Label>Components (editable)</Label>
+                {components.map((component, index) => (
+                  <div key={component.key} className="space-y-2 rounded border border-border p-3">
+                    <p className="text-sm font-medium">{component.name || `Component ${index + 1}`}</p>
+                    <div className="grid grid-cols-[1fr_5rem] gap-2">
+                      <Input
+                        type="number"
+                        step="any"
+                        value={component.quantityValue}
+                        onChange={(event) =>
+                          setComponents((current) =>
+                            current.map((row) =>
+                              row.key === component.key
+                                ? { ...row, quantityValue: event.target.value }
+                                : row,
+                            ),
+                          )
+                        }
+                        placeholder="Qty"
+                      />
+                      <Input
+                        value={component.quantityUnit}
+                        onChange={(event) =>
+                          setComponents((current) =>
+                            current.map((row) =>
+                              row.key === component.key
+                                ? { ...row, quantityUnit: event.target.value }
+                                : row,
+                            ),
+                          )
+                        }
+                        placeholder="Unit"
+                      />
+                    </div>
+                    {component.notes ? <p className="text-xs text-muted">{component.notes}</p> : null}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : null}
+
+          {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
+          {success ? <StatusMessage tone="success">{success}</StatusMessage> : null}
+
+          <Button
+            type="button"
+            className="w-full"
+            disabled={submitting || !online || !recipeId}
+            onClick={() => void onSubmit()}
+          >
+            {submitting ? 'Submitting…' : 'Submit'}
+          </Button>
+          <p className="text-xs text-muted">
+            Linked components deduct stock from Inside lab. Reagent recipes can also create a new lot.
+          </p>
           <p className="text-xs text-muted">
             <Link href="/scan" className="underline-offset-2 hover:underline">
               Scan another label with camera

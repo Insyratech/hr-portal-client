@@ -112,6 +112,9 @@ import type {
   InventoryPublicPlasticIssueResult,
   InventoryCentralQr,
   InventoryCentralQrPrint,
+  InventoryLabActivity,
+  InventoryLabRecipe,
+  InventoryLabUsageResult,
   InventoryStation,
   InventoryStationPrint,
   InventoryAlert,
@@ -308,6 +311,7 @@ export const api = createApi({
     'InventoryPlastic',
     'InventoryStations',
     'InventoryCentralQrs',
+    'InventoryLab',
     'InventoryAlerts',
     'HrInvoices',
   ],
@@ -3856,6 +3860,141 @@ export const api = createApi({
     getInventoryCentralQrPrint: builder.query<ApiSuccess<InventoryCentralQrPrint>, string>({
       query: (id) => `/api/v1/inventory/central-qrs/${id}/print`,
     }),
+    getInventoryLabActivities: builder.query<ApiSuccess<InventoryLabActivity[]>, void>({
+      query: () => '/api/v1/inventory/lab/activities',
+      providesTags: ['InventoryLab'],
+    }),
+    createInventoryLabActivity: builder.mutation<
+      ApiSuccess<InventoryLabActivity>,
+      { name: string; description?: string; sortOrder?: number }
+    >({
+      query: (body) => ({ url: '/api/v1/inventory/lab/activities', method: 'POST', body }),
+      invalidatesTags: ['InventoryLab'],
+    }),
+    updateInventoryLabActivity: builder.mutation<
+      ApiSuccess<InventoryLabActivity>,
+      {
+        id: string;
+        body: {
+          name?: string;
+          description?: string;
+          sortOrder?: number;
+          status?: 'active' | 'inactive';
+        };
+      }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/inventory/lab/activities/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['InventoryLab'],
+    }),
+    getInventoryLabRecipes: builder.query<
+      ApiSuccess<InventoryLabRecipe[]>,
+      { activityId?: string } | void
+    >({
+      query: (args) => {
+        const activityId = args && 'activityId' in args ? args.activityId : undefined;
+        const qs = activityId ? `?activityId=${encodeURIComponent(activityId)}` : '';
+        return `/api/v1/inventory/lab/recipes${qs}`;
+      },
+      providesTags: ['InventoryLab'],
+    }),
+    getInventoryLabRecipe: builder.query<ApiSuccess<InventoryLabRecipe>, string>({
+      query: (id) => `/api/v1/inventory/lab/recipes/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'InventoryLab', id }],
+    }),
+    createInventoryLabRecipe: builder.mutation<
+      ApiSuccess<InventoryLabRecipe>,
+      {
+        activityId: string;
+        name: string;
+        finalVolumeValue?: number | null;
+        finalVolumeUnit?: string;
+        notes?: string;
+        sortOrder?: number;
+        createsOutputLot?: boolean;
+        outputCatalogItemId?: string | null;
+        components?: Array<{
+          name: string;
+          quantityValue?: number | null;
+          quantityUnit?: string;
+          notes?: string;
+          sortOrder?: number;
+          catalogItemId?: string | null;
+        }>;
+      }
+    >({
+      query: (body) => ({ url: '/api/v1/inventory/lab/recipes', method: 'POST', body }),
+      invalidatesTags: ['InventoryLab'],
+    }),
+    updateInventoryLabRecipe: builder.mutation<
+      ApiSuccess<InventoryLabRecipe>,
+      {
+        id: string;
+        body: {
+          name?: string;
+          finalVolumeValue?: number | null;
+          finalVolumeUnit?: string;
+          notes?: string;
+          sortOrder?: number;
+          status?: 'active' | 'inactive';
+          createsOutputLot?: boolean;
+          outputCatalogItemId?: string | null;
+          components?: Array<{
+            id?: string;
+            name: string;
+            quantityValue?: number | null;
+            quantityUnit?: string;
+            notes?: string;
+            sortOrder?: number;
+            catalogItemId?: string | null;
+          }>;
+        };
+      }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/inventory/lab/recipes/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['InventoryLab'],
+    }),
+    deleteInventoryLabRecipe: builder.mutation<ApiSuccess<{ id: string }>, string>({
+      query: (id) => ({ url: `/api/v1/inventory/lab/recipes/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['InventoryLab'],
+    }),
+    getInventoryPublicLabRecipes: builder.query<ApiSuccess<InventoryLabRecipe[]>, string>({
+      query: (activityId) =>
+        `/api/v1/inventory/public/lab/activities/${encodeURIComponent(activityId)}/recipes`,
+    }),
+    submitInventoryPublicLabUsage: builder.mutation<
+      ApiSuccess<InventoryLabUsageResult>,
+      {
+        token: string;
+        body: {
+          employeeId: string;
+          activityId: string;
+          recipeId: string;
+          notes?: string;
+          outputQty?: number | null;
+          components: Array<{
+            name: string;
+            quantityValue?: number | null;
+            quantityUnit?: string;
+            notes?: string;
+            catalogItemId?: string | null;
+          }>;
+        };
+      }
+    >({
+      query: ({ token, body }) => ({
+        url: `/api/v1/inventory/public/scan/${encodeURIComponent(token)}/lab-usage`,
+        method: 'POST',
+        body,
+      }),
+    }),
     getInventoryStations: builder.query<ApiSuccess<InventoryStation[]>, void>({
       query: () => '/api/v1/inventory/stations',
       providesTags: ['InventoryStations'],
@@ -4511,6 +4650,16 @@ export const {
   useGetInventoryStationQuery,
   useGetInventoryCentralQrsQuery,
   useLazyGetInventoryCentralQrPrintQuery,
+  useGetInventoryLabActivitiesQuery,
+  useCreateInventoryLabActivityMutation,
+  useUpdateInventoryLabActivityMutation,
+  useGetInventoryLabRecipesQuery,
+  useGetInventoryLabRecipeQuery,
+  useCreateInventoryLabRecipeMutation,
+  useUpdateInventoryLabRecipeMutation,
+  useDeleteInventoryLabRecipeMutation,
+  useGetInventoryPublicLabRecipesQuery,
+  useSubmitInventoryPublicLabUsageMutation,
   useCreateInventoryStationMutation,
   useUpdateInventoryStationMutation,
   useLazyGetInventoryStationPrintQuery,
