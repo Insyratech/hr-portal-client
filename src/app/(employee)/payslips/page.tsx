@@ -3,30 +3,35 @@
 import Link from 'next/link';
 import { DataTable } from '@/components/dashboard/data-table';
 import { PageHeader } from '@/components/layout/page-header';
+import { Button } from '@/components/ui/button';
 import { formatInr } from '@/features/payroll/format';
-import { useGetMeQuery, useGetMyPayslipsQuery, useGetPayslipPlaygroundSeedQuery } from '@/store/api/api';
+import {
+  isPayslipPlaygroundViewer,
+  PAYSLIP_PLAYGROUND_PATH,
+} from '@/features/payroll/playground-access';
+import { useGetMeQuery, useGetMyPayslipsQuery } from '@/store/api/api';
 
 export default function EmployeePayslipsPage() {
   const { data, isLoading } = useGetMyPayslipsQuery();
   const { data: me } = useGetMeQuery();
-  const maybeSandip = me?.data?.fullName === 'Sandip Kumar Yadav';
-  const playground = useGetPayslipPlaygroundSeedQuery(undefined, { skip: !maybeSandip });
-  const showPlayground = playground.isSuccess;
+  const showPlayground = isPayslipPlaygroundViewer(me?.data?.fullName);
 
   return (
     <>
       <PageHeader kicker="Payslips" title="Salary slips" />
-      <p className="mb-4 text-sm text-muted">Published months only. Open a slip to print it.</p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-3">
+        <p className="max-w-xl text-sm text-muted">Published months only. Open a slip to print it.</p>
+        {showPlayground ? (
+          <Button asChild variant="outline" size="sm">
+            <Link href={PAYSLIP_PLAYGROUND_PATH}>Payslip playground</Link>
+          </Button>
+        ) : null}
+      </div>
       {showPlayground ? (
-        <p className="mb-8 text-sm">
-          <Link href="/payslips/playground" className="text-muted underline-offset-2 hover:text-foreground hover:underline">
-            Opens payslip playground
-          </Link>
-          <span className="text-muted"> — ephemeral new-regime draft (not published).</span>
+        <p className="mb-6 text-sm text-muted">
+          Use the playground to draft a new-regime salary slip (ephemeral — not published).
         </p>
-      ) : (
-        <div className="mb-8" />
-      )}
+      ) : null}
       <DataTable
         columns={[
           { id: 'month', header: 'Month', cell: (row) => row.monthLabel },

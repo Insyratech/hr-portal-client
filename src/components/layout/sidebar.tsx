@@ -57,7 +57,9 @@ import {
   type ManagerialShellVariant,
   type ShellVariant,
 } from '@/features/auth/role-access';
+import { payDocsNavForViewer } from '@/features/payroll/playground-access';
 import { useMyProjectNavItems } from '@/features/work/my-projects';
+import { useGetMeQuery } from '@/store/api/api';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toggleSidebar } from '@/store/slices/ui-slice';
 
@@ -212,11 +214,13 @@ function NavSection({
 }
 
 function EmployeeNavGroups({ collapsed }: { collapsed: boolean }) {
+  const { data: me } = useGetMeQuery();
+  const payDocs = payDocsNavForViewer(MY_WORK_DOCS_NAV, me?.data?.fullName);
   return (
     <>
       <NavLinks items={[MY_WORK_DASHBOARD, MY_WORK_LINK]} collapsed={collapsed} />
       <NavGroup label="Time off" items={MY_WORK_TIME_NAV} collapsed={collapsed} metaTone="orange" />
-      <NavGroup label="Pay & docs" items={MY_WORK_DOCS_NAV} collapsed={collapsed} metaTone="orange" />
+      <NavGroup label="Pay & docs" items={payDocs} collapsed={collapsed} metaTone="orange" />
       <NavGroup label="Account" items={MY_WORK_ACCOUNT_NAV} collapsed={collapsed} metaTone="orange" />
     </>
   );

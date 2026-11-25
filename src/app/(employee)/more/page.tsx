@@ -1,7 +1,14 @@
+'use client';
+
 import Link from 'next/link';
 import { PageHeader } from '@/components/layout/page-header';
 import { Icon, type IconName } from '@/components/ui/icon';
+import {
+  isPayslipPlaygroundViewer,
+  PAYSLIP_PLAYGROUND_PATH,
+} from '@/features/payroll/playground-access';
 import { cn } from '@/lib/utils';
+import { useGetMeQuery } from '@/store/api/api';
 
 const MORE_LINKS: readonly { href: string; label: string; icon: IconName }[] = [
   { href: '/leave', label: 'Leave', icon: 'leave' },
@@ -19,6 +26,24 @@ const MORE_LINKS: readonly { href: string; label: string; icon: IconName }[] = [
 ];
 
 export default function MorePage() {
+  const { data: me } = useGetMeQuery();
+  const showPlayground = isPayslipPlaygroundViewer(me?.data?.fullName);
+
+  const links = showPlayground
+    ? MORE_LINKS.flatMap((item) =>
+        item.href === '/payslips'
+          ? [
+              item,
+              {
+                href: PAYSLIP_PLAYGROUND_PATH,
+                label: 'Payslip playground',
+                icon: 'file' as const,
+              },
+            ]
+          : [item],
+      )
+    : MORE_LINKS;
+
   return (
     <div className="space-y-8">
       <PageHeader kicker="More" title="More" />
@@ -26,7 +51,7 @@ export default function MorePage() {
         Shortcuts you use less often — leave, schedule, documents, and account.
       </p>
       <ul className="grid max-w-md grid-cols-1 gap-1 sm:max-w-xl sm:grid-cols-2">
-        {MORE_LINKS.map((item) => (
+        {links.map((item) => (
           <li key={item.href}>
             <Link
               href={item.href}
