@@ -344,6 +344,7 @@ export const INVENTORY_STOCK_NAV: readonly NavItem[] = [
   { href: '/inventory/lots', label: 'Lots', icon: 'grid' },
   { href: '/inventory/prep', label: 'Prep', icon: 'file' },
   { href: '/inventory/plastic', label: 'Plastic', icon: 'grid' },
+  { href: '/inventory/central-qrs', label: 'Room QRs', icon: 'building' },
   { href: '/inventory/stations', label: 'Stations', icon: 'building' },
 ];
 

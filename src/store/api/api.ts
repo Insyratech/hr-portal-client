@@ -110,6 +110,8 @@ import type {
   InventoryPublicIssueResult,
   InventoryPublicPlasticIssueBatchResult,
   InventoryPublicPlasticIssueResult,
+  InventoryCentralQr,
+  InventoryCentralQrPrint,
   InventoryStation,
   InventoryStationPrint,
   InventoryAlert,
@@ -305,6 +307,7 @@ export const api = createApi({
     'InventoryPrep',
     'InventoryPlastic',
     'InventoryStations',
+    'InventoryCentralQrs',
     'InventoryAlerts',
     'HrInvoices',
   ],
@@ -3761,6 +3764,7 @@ export const api = createApi({
       {
         catalogItemId: string;
         locationId: string;
+        centralQrId: string;
         supplierName?: string;
         supplierType?: InventoryLot['supplierType'];
         purchaseDate: string;
@@ -3774,7 +3778,7 @@ export const api = createApi({
       }
     >({
       query: (body) => ({ url: '/api/v1/inventory/lots', method: 'POST', body }),
-      invalidatesTags: ['InventoryLots', 'InventoryOverview'],
+      invalidatesTags: ['InventoryLots', 'InventoryOverview', 'InventoryCentralQrs'],
     }),
     getInventoryLotPrint: builder.query<ApiSuccess<InventoryLotPrint>, string>({
       query: (id) => `/api/v1/inventory/lots/${id}/print`,
@@ -3845,6 +3849,13 @@ export const api = createApi({
       }),
       invalidatesTags: ['InventoryPrep', 'InventoryOverview'],
     }),
+    getInventoryCentralQrs: builder.query<ApiSuccess<InventoryCentralQr[]>, void>({
+      query: () => '/api/v1/inventory/central-qrs',
+      providesTags: ['InventoryCentralQrs'],
+    }),
+    getInventoryCentralQrPrint: builder.query<ApiSuccess<InventoryCentralQrPrint>, string>({
+      query: (id) => `/api/v1/inventory/central-qrs/${id}/print`,
+    }),
     getInventoryStations: builder.query<ApiSuccess<InventoryStation[]>, void>({
       query: () => '/api/v1/inventory/stations',
       providesTags: ['InventoryStations'],
@@ -3883,6 +3894,7 @@ export const api = createApi({
       {
         catalogItemId: string;
         locationId: string;
+        centralQrId: string;
         manufacturer?: string;
         sizeLabel: string;
         attributes?: Record<string, string>;
@@ -3896,7 +3908,7 @@ export const api = createApi({
       }
     >({
       query: (body) => ({ url: '/api/v1/inventory/plastic-stock', method: 'POST', body }),
-      invalidatesTags: ['InventoryPlastic', 'InventoryOverview'],
+      invalidatesTags: ['InventoryPlastic', 'InventoryOverview', 'InventoryCentralQrs'],
     }),
     getInventoryPlasticMovements: builder.query<ApiSuccess<InventoryPlasticMovement[]>, string>({
       query: (id) => `/api/v1/inventory/plastic-stock/${id}/movements`,
@@ -3918,7 +3930,7 @@ export const api = createApi({
     }),
     issueInventoryPublicScan: builder.mutation<
       ApiSuccess<InventoryPublicIssueResult>,
-      { token: string; body: { employeeId: string; qty: number; notes?: string } }
+      { token: string; body: { employeeId: string; qty: number; lotId?: string; notes?: string } }
     >({
       query: ({ token, body }) => ({
         url: `/api/v1/inventory/public/scan/${encodeURIComponent(token)}/issue`,
@@ -4497,6 +4509,8 @@ export const {
   useCancelInventoryPrepSessionMutation,
   useGetInventoryStationsQuery,
   useGetInventoryStationQuery,
+  useGetInventoryCentralQrsQuery,
+  useLazyGetInventoryCentralQrPrintQuery,
   useCreateInventoryStationMutation,
   useUpdateInventoryStationMutation,
   useLazyGetInventoryStationPrintQuery,

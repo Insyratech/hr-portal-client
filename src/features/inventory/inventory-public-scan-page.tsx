@@ -14,7 +14,13 @@ import {
   useIssueInventoryPublicPlasticBatchMutation,
   useIssueInventoryPublicScanMutation,
 } from '@/store/api/api';
-import type { InventoryPublicLotScanCard, InventoryPublicStationCard } from '@/types/api';
+import type {
+  InventoryPublicCentralCard,
+  InventoryPublicCentralLotItem,
+  InventoryPublicLotScanCard,
+  InventoryPublicStationCard,
+  InventoryPublicStationItem,
+} from '@/types/api';
 
 function useOnlineStatus(): boolean {
   const [online, setOnline] = useState(
@@ -111,6 +117,28 @@ export function InventoryPublicScanPage() {
     );
   }
 
+  if (payload.kind === 'central_lab') {
+    return (
+      <main className="mx-auto max-w-md px-4 py-10">
+        <OfflineBanner online={online} />
+        <p className="text-xs uppercase tracking-[0.2em] text-meta">Lab inventory</p>
+        <h1 className="mt-2 text-xl font-medium">{payload.name}</h1>
+        <p className="mt-4 text-sm text-muted">{payload.message}</p>
+        <p className="mt-6 text-sm">
+          <Link href="/scan" className="underline-offset-2 hover:underline">
+            Scan another label
+          </Link>
+        </p>
+      </main>
+    );
+  }
+
+  if (payload.kind === 'central') {
+    return (
+      <CentralScanCard token={token} card={payload} online={online} onDone={() => void refetch()} />
+    );
+  }
+
   if (payload.kind === 'station') {
     return (
       <StationScanCard token={token} card={payload} online={online} onDone={() => void refetch()} />
@@ -182,6 +210,7 @@ function LotScanCard({
   }
 
   const depleted = card.status === 'depleted' || card.remainingQty <= 0;
+  const issueDisabled = Boolean(card.issueDisabled);
 
   return (
     <main className="mx-auto min-h-screen max-w-md bg-background px-4 py-8">
@@ -208,7 +237,19 @@ function LotScanCard({
         <span className="text-sm font-normal text-muted">{card.unit} left</span>
       </p>
 
-      {depleted ? (
+      {issueDisabled ? (
+        <div className="mt-6 space-y-3">
+          <StatusMessage tone="danger">
+            {card.issueDisabledMessage ??
+              'Bottle QRs no longer record usage. Scan the room QR instead.'}
+          </StatusMessage>
+          <p className="text-sm">
+            <Link href="/scan" className="underline-offset-2 hover:underline">
+              Open camera scanner
+            </Link>
+          </p>
+        </div>
+      ) : depleted ? (
         <p className="mt-6 text-sm text-danger">This lot is empty.</p>
       ) : (
         <div className="mt-8 space-y-5">
@@ -500,6 +541,393 @@ function StationScanCard({
           <p className="text-xs text-muted">
             No login needed. One name covers every item on this visit.
           </p>
+          <p className="text-xs text-muted">
+            <Link href="/scan" className="underline-offset-2 hover:underline">
+              Scan another label with camera
+            </Link>
+          </p>
+        </div>
+      )}
+    </main>
+  );
+}
+
+function CentralScanCard({
+  token,
+  card,
+  online,
+  onDone,
+}: {
+  token: string;
+  card: InventoryPublicCentralCard;
+  online: boolean;
+  onDone: () => void;
+}) {
+  const [issueLot, { isLoading: issuingLot }] = useIssueInventoryPublicScanMutation();
+  const [issueBatch, { isLoading: issuingPlastic }] = useIssueInventoryPublicPlasticBatchMutation();
+  const [employeeId, setEmployeeId] = useState('');
+  const [mode, setMode] = useState<'lot' | 'box'>(card.lots.length > 0 ? 'lot' : 'box');
+  const [lotId, setLotId] = useState('');
+  const [qty, setQty] = useState<number | null>(null);
+  const [customQty, setCustomQty] = useState('');
+  const [lines, setLines] = useState<DraftPlasticLine[]>([emptyPlasticLine()]);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const selectedLot: InventoryPublicCentralLotItem | undefined = card.lots.find((lot) => lot.id === lotId);
+  const selectedQty = useMemo(() => {
+    if (customQty.trim()) {
+      const parsed = Number(customQty);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return qty;
+  }, [customQty, qty]);
+
+  const empty = card.lots.length === 0 && card.plasticItems.length === 0;
+  const submitting = issuingLot || issuingPlastic;
+  const showLots = (mode === 'lot' || card.plasticItems.length === 0) && card.lots.length > 0;
+
+  function updateLine(key: string, patch: Partial<DraftPlasticLine>) {
+    setLines((current) => current.map((line) => (line.key === key ? { ...line, ...patch } : line)));
+  }
+
+  async function onSubmitLot() {
+    setError(null);
+    setSuccess(null);
+    if (!online) {
+      setError('You are offline. Connect to the network before submitting — usage was not recorded.');
+      return;
+    }
+    if (!employeeId) {
+      setError('Select your name.');
+      return;
+    }
+    if (!lotId) {
+      setError('Select a lot.');
+      return;
+    }
+    if (selectedQty == null || selectedQty <= 0) {
+      setError('Choose a quantity.');
+      return;
+    }
+    try {
+      const result = await issueLot({
+        token,
+        body: { employeeId, lotId, qty: selectedQty },
+      }).unwrap();
+      setSuccess(
+        `Recorded ${result.data.qtyIssued} ${result.data.unit} for ${result.data.employeeName}. Remaining ${result.data.remainingQty} ${result.data.unit}.`,
+      );
+      setLotId('');
+      setQty(null);
+      setCustomQty('');
+      onDone();
+    } catch (cause) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setError('You are offline. Connect to the network before submitting — usage was not recorded.');
+        return;
+      }
+      setError(apiErrorMessage(cause, 'Unable to submit usage.'));
+    }
+  }
+
+  async function onSubmitPlastic() {
+    setError(null);
+    setSuccess(null);
+    if (!online) {
+      setError('You are offline. Connect to the network before submitting — usage was not recorded.');
+      return;
+    }
+    if (!employeeId) {
+      setError('Select your name.');
+      return;
+    }
+    const parsed = lines.map((line) => {
+      const custom = line.custom.trim();
+      const boxes = custom ? Math.trunc(Number(custom)) : line.boxes;
+      return { plasticStockId: line.plasticStockId, boxes };
+    });
+    if (parsed.some((line) => !line.plasticStockId)) {
+      setError('Choose an item on every row, or remove the empty row.');
+      return;
+    }
+    if (parsed.some((line) => line.boxes == null || !Number.isFinite(line.boxes) || line.boxes <= 0)) {
+      setError('Enter how many boxes for each item.');
+      return;
+    }
+    const ids = parsed.map((line) => line.plasticStockId);
+    if (new Set(ids).size !== ids.length) {
+      setError('Each item can be entered once. Combine the boxes on one row.');
+      return;
+    }
+    try {
+      const result = await issueBatch({
+        token,
+        body: {
+          employeeId,
+          lines: parsed.map((line) => ({
+            plasticStockId: line.plasticStockId,
+            boxes: line.boxes!,
+          })),
+        },
+      }).unwrap();
+      const summary = result.data.lines
+        .map((line) => `${line.boxesIssued} ${line.unit} · ${line.itemName}`)
+        .join('; ');
+      setSuccess(`Recorded for ${result.data.employeeName}: ${summary}`);
+      setLines([emptyPlasticLine()]);
+      onDone();
+    } catch (cause) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setError('You are offline. Connect to the network before submitting — usage was not recorded.');
+        return;
+      }
+      setError(apiErrorMessage(cause, 'Unable to submit usage.'));
+    }
+  }
+
+  return (
+    <main className="mx-auto min-h-screen max-w-md bg-background px-4 py-8">
+      <OfflineBanner online={online} />
+      <p className="text-xs uppercase tracking-[0.2em] text-meta">Lab inventory</p>
+      <h1 className="mt-2 text-xl font-medium">{card.name}</h1>
+      <p className="mt-1 text-sm text-muted">
+        {card.centralKind === 'stock_room' ? 'Stock room take-out' : 'Stationery take-out'}
+      </p>
+
+      {empty ? (
+        <p className="mt-6 text-sm text-muted">Nothing is attached to this room QR yet.</p>
+      ) : (
+        <div className="mt-8 space-y-5">
+          <div>
+            <Label htmlFor="central-employee">1. Your name</Label>
+            <select
+              id="central-employee"
+              className={SELECT_CLASS}
+              value={employeeId}
+              onChange={(event) => setEmployeeId(event.target.value)}
+            >
+              <option value="">Select employee</option>
+              {card.employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.fullName} ({employee.employeeCode})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {card.lots.length > 0 && card.plasticItems.length > 0 ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className={`rounded border px-3 py-2 text-sm ${
+                  mode === 'lot'
+                    ? 'border-foreground bg-foreground text-background'
+                    : 'border-border bg-background'
+                }`}
+                onClick={() => setMode('lot')}
+              >
+                Measured lot
+              </button>
+              <button
+                type="button"
+                className={`rounded border px-3 py-2 text-sm ${
+                  mode === 'box'
+                    ? 'border-foreground bg-foreground text-background'
+                    : 'border-border bg-background'
+                }`}
+                onClick={() => setMode('box')}
+              >
+                Boxes
+              </button>
+            </div>
+          ) : null}
+
+          {showLots ? (
+            <>
+              <div>
+                <Label htmlFor="central-lot">2. Lot</Label>
+                <select
+                  id="central-lot"
+                  className={SELECT_CLASS}
+                  value={lotId}
+                  onChange={(event) => {
+                    setLotId(event.target.value);
+                    setQty(null);
+                    setCustomQty('');
+                  }}
+                >
+                  <option value="">Select lot</option>
+                  {card.lots.map((lot) => (
+                    <option key={lot.id} value={lot.id}>
+                      {lot.itemName} · {lot.lotCode} ({lot.remainingQty} {lot.unit})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {selectedLot ? (
+                <div>
+                  <Label>3. Quantity ({selectedLot.unit})</Label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {selectedLot.qtyChips.map((chip) => (
+                      <button
+                        key={chip}
+                        type="button"
+                        className={`rounded border px-3 py-2 text-sm tabular-nums ${
+                          qty === chip && !customQty.trim()
+                            ? 'border-foreground bg-foreground text-background'
+                            : 'border-border bg-background'
+                        }`}
+                        onClick={() => {
+                          setQty(chip);
+                          setCustomQty('');
+                        }}
+                      >
+                        {chip}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3">
+                    <Label htmlFor="central-custom-qty">Or enter amount</Label>
+                    <Input
+                      id="central-custom-qty"
+                      type="number"
+                      min={0.0001}
+                      step="any"
+                      value={customQty}
+                      onChange={(event) => {
+                        setCustomQty(event.target.value);
+                        setQty(null);
+                      }}
+                      placeholder={`Max ${selectedLot.remainingQty}`}
+                    />
+                  </div>
+                </div>
+              ) : null}
+              {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
+              {success ? <StatusMessage tone="success">{success}</StatusMessage> : null}
+              <Button
+                type="button"
+                className="w-full"
+                disabled={submitting || !online}
+                onClick={() => void onSubmitLot()}
+              >
+                {submitting ? 'Submitting…' : 'Submit'}
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <Label>2. Items</Label>
+                  <button
+                    type="button"
+                    className="text-sm underline-offset-2 hover:underline"
+                    onClick={() =>
+                      setLines((current) =>
+                        current.length >= 12 ? current : [...current, emptyPlasticLine()],
+                      )
+                    }
+                  >
+                    Add item
+                  </button>
+                </div>
+                {lines.map((line, index) => {
+                  const selected: InventoryPublicStationItem | undefined = card.plasticItems.find(
+                    (item) => item.id === line.plasticStockId,
+                  );
+                  const takenElsewhere = new Set(
+                    lines
+                      .filter((other) => other.key !== line.key && other.plasticStockId)
+                      .map((other) => other.plasticStockId),
+                  );
+                  return (
+                    <div key={line.key} className="space-y-3 rounded border border-border p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs text-muted">Item {index + 1}</p>
+                        {lines.length > 1 ? (
+                          <button
+                            type="button"
+                            className="text-xs underline-offset-2 hover:underline"
+                            onClick={() =>
+                              setLines((current) => current.filter((item) => item.key !== line.key))
+                            }
+                          >
+                            Remove
+                          </button>
+                        ) : null}
+                      </div>
+                      <select
+                        className={SELECT_CLASS}
+                        value={line.plasticStockId}
+                        onChange={(event) =>
+                          updateLine(line.key, {
+                            plasticStockId: event.target.value,
+                            boxes: null,
+                            custom: '',
+                          })
+                        }
+                      >
+                        <option value="">Select item</option>
+                        {card.plasticItems.map((item) => (
+                          <option
+                            key={item.id}
+                            value={item.id}
+                            disabled={takenElsewhere.has(item.id)}
+                          >
+                            {item.itemName} · {item.sizeLabel}
+                            {item.manufacturer ? ` · ${item.manufacturer}` : ''} ({item.boxesOnHand}{' '}
+                            {item.unit})
+                          </option>
+                        ))}
+                      </select>
+                      {selected ? (
+                        <>
+                          <div className="flex flex-wrap gap-2">
+                            {selected.qtyChips.map((chip) => (
+                              <button
+                                key={chip}
+                                type="button"
+                                className={`rounded border px-3 py-2 text-sm tabular-nums ${
+                                  line.boxes === chip && !line.custom.trim()
+                                    ? 'border-foreground bg-foreground text-background'
+                                    : 'border-border bg-background'
+                                }`}
+                                onClick={() => updateLine(line.key, { boxes: chip, custom: '' })}
+                              >
+                                {chip}
+                              </button>
+                            ))}
+                          </div>
+                          <Input
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={line.custom}
+                            onChange={(event) =>
+                              updateLine(line.key, { custom: event.target.value, boxes: null })
+                            }
+                            placeholder={`Boxes, max ${selected.boxesOnHand}`}
+                          />
+                        </>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+              {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
+              {success ? <StatusMessage tone="success">{success}</StatusMessage> : null}
+              <Button
+                type="button"
+                className="w-full"
+                disabled={submitting || !online}
+                onClick={() => void onSubmitPlastic()}
+              >
+                {submitting ? 'Submitting…' : 'Submit all'}
+              </Button>
+            </>
+          )}
+
           <p className="text-xs text-muted">
             <Link href="/scan" className="underline-offset-2 hover:underline">
               Scan another label with camera

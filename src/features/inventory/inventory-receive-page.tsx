@@ -23,6 +23,7 @@ import { PERMISSIONS } from '@/types/permissions';
 import {
   useGetInventoryCatalogQuery,
   useGetInventoryCategoriesQuery,
+  useGetInventoryCentralQrsQuery,
   useGetInventoryLocationsQuery,
   useLazyGetInventoryLotPrintQuery,
   useReceiveInventoryLotMutation,
@@ -40,6 +41,7 @@ export function InventoryReceivePage() {
   const { data: catalogData } = useGetInventoryCatalogQuery(undefined, { skip: !canManage });
   const { data: categoriesData } = useGetInventoryCategoriesQuery(undefined, { skip: !canManage });
   const { data: locationsData } = useGetInventoryLocationsQuery(undefined, { skip: !canManage });
+  const { data: centralData } = useGetInventoryCentralQrsQuery(undefined, { skip: !canManage });
   const [receiveLot, { isLoading }] = useReceiveInventoryLotMutation();
   const [fetchPrint] = useLazyGetInventoryLotPrintQuery();
   const [selectedCatalogId, setSelectedCatalogId] = useState('');
@@ -62,6 +64,10 @@ export function InventoryReceivePage() {
     () => (locationsData?.data ?? []).filter((item) => item.status === 'active'),
     [locationsData?.data],
   );
+  const centralQrs = useMemo(
+    () => (centralData?.data ?? []).filter((item) => item.status === 'active'),
+    [centralData?.data],
+  );
   const selectedItem = catalogItems.find((item) => item.id === selectedCatalogId);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -81,6 +87,7 @@ export function InventoryReceivePage() {
       const created = await receiveLot({
         catalogItemId: selectedItem.id,
         locationId: String(form.get('locationId') ?? ''),
+        centralQrId: String(form.get('centralQrId') ?? ''),
         supplierName: String(form.get('supplierName') ?? '').trim(),
         supplierType: String(form.get('supplierType') ?? 'external') as 'external' | 'internal',
         purchaseDate: String(form.get('purchaseDate') ?? ''),
@@ -121,9 +128,9 @@ export function InventoryReceivePage() {
       <DelayedLoadingOverlay active={isLoading} />
       <PageHeader kicker="Inventory" title="Receive lot" />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Create a bottle (QR lot). <span className="text-foreground">Amount received</span> becomes
-        starting stock on hand, in the catalog item&apos;s measuring unit. Lab-made reagents use Prep
-        instead.
+        Receive measured stock and attach it to a room QR (Stock room, Stationery, or Inside lab).
+        Usage is recorded by scanning that room QR — not a per-bottle label. Lab-made reagents use
+        Prep (they attach to Inside lab automatically).
       </p>
 
       <form className="mt-4 max-w-2xl space-y-6" onSubmit={onSubmit}>
@@ -151,7 +158,26 @@ export function InventoryReceivePage() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label htmlFor="locationId">Location</Label>
+              <Label htmlFor="centralQrId">Keep in (room QR)</Label>
+              <select
+                id="centralQrId"
+                name="centralQrId"
+                className={SELECT_CLASS}
+                required
+                defaultValue=""
+              >
+                <option value="" disabled>
+                  Select room
+                </option>
+                {centralQrs.map((room) => (
+                  <option key={room.id} value={room.id}>
+                    {room.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="locationId">Shelf / location</Label>
               <select
                 id="locationId"
                 name="locationId"
@@ -169,16 +195,16 @@ export function InventoryReceivePage() {
                 ))}
               </select>
             </div>
-            <div>
-              <Label htmlFor="purchaseDate">Purchase date</Label>
-              <Input
-                id="purchaseDate"
-                name="purchaseDate"
-                type="date"
-                required
-                defaultValue={todayIso()}
-              />
-            </div>
+          </div>
+          <div>
+            <Label htmlFor="purchaseDate">Purchase date</Label>
+            <Input
+              id="purchaseDate"
+              name="purchaseDate"
+              type="date"
+              required
+              defaultValue={todayIso()}
+            />
           </div>
         </section>
 

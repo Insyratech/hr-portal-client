@@ -21,6 +21,7 @@ import { PERMISSIONS } from '@/types/permissions';
 import {
   useGetInventoryCatalogQuery,
   useGetInventoryCategoriesQuery,
+  useGetInventoryCentralQrsQuery,
   useGetInventoryLocationsQuery,
   useReceiveInventoryPlasticStockMutation,
 } from '@/store/api/api';
@@ -39,6 +40,7 @@ export function InventoryPlasticReceivePage() {
   const { data: catalogData } = useGetInventoryCatalogQuery(undefined, { skip: !canManage });
   const { data: categoriesData } = useGetInventoryCategoriesQuery(undefined, { skip: !canManage });
   const { data: locationsData } = useGetInventoryLocationsQuery(undefined, { skip: !canManage });
+  const { data: centralData } = useGetInventoryCentralQrsQuery(undefined, { skip: !canManage });
   const [receiveStock, { isLoading }] = useReceiveInventoryPlasticStockMutation();
   const [selectedCatalogId, setSelectedCatalogId] = useState('');
 
@@ -62,6 +64,10 @@ export function InventoryPlasticReceivePage() {
     () => (locationsData?.data ?? []).filter((item) => item.status === 'active'),
     [locationsData?.data],
   );
+  const centralQrs = useMemo(
+    () => (centralData?.data ?? []).filter((item) => item.status === 'active'),
+    [centralData?.data],
+  );
   const selectedItem = catalogItems.find((item) => item.id === selectedCatalogId);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -81,6 +87,7 @@ export function InventoryPlasticReceivePage() {
       const created = await receiveStock({
         catalogItemId: String(form.get('catalogItemId') ?? ''),
         locationId: String(form.get('locationId') ?? ''),
+        centralQrId: String(form.get('centralQrId') ?? ''),
         manufacturer: String(form.get('manufacturer') ?? '').trim(),
         sizeLabel: String(form.get('sizeLabel') ?? '').trim(),
         boxes: Number(form.get('boxes') ?? 0),
@@ -112,8 +119,9 @@ export function InventoryPlasticReceivePage() {
       <DelayedLoadingOverlay active={isLoading} />
       <PageHeader kicker="Inventory" title="Receive plastic boxes" />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Enter boxes (not individual gloves/tips). Matching item + location + manufacturer + size
-        adds to the same stock line. Issue happens from the station QR at that location.
+        Enter boxes (not individual gloves/tips). Attach them to a room QR — Stationery for misc,
+        Stock room for plasticwares. Matching item + location + room + manufacturer + size adds to
+        the same stock line.
       </p>
       <form className="mt-4 max-w-2xl space-y-4" onSubmit={onSubmit}>
         <div>
@@ -143,7 +151,26 @@ export function InventoryPlasticReceivePage() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <Label htmlFor="locationId">Location</Label>
+            <Label htmlFor="centralQrId">Keep in (room QR)</Label>
+            <select
+              id="centralQrId"
+              name="centralQrId"
+              className={SELECT_CLASS}
+              required
+              defaultValue=""
+            >
+              <option value="" disabled>
+                Select room
+              </option>
+              {centralQrs.map((room) => (
+                <option key={room.id} value={room.id}>
+                  {room.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="locationId">Shelf / location</Label>
             <select id="locationId" name="locationId" className={SELECT_CLASS} required defaultValue="">
               <option value="" disabled>
                 Select location
@@ -155,10 +182,10 @@ export function InventoryPlasticReceivePage() {
               ))}
             </select>
           </div>
-          <div>
-            <Label htmlFor="purchaseDate">Purchase date</Label>
-            <Input id="purchaseDate" name="purchaseDate" type="date" required defaultValue={todayIso()} />
-          </div>
+        </div>
+        <div>
+          <Label htmlFor="purchaseDate">Purchase date</Label>
+          <Input id="purchaseDate" name="purchaseDate" type="date" required defaultValue={todayIso()} />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>

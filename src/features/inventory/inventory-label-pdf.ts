@@ -1,6 +1,6 @@
 import { toDataURL } from 'qrcode';
 import { jsPDF } from 'jspdf';
-import type { InventoryLotPrint, InventoryStationPrint } from '@/types/api';
+import type { InventoryCentralQrPrint, InventoryLotPrint, InventoryStationPrint } from '@/types/api';
 
 function showDate(value: string | null | undefined): string {
   if (!value) return '—';
@@ -125,6 +125,24 @@ function openForPrint(doc: jsPDF): void {
   if (!win) doc.save('qr-label.pdf');
 }
 
+async function centralDoc(payload: InventoryCentralQrPrint): Promise<jsPDF> {
+  const kindLabel =
+    payload.central.kind === 'stock_room'
+      ? 'Stock room'
+      : payload.central.kind === 'stationery'
+        ? 'Stationery'
+        : 'Inside lab';
+  return renderLabel(
+    payload.central.name,
+    [
+      ['Kind', kindLabel],
+      ['Use', 'Room QR — pick items on scan'],
+      ['Notes', payload.central.notes || '—'],
+    ],
+    payload.scanUrl,
+  );
+}
+
 export async function printInventoryStationLabel(payload: InventoryStationPrint): Promise<void> {
   openForPrint(await stationDoc(payload));
 }
@@ -132,6 +150,15 @@ export async function printInventoryStationLabel(payload: InventoryStationPrint)
 export async function downloadInventoryStationLabel(payload: InventoryStationPrint): Promise<void> {
   const doc = await stationDoc(payload);
   doc.save(`qr-${fileSlug(payload.station.name)}.pdf`);
+}
+
+export async function printInventoryCentralQrLabel(payload: InventoryCentralQrPrint): Promise<void> {
+  openForPrint(await centralDoc(payload));
+}
+
+export async function downloadInventoryCentralQrLabel(payload: InventoryCentralQrPrint): Promise<void> {
+  const doc = await centralDoc(payload);
+  doc.save(`qr-${fileSlug(payload.central.name)}.pdf`);
 }
 
 export async function printInventoryLotLabel(payload: InventoryLotPrint): Promise<void> {
