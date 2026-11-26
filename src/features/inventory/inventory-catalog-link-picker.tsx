@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -111,6 +111,10 @@ export function InventoryCatalogLinkPicker({
   required?: boolean;
   emptyLabel?: string;
 }) {
+  const autoId = useId();
+  const fieldId = id ?? autoId;
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState(ALL_FILTER);
 
@@ -149,58 +153,134 @@ export function InventoryCatalogLinkPicker({
   }, [options, search, filter]);
 
   const selectedOption = value ? options.find((option) => option.id === value) : undefined;
-  const selectedHiddenByFilter = Boolean(
-    value && selectedOption && !filtered.some((option) => option.id === value),
-  );
+  const displayLabel = selectedOption?.label ?? emptyLabel;
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  function selectOption(nextId: string) {
+    onChange(nextId);
+    setOpen(false);
+    setSearch('');
+    setFilter(ALL_FILTER);
+  }
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search name, catalogue no., recipe…"
-          aria-label="Search link options"
-        />
-        <select
-          className={SELECT_CLASS}
-          value={filter}
-          onChange={(event) => setFilter(event.target.value)}
-          aria-label="Filter link options"
-        >
-          <option value={ALL_FILTER}>All sources</option>
-          {filterChoices.map((choice) => (
-            <option key={choice.key} value={choice.key}>
-              {choice.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <select
-        id={id}
-        className={SELECT_CLASS}
+    <div className="space-y-2" ref={rootRef}>
+      <Label htmlFor={fieldId}>{label}</Label>
+      {/* Hidden input so parent forms can still honor required when used inside <form>. */}
+      <input
+        type="text"
+        className="sr-only"
+        tabIndex={-1}
         value={value}
         required={required}
-        onChange={(event) => onChange(event.target.value)}
+        readOnly
+        aria-hidden
+      />
+      <button
+        id={fieldId}
+        type="button"
+        className={`${SELECT_CLASS} flex w-full items-center justify-between gap-2 text-left`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
       >
-        <option value="">{emptyLabel}</option>
-        {selectedHiddenByFilter && selectedOption ? (
-          <option value={selectedOption.id}>{selectedOption.label} (hidden by filter)</option>
-        ) : null}
-        {filtered.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <p className="text-xs text-muted">
-        {filtered.length} match{filtered.length === 1 ? '' : 'es'}
-        {filter === PREPARED_FILTER
-          ? ' · prepared recipe outputs and matching catalog reagents'
-          : ''}
-        . Stock deduct uses lots of the linked catalog item.
-      </p>
+        <span className={`truncate ${selectedOption ? '' : 'text-muted'}`}>{displayLabel}</span>
+        <span className="shrink-0 text-xs text-muted" aria-hidden>
+          {open ? '▲' : '▼'}
+        </span>
+      </button>
+
+      {open ? (
+        <div className="rounded border border-border bg-surface/40 p-2">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input
+              autoFocus
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search name, catalogue no., recipe…"
+              aria-label="Search link options"
+            />
+            <select
+              className={SELECT_CLASS}
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              aria-label="Filter link options"
+            >
+              <option value={ALL_FILTER}>All sources</option>
+              {filterChoices.map((choice) => (
+                <option key={choice.key} value={choice.key}>
+                  {choice.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <ul
+            className="mt-2 max-h-56 overflow-y-auto rounded border border-border bg-background"
+            role="listbox"
+            aria-label={label}
+          >
+            <li>
+              <button
+                type="button"
+                role="option"
+                aria-selected={!value}
+                className={`flex w-full px-3 py-2 text-left text-sm hover:bg-surface ${
+                  !value ? 'bg-surface font-medium' : ''
+                }`}
+                onClick={() => selectOption('')}
+              >
+                {emptyLabel}
+              </button>
+            </li>
+            {filtered.map((option) => (
+              <li key={option.id}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={value === option.id}
+                  className={`flex w-full px-3 py-2 text-left text-sm hover:bg-surface ${
+                    value === option.id ? 'bg-surface font-medium' : ''
+                  }`}
+                  onClick={() => selectOption(option.id)}
+                >
+                  {option.label}
+                </button>
+              </li>
+            ))}
+            {!filtered.length ? (
+              <li className="px-3 py-2 text-sm text-muted">No matches.</li>
+            ) : null}
+          </ul>
+
+          <p className="mt-2 text-xs text-muted">
+            {filtered.length} match{filtered.length === 1 ? '' : 'es'}
+            {filter === PREPARED_FILTER
+              ? ' · prepared recipe outputs and matching catalog reagents'
+              : ''}
+            . Stock deduct uses lots of the linked catalog item.
+          </p>
+        </div>
+      ) : selectedOption ? (
+        <p className="text-xs text-muted">Stock deduct uses lots of the linked catalog item.</p>
+      ) : null}
     </div>
   );
 }
