@@ -3758,8 +3758,10 @@ export type InventoryPublicTransferResult = {
 };
 export type InventoryPrepStatus = 'open' | 'completed' | 'cancelled';
 
-/** method = DNA/PCR/Gel/Loading with Nx multiplier; recipe = reagent prep composition. */
-export type InventoryLabUsageMode = 'method' | 'recipe';
+/** method = DNA/PCR/Loading with Nx; recipe = reagent prep; gel = % + volume chart. */
+export type InventoryLabUsageMode = 'method' | 'recipe' | 'gel';
+
+export type InventoryLabGelComponentKey = 'agarose' | 'buffer' | 'stain';
 
 export type InventoryLabActivity = {
   id: string;
@@ -3771,6 +3773,24 @@ export type InventoryLabActivity = {
   recipeCount: number;
   createdAt: string;
   updatedAt: string;
+};
+
+export type InventoryLabGelComponentLink = {
+  id: string;
+  activityId: string;
+  componentKey: InventoryLabGelComponentKey;
+  name: string;
+  catalogItemId: string | null;
+  catalogItemName: string;
+  sortOrder: number;
+};
+
+export type InventoryLabGelChart = {
+  activityId: string;
+  percentages: number[];
+  volumesMl: number[];
+  etbrUlByVolumeMl: Record<string, number>;
+  components: InventoryLabGelComponentLink[];
 };
 
 export type InventoryLabRecipeComponent = {

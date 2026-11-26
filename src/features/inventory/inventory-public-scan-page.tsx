@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
 import { SELECT_CLASS } from '@/features/inventory/inventory-constants';
+import { computeGelComponents, formatGelPercentLabel } from '@/features/inventory/gel-chart';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
+  useGetInventoryPublicLabGelChartQuery,
   useGetInventoryPublicLabRecipesQuery,
   useGetInventoryPublicScanQuery,
   useIssueInventoryPublicPlasticBatchMutation,
@@ -906,6 +908,8 @@ function LabScanCard({
   const [activityId, setActivityId] = useState('');
   const [recipeId, setRecipeId] = useState('');
   const [howMany, setHowMany] = useState('1');
+  const [gelPercent, setGelPercent] = useState('');
+  const [gelVolumeMl, setGelVolumeMl] = useState('');
   const [outputQty, setOutputQty] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -920,25 +924,42 @@ function LabScanCard({
     }>
   >([]);
 
-  const { data: recipesData, isFetching: loadingRecipes } = useGetInventoryPublicLabRecipesQuery(
-    activityId,
-    { skip: !activityId },
-  );
-  const recipes = recipesData?.data ?? [];
   const selectedActivity = card.activities.find((row) => row.id === activityId);
   const isMethod = selectedActivity?.usageMode === 'method';
+  const isGel = selectedActivity?.usageMode === 'gel';
+
+  const { data: recipesData, isFetching: loadingRecipes } = useGetInventoryPublicLabRecipesQuery(
+    activityId,
+    { skip: !activityId || isGel },
+  );
+  const recipes = recipesData?.data ?? [];
+  const { data: gelChartData, isFetching: loadingGel } = useGetInventoryPublicLabGelChartQuery(
+    activityId,
+    { skip: !activityId || !isGel },
+  );
+  const gelChart = gelChartData?.data;
   const selectedRecipe = recipes.find((recipe) => recipe.id === recipeId);
   const multiplier = Number(howMany);
   const multiplierOk = Number.isFinite(multiplier) && multiplier > 0;
+  const selectedGelPercent = Number(gelPercent);
+  const selectedGelVolume = Number(gelVolumeMl);
+  const gelSelectionOk =
+    Number.isFinite(selectedGelPercent) &&
+    selectedGelPercent > 0 &&
+    Number.isFinite(selectedGelVolume) &&
+    selectedGelVolume > 0;
 
   useEffect(() => {
     setRecipeId('');
     setComponents([]);
     setOutputQty('');
     setHowMany('1');
+    setGelPercent('');
+    setGelVolumeMl('');
   }, [activityId]);
 
   useEffect(() => {
+    if (isGel) return;
     if (!selectedRecipe) {
       setComponents([]);
       setOutputQty('');
@@ -968,7 +989,24 @@ function LabScanCard({
         };
       }),
     );
-  }, [selectedRecipe, isMethod, howMany, multiplier, multiplierOk]);
+  }, [selectedRecipe, isMethod, isGel, howMany, multiplier, multiplierOk]);
+
+  useEffect(() => {
+    if (!isGel || !gelChart || !gelSelectionOk) {
+      if (isGel) setComponents([]);
+      return;
+    }
+    setComponents(
+      computeGelComponents(gelChart, selectedGelPercent, selectedGelVolume).map((row) => ({
+        key: row.key,
+        name: row.name,
+        quantityValue: row.quantityValue,
+        quantityUnit: row.quantityUnit,
+        notes: '',
+        catalogItemId: row.catalogItemId,
+      })),
+    );
+  }, [isGel, gelChart, gelPercent, gelVolumeMl, gelSelectionOk, selectedGelPercent, selectedGelVolume]);
 
   async function onSubmit() {
     setError(null);
@@ -985,7 +1023,12 @@ function LabScanCard({
       setError('Select what you are doing.');
       return;
     }
-    if (!recipeId) {
+    if (isGel) {
+      if (!gelSelectionOk) {
+        setError('Choose agarose percentage and gel volume.');
+        return;
+      }
+    } else if (!recipeId) {
       setError(isMethod ? 'Select a method.' : 'Select a recipe / type.');
       return;
     }
@@ -1019,9 +1062,11 @@ function LabScanCard({
         body: {
           employeeId,
           activityId,
-          recipeId,
-          outputQty: !isMethod && outputQty.trim() ? Number(outputQty) : null,
+          recipeId: isGel ? null : recipeId,
+          outputQty: !isMethod && !isGel && outputQty.trim() ? Number(outputQty) : null,
           quantityMultiplier: isMethod ? multiplier : 1,
+          gelPercent: isGel ? selectedGelPercent : null,
+          gelVolumeMl: isGel ? selectedGelVolume : null,
           components: lines,
         },
       }).unwrap();
@@ -1036,6 +1081,8 @@ function LabScanCard({
       setRecipeId('');
       setComponents([]);
       setHowMany('1');
+      setGelPercent('');
+      setGelVolumeMl('');
       onDone();
     } catch (cause) {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -1093,7 +1140,46 @@ function LabScanCard({
             </select>
           </div>
 
-          {activityId ? (
+          {activityId && isGel ? (
+            <>
+              <div>
+                <Label htmlFor="lab-gel-percent">Agarose %</Label>
+                <select
+                  id="lab-gel-percent"
+                  className={SELECT_CLASS}
+                  value={gelPercent}
+                  onChange={(event) => setGelPercent(event.target.value)}
+                  disabled={loadingGel}
+                >
+                  <option value="">{loadingGel ? 'Loading…' : 'Select percentage'}</option>
+                  {(gelChart?.percentages ?? []).map((percent) => (
+                    <option key={percent} value={String(percent)}>
+                      {formatGelPercentLabel(percent)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="lab-gel-volume">Volume</Label>
+                <select
+                  id="lab-gel-volume"
+                  className={SELECT_CLASS}
+                  value={gelVolumeMl}
+                  onChange={(event) => setGelVolumeMl(event.target.value)}
+                  disabled={loadingGel}
+                >
+                  <option value="">{loadingGel ? 'Loading…' : 'Select volume'}</option>
+                  {(gelChart?.volumesMl ?? []).map((volume) => (
+                    <option key={volume} value={String(volume)}>
+                      {volume} mL
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          ) : null}
+
+          {activityId && !isGel ? (
             <div>
               <Label htmlFor="lab-recipe">{isMethod ? 'Method' : 'Recipe / type'}</Label>
               <select
@@ -1118,7 +1204,7 @@ function LabScanCard({
             </div>
           ) : null}
 
-          {selectedRecipe ? (
+          {selectedRecipe && !isGel ? (
             <>
               {selectedRecipe.sopFileId ? (
                 <div className="flex items-center justify-between gap-3 rounded border border-border px-3 py-2">
@@ -1193,91 +1279,101 @@ function LabScanCard({
                   />
                 </div>
               ) : null}
+            </>
+          ) : null}
 
-              <div className="space-y-3">
-                <Label>{isMethod ? 'Components (from method)' : 'Components (editable)'}</Label>
-                {isMethod ? (
-                  <p className="text-xs text-muted">
-                    Volumes default from the method × How many (Nx). Edit a volume when this run differs.
-                  </p>
-                ) : null}
-                {components.map((component, index) => (
-                  <div key={component.key} className="space-y-2 rounded border border-border p-3">
-                    {isMethod ? (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            step="any"
-                            className="w-[5.5rem] shrink-0"
-                            value={component.quantityValue}
-                            onChange={(event) =>
-                              setComponents((current) =>
-                                current.map((row) =>
-                                  row.key === component.key
-                                    ? { ...row, quantityValue: event.target.value }
-                                    : row,
-                                ),
-                              )
-                            }
-                            placeholder="Vol"
-                            aria-label={`${component.name || `Component ${index + 1}`} volume`}
-                          />
-                          <span className="w-8 shrink-0 text-xs text-muted">
-                            {component.quantityUnit || '—'}
-                          </span>
-                          <p className="min-w-0 flex-1 text-sm font-medium">
-                            {component.name || `Component ${index + 1}`}
-                          </p>
-                        </div>
-                        {component.notes ? (
-                          <p className="text-xs text-muted">{component.notes}</p>
-                        ) : null}
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-sm font-medium">
+          {(selectedRecipe && !isGel) || (isGel && gelSelectionOk) ? (
+            <div className="space-y-3">
+              <Label>
+                {isGel
+                  ? 'Components (from chart)'
+                  : isMethod
+                    ? 'Components (from method)'
+                    : 'Components (editable)'}
+              </Label>
+              {isMethod || isGel ? (
+                <p className="text-xs text-muted">
+                  {isGel
+                    ? 'Amounts come from the agarose chart. Edit a value when this run differs.'
+                    : 'Volumes default from the method × How many (Nx). Edit a volume when this run differs.'}
+                </p>
+              ) : null}
+              {components.map((component, index) => (
+                <div key={component.key} className="space-y-2 rounded border border-border p-3">
+                  {isMethod || isGel ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          step="any"
+                          className="w-[5.5rem] shrink-0"
+                          value={component.quantityValue}
+                          onChange={(event) =>
+                            setComponents((current) =>
+                              current.map((row) =>
+                                row.key === component.key
+                                  ? { ...row, quantityValue: event.target.value }
+                                  : row,
+                              ),
+                            )
+                          }
+                          placeholder="Vol"
+                          aria-label={`${component.name || `Component ${index + 1}`} volume`}
+                        />
+                        <span className="w-8 shrink-0 text-xs text-muted">
+                          {component.quantityUnit || '—'}
+                        </span>
+                        <p className="min-w-0 flex-1 text-sm font-medium">
                           {component.name || `Component ${index + 1}`}
                         </p>
-                        <div className="grid grid-cols-[1fr_5rem] gap-2">
-                          <Input
-                            type="number"
-                            step="any"
-                            value={component.quantityValue}
-                            onChange={(event) =>
-                              setComponents((current) =>
-                                current.map((row) =>
-                                  row.key === component.key
-                                    ? { ...row, quantityValue: event.target.value }
-                                    : row,
-                                ),
-                              )
-                            }
-                            placeholder="Qty"
-                          />
-                          <Input
-                            value={component.quantityUnit}
-                            onChange={(event) =>
-                              setComponents((current) =>
-                                current.map((row) =>
-                                  row.key === component.key
-                                    ? { ...row, quantityUnit: event.target.value }
-                                    : row,
-                                ),
-                              )
-                            }
-                            placeholder="Unit"
-                          />
-                        </div>
-                        {component.notes ? (
-                          <p className="text-xs text-muted">{component.notes}</p>
-                        ) : null}
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </>
+                      </div>
+                      {component.notes ? (
+                        <p className="text-xs text-muted">{component.notes}</p>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium">
+                        {component.name || `Component ${index + 1}`}
+                      </p>
+                      <div className="grid grid-cols-[1fr_5rem] gap-2">
+                        <Input
+                          type="number"
+                          step="any"
+                          value={component.quantityValue}
+                          onChange={(event) =>
+                            setComponents((current) =>
+                              current.map((row) =>
+                                row.key === component.key
+                                  ? { ...row, quantityValue: event.target.value }
+                                  : row,
+                              ),
+                            )
+                          }
+                          placeholder="Qty"
+                        />
+                        <Input
+                          value={component.quantityUnit}
+                          onChange={(event) =>
+                            setComponents((current) =>
+                              current.map((row) =>
+                                row.key === component.key
+                                  ? { ...row, quantityUnit: event.target.value }
+                                  : row,
+                              ),
+                            )
+                          }
+                          placeholder="Unit"
+                        />
+                      </div>
+                      {component.notes ? (
+                        <p className="text-xs text-muted">{component.notes}</p>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
           ) : null}
 
           {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
@@ -1286,15 +1382,21 @@ function LabScanCard({
           <Button
             type="button"
             className="w-full"
-            disabled={submitting || !online || !recipeId}
+            disabled={
+              submitting ||
+              !online ||
+              (isGel ? !gelSelectionOk : !recipeId)
+            }
             onClick={() => void onSubmit()}
           >
             {submitting ? 'Submitting…' : 'Submit'}
           </Button>
           <p className="text-xs text-muted">
-            {isMethod
-              ? 'How many (Nx) and edited volumes are recorded with this method run. Linked components deduct stock from Inside lab.'
-              : 'Linked components deduct stock from Inside lab. Reagent recipes can also create a new lot.'}
+            {isGel
+              ? 'Agarose, TAE Buffer, and EtBr are calculated from % and volume. Linked components deduct stock from Inside lab.'
+              : isMethod
+                ? 'How many (Nx) and edited volumes are recorded with this method run. Linked components deduct stock from Inside lab.'
+                : 'Linked components deduct stock from Inside lab. Reagent recipes can also create a new lot.'}
           </p>
           <p className="text-xs text-muted">
             <Link href="/scan" className="underline-offset-2 hover:underline">

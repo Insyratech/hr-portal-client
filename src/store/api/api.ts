@@ -116,6 +116,8 @@ import type {
   InventoryCentralQr,
   InventoryCentralQrPrint,
   InventoryLabActivity,
+  InventoryLabGelChart,
+  InventoryLabGelComponentKey,
   InventoryLabRecipe,
   InventoryLabUsageResult,
   InventorySopFolder,
@@ -3838,7 +3840,7 @@ export const api = createApi({
         name: string;
         description?: string;
         sortOrder?: number;
-        usageMode?: 'method' | 'recipe';
+        usageMode?: 'method' | 'recipe' | 'gel';
       }
     >({
       query: (body) => ({ url: '/api/v1/inventory/lab/activities', method: 'POST', body }),
@@ -3853,7 +3855,7 @@ export const api = createApi({
           description?: string;
           sortOrder?: number;
           status?: 'active' | 'inactive';
-          usageMode?: 'method' | 'recipe';
+          usageMode?: 'method' | 'recipe' | 'gel';
         };
       }
     >({
@@ -3863,6 +3865,31 @@ export const api = createApi({
         body,
       }),
       invalidatesTags: ['InventoryLab'],
+    }),
+    getInventoryLabGelChart: builder.query<ApiSuccess<InventoryLabGelChart>, string>({
+      query: (activityId) => `/api/v1/inventory/lab/activities/${encodeURIComponent(activityId)}/gel`,
+      providesTags: (_r, _e, activityId) => [{ type: 'InventoryLab', id: `gel-${activityId}` }],
+    }),
+    updateInventoryLabGelComponents: builder.mutation<
+      ApiSuccess<InventoryLabGelChart>,
+      {
+        activityId: string;
+        components: Array<{
+          componentKey: InventoryLabGelComponentKey;
+          name?: string;
+          catalogItemId?: string | null;
+        }>;
+      }
+    >({
+      query: ({ activityId, components }) => ({
+        url: `/api/v1/inventory/lab/activities/${encodeURIComponent(activityId)}/gel/components`,
+        method: 'PUT',
+        body: { components },
+      }),
+      invalidatesTags: (_r, _e, arg) => [
+        'InventoryLab',
+        { type: 'InventoryLab', id: `gel-${arg.activityId}` },
+      ],
     }),
     getInventoryLabRecipes: builder.query<
       ApiSuccess<InventoryLabRecipe[]>,
@@ -4031,6 +4058,10 @@ export const api = createApi({
       query: (activityId) =>
         `/api/v1/inventory/public/lab/activities/${encodeURIComponent(activityId)}/recipes`,
     }),
+    getInventoryPublicLabGelChart: builder.query<ApiSuccess<InventoryLabGelChart>, string>({
+      query: (activityId) =>
+        `/api/v1/inventory/public/lab/activities/${encodeURIComponent(activityId)}/gel`,
+    }),
     submitInventoryPublicLabUsage: builder.mutation<
       ApiSuccess<InventoryLabUsageResult>,
       {
@@ -4038,10 +4069,12 @@ export const api = createApi({
         body: {
           employeeId: string;
           activityId: string;
-          recipeId: string;
+          recipeId?: string | null;
           notes?: string;
           outputQty?: number | null;
           quantityMultiplier?: number | null;
+          gelPercent?: number | null;
+          gelVolumeMl?: number | null;
           components?: Array<{
             name: string;
             quantityValue?: number | null;
@@ -4699,6 +4732,8 @@ export const {
   useGetInventoryLabActivitiesQuery,
   useCreateInventoryLabActivityMutation,
   useUpdateInventoryLabActivityMutation,
+  useGetInventoryLabGelChartQuery,
+  useUpdateInventoryLabGelComponentsMutation,
   useGetInventoryLabRecipesQuery,
   useGetInventoryLabRecipeQuery,
   useCreateInventoryLabRecipeMutation,
@@ -4715,6 +4750,7 @@ export const {
   useLazyGetInventorySopPdfQuery,
   useLazyGetInventoryPublicRecipeSopQuery,
   useGetInventoryPublicLabRecipesQuery,
+  useGetInventoryPublicLabGelChartQuery,
   useSubmitInventoryPublicLabUsageMutation,
   useGetInventoryPlasticStockQuery,
   useGetInventoryPlasticStockItemQuery,

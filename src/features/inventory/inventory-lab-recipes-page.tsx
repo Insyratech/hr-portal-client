@@ -27,12 +27,19 @@ import {
   useDeleteInventoryLabRecipeMutation,
   useGetInventoryCatalogQuery,
   useGetInventoryLabActivitiesQuery,
+  useGetInventoryLabGelChartQuery,
   useGetInventoryLabRecipesQuery,
   useGetInventorySopFilesQuery,
   useUpdateInventoryLabActivityMutation,
+  useUpdateInventoryLabGelComponentsMutation,
   useUpdateInventoryLabRecipeMutation,
 } from '@/store/api/api';
-import type { InventoryLabActivity, InventoryLabRecipe } from '@/types/api';
+import { agaroseGrams, formatGelPercentLabel } from '@/features/inventory/gel-chart';
+import type {
+  InventoryLabActivity,
+  InventoryLabGelComponentKey,
+  InventoryLabRecipe,
+} from '@/types/api';
 
 type DraftComponent = {
   key: string;
@@ -98,9 +105,18 @@ export function InventoryLabRecipesPage() {
     }
   }, [activities, selectedActivityId]);
 
+  const selectedActivity = useMemo(
+    () => activities.find((row) => row.id === selectedActivityId) ?? null,
+    [activities, selectedActivityId],
+  );
+  const isMethodActivity = selectedActivity?.usageMode === 'method';
+  const isGelActivity = selectedActivity?.usageMode === 'gel';
+  const itemNoun = isMethodActivity ? 'method' : 'recipe';
+  const itemNounTitle = isMethodActivity ? 'Method' : 'Recipe';
+
   const { data: recipesData, isLoading: loadingRecipes } = useGetInventoryLabRecipesQuery(
     selectedActivityId ? { activityId: selectedActivityId } : undefined,
-    { skip: !canManage || !selectedActivityId },
+    { skip: !canManage || !selectedActivityId || isGelActivity },
   );
   const recipes = recipesData?.data ?? [];
 
@@ -109,25 +125,46 @@ export function InventoryLabRecipesPage() {
   const allRecipes = allRecipesData?.data ?? [];
   const { data: sopFilesData } = useGetInventorySopFilesQuery(undefined, { skip: !canManage });
   const sopFiles = sopFilesData?.data ?? [];
+  const { data: gelChartData, isLoading: loadingGel } = useGetInventoryLabGelChartQuery(
+    selectedActivityId,
+    { skip: !canManage || !selectedActivityId || !isGelActivity },
+  );
+  const gelChart = gelChartData?.data;
 
   const [createActivity, { isLoading: creatingActivity }] = useCreateInventoryLabActivityMutation();
   const [updateActivity, { isLoading: updatingActivity }] = useUpdateInventoryLabActivityMutation();
   const [createRecipe, { isLoading: creatingRecipe }] = useCreateInventoryLabRecipeMutation();
   const [updateRecipe, { isLoading: updatingRecipe }] = useUpdateInventoryLabRecipeMutation();
   const [deleteRecipe, { isLoading: deletingRecipe }] = useDeleteInventoryLabRecipeMutation();
+  const [updateGelLinks, { isLoading: savingGelLinks }] = useUpdateInventoryLabGelComponentsMutation();
 
   const [activityOpen, setActivityOpen] = useState(false);
   const [recipeOpen, setRecipeOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<InventoryLabRecipe | null>(null);
   const [draftComponents, setDraftComponents] = useState<DraftComponent[]>([emptyComponent()]);
+  const [gelLinks, setGelLinks] = useState<
+    Record<InventoryLabGelComponentKey, { name: string; catalogItemId: string }>
+  >({
+    agarose: { name: 'Agarose', catalogItemId: '' },
+    buffer: { name: '1X TAE Buffer', catalogItemId: '' },
+    stain: { name: 'EtBr', catalogItemId: '' },
+  });
 
-  const selectedActivity = useMemo(
-    () => activities.find((row) => row.id === selectedActivityId) ?? null,
-    [activities, selectedActivityId],
-  );
-  const isMethodActivity = selectedActivity?.usageMode === 'method';
-  const itemNoun = isMethodActivity ? 'method' : 'recipe';
-  const itemNounTitle = isMethodActivity ? 'Method' : 'Recipe';
+  useEffect(() => {
+    if (!gelChart) return;
+    const next: Record<InventoryLabGelComponentKey, { name: string; catalogItemId: string }> = {
+      agarose: { name: 'Agarose', catalogItemId: '' },
+      buffer: { name: '1X TAE Buffer', catalogItemId: '' },
+      stain: { name: 'EtBr', catalogItemId: '' },
+    };
+    for (const row of gelChart.components) {
+      next[row.componentKey] = {
+        name: row.name,
+        catalogItemId: row.catalogItemId ?? '',
+      };
+    }
+    setGelLinks(next);
+  }, [gelChart]);
 
   function openNewRecipe() {
     setEditingRecipe(null);
@@ -151,11 +188,13 @@ export function InventoryLabRecipesPage() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const usageModeRaw = String(form.get('usageMode') ?? 'method');
+    const usageMode =
+      usageModeRaw === 'recipe' ? 'recipe' : usageModeRaw === 'gel' ? 'gel' : 'method';
     try {
       const created = await createActivity({
         name: String(form.get('name') ?? '').trim(),
         description: String(form.get('description') ?? '').trim(),
-        usageMode: usageModeRaw === 'recipe' ? 'recipe' : 'method',
+        usageMode,
       }).unwrap();
       setActivityOpen(false);
       setSelectedActivityId(created.data.id);
@@ -174,6 +213,23 @@ export function InventoryLabRecipesPage() {
       toast.success(activity.status === 'active' ? 'Work type deactivated.' : 'Work type activated.');
     } catch (cause) {
       toast.error(apiErrorMessage(cause, 'Unable to update work type.'));
+    }
+  }
+
+  async function onSaveGelLinks() {
+    if (!selectedActivityId) return;
+    try {
+      await updateGelLinks({
+        activityId: selectedActivityId,
+        components: (Object.keys(gelLinks) as InventoryLabGelComponentKey[]).map((componentKey) => ({
+          componentKey,
+          name: gelLinks[componentKey].name,
+          catalogItemId: gelLinks[componentKey].catalogItemId || null,
+        })),
+      }).unwrap();
+      toast.success('Gel component links saved.');
+    } catch (cause) {
+      toast.error(apiErrorMessage(cause, 'Unable to save gel links.'));
     }
   }
 
@@ -301,15 +357,18 @@ export function InventoryLabRecipesPage() {
             <Button type="button" variant="outline" onClick={() => setActivityOpen(true)}>
               Add work type
             </Button>
-            <Button type="button" onClick={openNewRecipe} disabled={!selectedActivityId}>
-              Add {itemNoun}
-            </Button>
+            {!isGelActivity ? (
+              <Button type="button" onClick={openNewRecipe} disabled={!selectedActivityId}>
+                Add {itemNoun}
+              </Button>
+            ) : null}
           </div>
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        DNA Extraction, PCR, Gel, and Loading use <span className="text-foreground">methods</span>{' '}
+        DNA Extraction, PCR, and Loading use <span className="text-foreground">methods</span>{' '}
         (component list + optional catalog links; staff pick how many Nx on the Inside lab QR).
+        Gel preparation uses the <span className="text-foreground">agarose % + volume chart</span>.
         Reagent preparation stays as <span className="text-foreground">recipes</span> with measured
         volumes and optional output lots.
       </p>
@@ -335,10 +394,13 @@ export function InventoryLabRecipesPage() {
                     selectedActivityId === activity.id ? 'text-background/80' : 'text-muted'
                   }`}
                 >
-                  {activity.recipeCount}{' '}
-                  {activity.usageMode === 'method'
-                    ? `method${activity.recipeCount === 1 ? '' : 's'}`
-                    : `recipe${activity.recipeCount === 1 ? '' : 's'}`}
+                  {activity.usageMode === 'gel'
+                    ? 'chart'
+                    : `${activity.recipeCount} ${
+                        activity.usageMode === 'method'
+                          ? `method${activity.recipeCount === 1 ? '' : 's'}`
+                          : `recipe${activity.recipeCount === 1 ? '' : 's'}`
+                      }`}
                   {activity.status !== 'active' ? ' · inactive' : ''}
                 </span>
               </button>
@@ -361,61 +423,158 @@ export function InventoryLabRecipesPage() {
           {selectedActivity?.description ? (
             <p className="mb-4 text-sm text-muted">{selectedActivity.description}</p>
           ) : null}
-          <DataTable<InventoryLabRecipe>
-            columns={[
-              { id: 'name', header: itemNounTitle, cell: (row) => row.name },
-              {
-                id: 'sop',
-                header: 'SOP',
-                cell: (row) => row.sopTitle || '—',
-              },
-              ...(isMethodActivity
-                ? []
-                : [
-                    {
-                      id: 'volume',
-                      header: 'Final volume',
-                      cell: (row: InventoryLabRecipe) =>
-                        row.finalVolumeValue != null
-                          ? `${row.finalVolumeValue} ${row.finalVolumeUnit}`.trim()
-                          : row.finalVolumeUnit || '—',
-                    },
-                  ]),
-              {
-                id: 'components',
-                header: 'Components',
-                cell: (row) => String(row.components.length),
-              },
-              { id: 'status', header: 'Status', cell: (row) => row.status },
-              {
-                id: 'actions',
-                header: '',
-                cell: (row) => (
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={() => openEditRecipe(row)}>
-                      Edit
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void onDeleteRecipe(row)}
-                    >
-                      Delete
-                    </Button>
+
+          {isGelActivity ? (
+            <div className="space-y-6">
+              <DelayedLoadingOverlay show={loadingGel} />
+              <div className="rounded border border-border p-4">
+                <Meta>Agarose gel chart</Meta>
+                <p className="mt-2 text-sm text-muted">
+                  Staff pick % and volume on the Inside lab QR. Agarose (g) = % ÷ 100 × volume (mL).
+                  TAE buffer equals the chosen volume. EtBr follows the chart by volume.
+                </p>
+                {gelChart ? (
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="min-w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
+                          <th className="px-2 py-2">% w/v</th>
+                          {gelChart.volumesMl.map((volume) => (
+                            <th key={volume} className="px-2 py-2">
+                              {volume} mL
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {gelChart.percentages.map((percent) => (
+                          <tr key={percent} className="border-b border-border/60">
+                            <td className="px-2 py-2 font-medium">{formatGelPercentLabel(percent)}</td>
+                            {gelChart.volumesMl.map((volume) => (
+                              <td key={`${percent}-${volume}`} className="px-2 py-2 tabular-nums">
+                                {agaroseGrams(percent, volume)} g
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <p className="mt-3 text-xs text-muted">
+                      EtBr:{' '}
+                      {gelChart.volumesMl
+                        .map(
+                          (volume) =>
+                            `${volume} mL → ${gelChart.etbrUlByVolumeMl[String(volume)] ?? '—'} µL`,
+                        )
+                        .join(' · ')}
+                    </p>
                   </div>
-                ),
-              },
-            ]}
-            rows={recipes}
-            loading={loadingRecipes}
-            emptyTitle={isMethodActivity ? 'No methods yet' : 'No recipes yet'}
-            emptyDescription={
-              isMethodActivity
-                ? 'Add a method with its component list (e.g. Blood DNA Extraction).'
-                : 'Add a recipe with composition lines (e.g. 6X Loading Dye).'
-            }
-          />
+                ) : null}
+              </div>
+
+              <div className="space-y-4 rounded border border-border p-4">
+                <Meta>Stock deduct links</Meta>
+                <p className="text-sm text-muted">
+                  Link catalog items so Inside lab can deduct Agarose, TAE Buffer, and EtBr.
+                </p>
+                {(Object.keys(gelLinks) as InventoryLabGelComponentKey[]).map((key) => (
+                  <div key={key} className="space-y-2 rounded border border-border p-3">
+                    <Label htmlFor={`gel-name-${key}`}>
+                      {key === 'agarose' ? 'Agarose' : key === 'buffer' ? 'TAE Buffer' : 'EtBr'}
+                    </Label>
+                    <Input
+                      id={`gel-name-${key}`}
+                      value={gelLinks[key].name}
+                      onChange={(event) =>
+                        setGelLinks((current) => ({
+                          ...current,
+                          [key]: { ...current[key], name: event.target.value },
+                        }))
+                      }
+                    />
+                    <InventoryCatalogLinkPicker
+                      id={`gel-link-${key}`}
+                      label="Link catalog item (for stock deduct)"
+                      value={gelLinks[key].catalogItemId}
+                      onChange={(catalogItemId) =>
+                        setGelLinks((current) => ({
+                          ...current,
+                          [key]: { ...current[key], catalogItemId },
+                        }))
+                      }
+                      catalogItems={catalogItems}
+                      recipes={allRecipes}
+                      emptyLabel="No stock deduct"
+                    />
+                  </div>
+                ))}
+                <Button type="button" disabled={savingGelLinks} onClick={() => void onSaveGelLinks()}>
+                  {savingGelLinks ? 'Saving…' : 'Save gel links'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <DataTable<InventoryLabRecipe>
+              columns={[
+                { id: 'name', header: itemNounTitle, cell: (row) => row.name },
+                {
+                  id: 'sop',
+                  header: 'SOP',
+                  cell: (row) => row.sopTitle || '—',
+                },
+                ...(isMethodActivity
+                  ? []
+                  : [
+                      {
+                        id: 'volume',
+                        header: 'Final volume',
+                        cell: (row: InventoryLabRecipe) =>
+                          row.finalVolumeValue != null
+                            ? `${row.finalVolumeValue} ${row.finalVolumeUnit}`.trim()
+                            : row.finalVolumeUnit || '—',
+                      },
+                    ]),
+                {
+                  id: 'components',
+                  header: 'Components',
+                  cell: (row) => String(row.components.length),
+                },
+                { id: 'status', header: 'Status', cell: (row) => row.status },
+                {
+                  id: 'actions',
+                  header: '',
+                  cell: (row) => (
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditRecipe(row)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void onDeleteRecipe(row)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  ),
+                },
+              ]}
+              rows={recipes}
+              loading={loadingRecipes}
+              emptyTitle={isMethodActivity ? 'No methods yet' : 'No recipes yet'}
+              emptyDescription={
+                isMethodActivity
+                  ? 'Add a method with its component list (e.g. Blood DNA Extraction).'
+                  : 'Add a recipe with composition lines (e.g. 6X Loading Dye).'
+              }
+            />
+          )}
         </section>
       </div>
 
@@ -423,8 +582,8 @@ export function InventoryLabRecipesPage() {
         <DialogContent>
           <DialogTitle>Add work type</DialogTitle>
           <DialogDescription>
-            Appears on the Inside lab scan form. Use Method for DNA/PCR/Gel/Loading-style work;
-            Recipe for reagent preparation.
+            Appears on the Inside lab scan form. Use Method for DNA/PCR/Loading-style work, Gel chart
+            for agarose % + volume, or Recipe for reagent preparation.
           </DialogDescription>
           <form className="mt-4 space-y-4" onSubmit={onCreateActivity}>
             <div>
@@ -448,6 +607,7 @@ export function InventoryLabRecipesPage() {
                 defaultValue="method"
               >
                 <option value="method">Method (component list + how many Nx)</option>
+                <option value="gel">Gel chart (agarose % + volume)</option>
                 <option value="recipe">Recipe (reagent prep / measured volumes)</option>
               </select>
             </div>
