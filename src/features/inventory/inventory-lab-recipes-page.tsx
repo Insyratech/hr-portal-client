@@ -28,6 +28,7 @@ import {
   useGetInventoryCatalogQuery,
   useGetInventoryLabActivitiesQuery,
   useGetInventoryLabRecipesQuery,
+  useGetInventorySopFilesQuery,
   useUpdateInventoryLabActivityMutation,
   useUpdateInventoryLabRecipeMutation,
 } from '@/store/api/api';
@@ -89,6 +90,7 @@ export function InventoryLabRecipesPage() {
   const [selectedActivityId, setSelectedActivityId] = useState('');
   const [createsOutputLot, setCreatesOutputLot] = useState(false);
   const [outputCatalogItemId, setOutputCatalogItemId] = useState('');
+  const [sopFileId, setSopFileId] = useState('');
 
   useEffect(() => {
     if (!selectedActivityId && activities.length) {
@@ -105,6 +107,8 @@ export function InventoryLabRecipesPage() {
   /** All recipes (every work type) so prepared outputs can be linked as components. */
   const { data: allRecipesData } = useGetInventoryLabRecipesQuery(undefined, { skip: !canManage });
   const allRecipes = allRecipesData?.data ?? [];
+  const { data: sopFilesData } = useGetInventorySopFilesQuery(undefined, { skip: !canManage });
+  const sopFiles = sopFilesData?.data ?? [];
 
   const [createActivity, { isLoading: creatingActivity }] = useCreateInventoryLabActivityMutation();
   const [updateActivity, { isLoading: updatingActivity }] = useUpdateInventoryLabActivityMutation();
@@ -126,6 +130,7 @@ export function InventoryLabRecipesPage() {
     setEditingRecipe(null);
     setCreatesOutputLot(false);
     setOutputCatalogItemId('');
+    setSopFileId('');
     setDraftComponents([emptyComponent()]);
     setRecipeOpen(true);
   }
@@ -134,6 +139,7 @@ export function InventoryLabRecipesPage() {
     setEditingRecipe(recipe);
     setCreatesOutputLot(Boolean(recipe.createsOutputLot));
     setOutputCatalogItemId(recipe.outputCatalogItemId ?? '');
+    setSopFileId(recipe.sopFileId ?? '');
     setDraftComponents(componentsFromRecipe(recipe));
     setRecipeOpen(true);
   }
@@ -216,6 +222,7 @@ export function InventoryLabRecipesPage() {
             status: String(form.get('status') ?? 'active') as 'active' | 'inactive',
             createsOutputLot,
             outputCatalogItemId: outputId,
+            sopFileId: sopFileId.trim() || null,
             components,
           },
         }).unwrap();
@@ -229,6 +236,7 @@ export function InventoryLabRecipesPage() {
           notes: String(form.get('notes') ?? '').trim(),
           createsOutputLot,
           outputCatalogItemId: outputId,
+          sopFileId: sopFileId.trim() || null,
           components,
         }).unwrap();
         toast.success('Recipe created.');
@@ -338,6 +346,11 @@ export function InventoryLabRecipesPage() {
           <DataTable<InventoryLabRecipe>
             columns={[
               { id: 'name', header: 'Recipe', cell: (row) => row.name },
+              {
+                id: 'sop',
+                header: 'SOP',
+                cell: (row) => row.sopTitle || '—',
+              },
               {
                 id: 'volume',
                 header: 'Final volume',
@@ -496,6 +509,26 @@ export function InventoryLabRecipesPage() {
                 emptyLabel="Select catalog item"
               />
             ) : null}
+
+            <div>
+              <Label htmlFor="recipe-sop">Linked SOP (optional)</Label>
+              <select
+                id="recipe-sop"
+                className={SELECT_CLASS}
+                value={sopFileId}
+                onChange={(event) => setSopFileId(event.target.value)}
+              >
+                <option value="">No SOP linked</option>
+                {sopFiles.map((file) => (
+                  <option key={file.id} value={file.id}>
+                    {file.title}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-muted">
+                Upload PDFs under Stock → SOPs, then link here for Inside lab preview.
+              </p>
+            </div>
 
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">

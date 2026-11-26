@@ -118,6 +118,9 @@ import type {
   InventoryLabActivity,
   InventoryLabRecipe,
   InventoryLabUsageResult,
+  InventorySopFolder,
+  InventorySopFile,
+  InventorySopFileContent,
   InventoryAlert,
   InventoryAlertLogEntry,
   InventoryAdminDashboard,
@@ -312,6 +315,7 @@ export const api = createApi({
     'InventoryCentralQrs',
     'InventoryStorage',
     'InventoryLab',
+    'InventorySops',
     'InventoryAlerts',
     'HrInvoices',
   ],
@@ -3880,6 +3884,7 @@ export const api = createApi({
         sortOrder?: number;
         createsOutputLot?: boolean;
         outputCatalogItemId?: string | null;
+        sopFileId?: string | null;
         components?: Array<{
           name: string;
           quantityValue?: number | null;
@@ -3906,6 +3911,7 @@ export const api = createApi({
           status?: 'active' | 'inactive';
           createsOutputLot?: boolean;
           outputCatalogItemId?: string | null;
+          sopFileId?: string | null;
           components?: Array<{
             id?: string;
             name: string;
@@ -3928,6 +3934,92 @@ export const api = createApi({
     deleteInventoryLabRecipe: builder.mutation<ApiSuccess<{ id: string }>, string>({
       query: (id) => ({ url: `/api/v1/inventory/lab/recipes/${id}`, method: 'DELETE' }),
       invalidatesTags: ['InventoryLab'],
+    }),
+    getInventorySopFolders: builder.query<
+      ApiSuccess<InventorySopFolder[]>,
+      { parentId?: string | null } | void
+    >({
+      query: (arg) => {
+        const parentId = arg && 'parentId' in arg ? arg.parentId : undefined;
+        if (parentId) {
+          return `/api/v1/inventory/sops/folders?parentId=${encodeURIComponent(parentId)}`;
+        }
+        return '/api/v1/inventory/sops/folders';
+      },
+      providesTags: ['InventorySops'],
+    }),
+    createInventorySopFolder: builder.mutation<
+      ApiSuccess<InventorySopFolder>,
+      { name: string; parentId?: string | null; sortOrder?: number }
+    >({
+      query: (body) => ({ url: '/api/v1/inventory/sops/folders', method: 'POST', body }),
+      invalidatesTags: ['InventorySops'],
+    }),
+    updateInventorySopFolder: builder.mutation<
+      ApiSuccess<InventorySopFolder>,
+      {
+        id: string;
+        body: {
+          name?: string;
+          sortOrder?: number;
+          status?: 'active' | 'inactive';
+          parentId?: string | null;
+        };
+      }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/inventory/sops/folders/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['InventorySops'],
+    }),
+    deleteInventorySopFolder: builder.mutation<ApiSuccess<{ id: string }>, string>({
+      query: (id) => ({ url: `/api/v1/inventory/sops/folders/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['InventorySops'],
+    }),
+    getInventorySopFiles: builder.query<ApiSuccess<InventorySopFile[]>, string | void>({
+      query: (folderId) =>
+        folderId
+          ? `/api/v1/inventory/sops/files?folderId=${encodeURIComponent(folderId)}`
+          : '/api/v1/inventory/sops/files',
+      providesTags: ['InventorySops'],
+    }),
+    uploadInventorySopFile: builder.mutation<
+      ApiSuccess<InventorySopFile>,
+      { folderId: string; title?: string; fileName: string; contentBase64: string }
+    >({
+      query: ({ folderId, ...body }) => ({
+        url: `/api/v1/inventory/sops/folders/${folderId}/files`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['InventorySops'],
+    }),
+    updateInventorySopFile: builder.mutation<
+      ApiSuccess<InventorySopFile>,
+      { id: string; body: { title?: string; folderId?: string } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/inventory/sops/files/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['InventorySops', 'InventoryLab'],
+    }),
+    deleteInventorySopFile: builder.mutation<ApiSuccess<{ id: string }>, string>({
+      query: (id) => ({ url: `/api/v1/inventory/sops/files/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['InventorySops', 'InventoryLab'],
+    }),
+    getInventorySopPdf: builder.query<ApiSuccess<InventorySopFileContent>, string>({
+      query: (id) => `/api/v1/inventory/sops/files/${id}/pdf`,
+    }),
+    getInventoryPublicRecipeSop: builder.query<
+      ApiSuccess<InventorySopFileContent>,
+      { token: string; recipeId: string }
+    >({
+      query: ({ token, recipeId }) =>
+        `/api/v1/inventory/public/scan/${encodeURIComponent(token)}/lab-recipes/${encodeURIComponent(recipeId)}/sop`,
     }),
     getInventoryPublicLabRecipes: builder.query<ApiSuccess<InventoryLabRecipe[]>, string>({
       query: (activityId) =>
@@ -4605,6 +4697,16 @@ export const {
   useCreateInventoryLabRecipeMutation,
   useUpdateInventoryLabRecipeMutation,
   useDeleteInventoryLabRecipeMutation,
+  useGetInventorySopFoldersQuery,
+  useCreateInventorySopFolderMutation,
+  useUpdateInventorySopFolderMutation,
+  useDeleteInventorySopFolderMutation,
+  useGetInventorySopFilesQuery,
+  useUploadInventorySopFileMutation,
+  useUpdateInventorySopFileMutation,
+  useDeleteInventorySopFileMutation,
+  useLazyGetInventorySopPdfQuery,
+  useLazyGetInventoryPublicRecipeSopQuery,
   useGetInventoryPublicLabRecipesQuery,
   useSubmitInventoryPublicLabUsageMutation,
   useGetInventoryPlasticStockQuery,

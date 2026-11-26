@@ -14,6 +14,7 @@ import {
   useGetInventoryPublicScanQuery,
   useIssueInventoryPublicPlasticBatchMutation,
   useIssueInventoryPublicScanMutation,
+  useLazyGetInventoryPublicRecipeSopQuery,
   useSubmitInventoryPublicLabUsageMutation,
   useTransferInventoryPublicInsideLabMutation,
 } from '@/store/api/api';
@@ -900,6 +901,7 @@ function LabScanCard({
   onDone: () => void;
 }) {
   const [submitUsage, { isLoading: submitting }] = useSubmitInventoryPublicLabUsageMutation();
+  const [fetchSop, { isFetching: loadingSop }] = useLazyGetInventoryPublicRecipeSopQuery();
   const [employeeId, setEmployeeId] = useState('');
   const [activityId, setActivityId] = useState('');
   const [recipeId, setRecipeId] = useState('');
@@ -1094,6 +1096,46 @@ function LabScanCard({
 
           {selectedRecipe ? (
             <>
+              {selectedRecipe.sopFileId ? (
+                <div className="flex items-center justify-between gap-3 rounded border border-border px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium">SOP</p>
+                    <p className="text-xs text-muted">{selectedRecipe.sopTitle || 'Linked procedure'}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={loadingSop || !online}
+                    onClick={() => {
+                      void (async () => {
+                        setError(null);
+                        try {
+                          const result = await fetchSop({ token, recipeId: selectedRecipe.id }).unwrap();
+                          const binary = atob(result.data.contentBase64);
+                          const bytes = new Uint8Array(binary.length);
+                          for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+                          const blob = new Blob([bytes], { type: 'application/pdf' });
+                          const url = URL.createObjectURL(blob);
+                          const win = window.open(url, '_blank', 'noopener,noreferrer');
+                          if (!win) {
+                            const anchor = document.createElement('a');
+                            anchor.href = url;
+                            anchor.download = result.data.fileName;
+                            anchor.click();
+                          }
+                          window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+                        } catch (cause) {
+                          setError(apiErrorMessage(cause, 'Unable to open SOP preview.'));
+                        }
+                      })();
+                    }}
+                  >
+                    {loadingSop ? 'Opening…' : 'Preview'}
+                  </Button>
+                </div>
+              ) : null}
+
               {selectedRecipe.createsOutputLot ? (
                 <div>
                   <Label htmlFor="lab-output-qty">
