@@ -195,11 +195,15 @@ export function shellMobileNavTitle(variant: Exclude<ShellVariant, 'employee'>):
   return 'Navigation';
 }
 
-export function shellNavItemActive(pathname: string, href: string): boolean {
+export function shellNavItemActive(
+  pathname: string,
+  href: string,
+  competingHrefs: readonly string[] = [],
+): boolean {
   if (MY_PROJECT_NAV.some((item) => item.href === href)) {
     return isMyProjectNavActive(pathname, href);
   }
-  return isNavActive(pathname, href);
+  return isNavActive(pathname, href, competingHrefs);
 }
 
 export function shellBottomNavItems(variant: Exclude<ShellVariant, 'employee'>): readonly NavItem[] {

@@ -24,6 +24,8 @@ import { displayRoleCodes, type ShellVariant } from '@/features/auth/role-access
 import { roleLabel } from '@/features/employees/onboarding-roles';
 import { useMyProjectNavItems } from '@/features/work/my-projects';
 
+const EMPLOYEE_NAV_HREFS = EMPLOYEE_NAV.map((item) => item.href);
+
 function EmployeeWorkMenu() {
   const pathname = usePathname();
   const { workItems } = useWorkNavGroups();
@@ -386,7 +388,7 @@ export function Topbar({ variant }: { variant: ShellVariant }) {
                       href={item.href}
                       className={cn(
                         'inline-flex shrink-0 items-center gap-2 rounded px-2.5 py-2 text-sm transition-colors lg:px-3',
-                        isNavActive(pathname, item.href)
+                        isNavActive(pathname, item.href, EMPLOYEE_NAV_HREFS)
                           ? 'bg-surface text-foreground'
                           : 'text-muted hover:bg-surface hover:text-foreground',
                       )}

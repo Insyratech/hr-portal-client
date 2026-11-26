@@ -2,19 +2,19 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Meta } from '@/components/layout/meta';
 import { NavSectionTitle } from '@/components/layout/nav-section-title';
 import { Icon } from '@/components/ui/icon';
 import type { NavMenuSection } from '@/components/layout/shell-nav-items';
-import type { NavItem } from '@/constants/nav';
+import { isNavActive, type NavItem } from '@/constants/nav';
 import { cn } from '@/lib/utils';
 import type { AccentTone } from '@/lib/ui-accents';
 
 type NavHamburgerMenuProps = {
   ariaLabel: string;
   panelTitle: string;
-  isItemActive?: (pathname: string, href: string) => boolean;
+  isItemActive?: (pathname: string, href: string, competingHrefs: readonly string[]) => boolean;
 } & (
   | { items: readonly NavItem[]; sections?: never }
   | { sections: readonly NavMenuSection[]; items?: never }
@@ -177,8 +177,19 @@ export function NavHamburgerMenu({
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
 
+  const competingHrefs = useMemo(() => {
+    if (sections) {
+      return sections.flatMap((section) =>
+        section.groups.flatMap((group) => group.items.map((item) => item.href)),
+      );
+    }
+    return (items ?? []).map((item) => item.href);
+  }, [items, sections]);
+
   function itemActive(href: string): boolean {
-    return isItemActive ? isItemActive(pathname, href) : pathname === href || pathname.startsWith(`${href}/`);
+    return isItemActive
+      ? isItemActive(pathname, href, competingHrefs)
+      : isNavActive(pathname, href, competingHrefs);
   }
 
   useEffect(() => {

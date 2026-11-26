@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 
 export function MobileBottomNav({ items }: { items: readonly NavItem[] }) {
   const pathname = usePathname();
+  const competingHrefs = items.map((item) => item.href);
 
   if (items.length === 0) {
     return null;
@@ -20,7 +21,7 @@ export function MobileBottomNav({ items }: { items: readonly NavItem[] }) {
         style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
         {items.map((item) => {
-          const active = isNavActive(pathname, item.href);
+          const active = isNavActive(pathname, item.href, competingHrefs);
           return (
             <li key={item.href} className="min-w-0">
               <Link

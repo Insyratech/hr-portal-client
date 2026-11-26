@@ -370,7 +370,8 @@ export const INVENTORY_BOTTOM_NAV: readonly NavItem[] = [
   { href: '/inventory/catalog', label: 'Catalog', icon: 'file' },
 ];
 
-export function isNavActive(pathname: string, href: string): boolean {
+/** Whether this nav href matches the current path (before sibling specificity). */
+export function pathMatchesNavHref(pathname: string, href: string): boolean {
   const roots = ['/super-admin', '/hr', '/gm', '/cso', '/finance', '/inventory', '/dashboard'];
   if (roots.includes(href)) {
     return pathname === href;
@@ -396,6 +397,26 @@ export function isNavActive(pathname: string, href: string): boolean {
     return pathname === href;
   }
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/**
+ * Active nav item for the current path.
+ * Pass sibling (or menu-wide) hrefs so nested routes like `/payslips/playground`
+ * activate only the most specific item, not also `/payslips`.
+ */
+export function isNavActive(
+  pathname: string,
+  href: string,
+  competingHrefs: readonly string[] = [],
+): boolean {
+  if (!pathMatchesNavHref(pathname, href)) return false;
+  if (competingHrefs.length === 0) return true;
+  return !competingHrefs.some(
+    (other) =>
+      other !== href &&
+      other.length > href.length &&
+      pathMatchesNavHref(pathname, other),
+  );
 }
 
 export function isWorkSubnavActive(pathname: string, href: string): boolean {

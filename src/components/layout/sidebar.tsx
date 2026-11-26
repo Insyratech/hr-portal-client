@@ -63,14 +63,19 @@ import { useGetMeQuery } from '@/store/api/api';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toggleSidebar } from '@/store/slices/ui-slice';
 
-function itemIsActive(pathname: string, href: string): boolean {
+function itemIsActive(
+  pathname: string,
+  href: string,
+  competingHrefs: readonly string[] = [],
+): boolean {
   return MY_PROJECT_NAV.some((projectItem) => projectItem.href === href)
     ? isMyProjectNavActive(pathname, href)
-    : isNavActive(pathname, href);
+    : isNavActive(pathname, href, competingHrefs);
 }
 
 function navItemsContainActive(pathname: string, items: readonly NavItem[]): boolean {
-  return items.some((item) => itemIsActive(pathname, item.href));
+  const competingHrefs = items.map((item) => item.href);
+  return items.some((item) => itemIsActive(pathname, item.href, competingHrefs));
 }
 
 function sectionContainsActive(pathname: string, section: NavMenuSection): boolean {
@@ -79,10 +84,11 @@ function sectionContainsActive(pathname: string, section: NavMenuSection): boole
 
 function NavLinks({ items, collapsed }: { items: readonly NavItem[]; collapsed: boolean }) {
   const pathname = usePathname();
+  const competingHrefs = items.map((item) => item.href);
   return (
     <ul className="space-y-1">
       {items.map((item) => {
-        const active = itemIsActive(pathname, item.href);
+        const active = itemIsActive(pathname, item.href, competingHrefs);
         return (
           <li key={item.href}>
             <Link
