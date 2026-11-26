@@ -993,29 +993,25 @@ function LabScanCard({
       setError('How many must be a positive number (default 1).');
       return;
     }
-    const lines = isMethod
-      ? undefined
-      : components
-          .map((row) => {
-            const qtyRaw = row.quantityValue.trim();
-            return {
-              name: row.name.trim(),
-              quantityValue: qtyRaw ? Number(qtyRaw) : null,
-              quantityUnit: row.quantityUnit.trim(),
-              notes: row.notes.trim(),
-              catalogItemId: row.catalogItemId,
-            };
-          })
-          .filter((row) => row.name);
-    if (!isMethod) {
-      if (!lines?.length) {
-        setError('Add at least one component.');
-        return;
-      }
-      if (lines.some((row) => row.quantityValue !== null && !Number.isFinite(row.quantityValue))) {
-        setError('Component quantities must be numbers (or blank).');
-        return;
-      }
+    const lines = components
+      .map((row) => {
+        const qtyRaw = row.quantityValue.trim();
+        return {
+          name: row.name.trim(),
+          quantityValue: qtyRaw ? Number(qtyRaw) : null,
+          quantityUnit: row.quantityUnit.trim(),
+          notes: row.notes.trim(),
+          catalogItemId: row.catalogItemId,
+        };
+      })
+      .filter((row) => row.name);
+    if (!lines.length) {
+      setError('Add at least one component.');
+      return;
+    }
+    if (lines.some((row) => row.quantityValue !== null && !Number.isFinite(row.quantityValue))) {
+      setError('Component volumes must be numbers (or blank).');
+      return;
     }
     try {
       const result = await submitUsage({
@@ -1200,15 +1196,49 @@ function LabScanCard({
 
               <div className="space-y-3">
                 <Label>{isMethod ? 'Components (from method)' : 'Components (editable)'}</Label>
+                {isMethod ? (
+                  <p className="text-xs text-muted">
+                    Volumes default from the method × How many (Nx). Edit a volume when this run differs.
+                  </p>
+                ) : null}
                 {components.map((component, index) => (
                   <div key={component.key} className="space-y-2 rounded border border-border p-3">
-                    <p className="text-sm font-medium">{component.name || `Component ${index + 1}`}</p>
                     {isMethod ? (
-                      component.notes ? (
-                        <p className="text-xs text-muted">{component.notes}</p>
-                      ) : null
+                      <>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            step="any"
+                            className="w-[5.5rem] shrink-0"
+                            value={component.quantityValue}
+                            onChange={(event) =>
+                              setComponents((current) =>
+                                current.map((row) =>
+                                  row.key === component.key
+                                    ? { ...row, quantityValue: event.target.value }
+                                    : row,
+                                ),
+                              )
+                            }
+                            placeholder="Vol"
+                            aria-label={`${component.name || `Component ${index + 1}`} volume`}
+                          />
+                          <span className="w-8 shrink-0 text-xs text-muted">
+                            {component.quantityUnit || '—'}
+                          </span>
+                          <p className="min-w-0 flex-1 text-sm font-medium">
+                            {component.name || `Component ${index + 1}`}
+                          </p>
+                        </div>
+                        {component.notes ? (
+                          <p className="text-xs text-muted">{component.notes}</p>
+                        ) : null}
+                      </>
                     ) : (
                       <>
+                        <p className="text-sm font-medium">
+                          {component.name || `Component ${index + 1}`}
+                        </p>
                         <div className="grid grid-cols-[1fr_5rem] gap-2">
                           <Input
                             type="number"
@@ -1263,7 +1293,7 @@ function LabScanCard({
           </Button>
           <p className="text-xs text-muted">
             {isMethod
-              ? 'How many (Nx) is recorded with this method run. Reagent recipes still use measured volumes.'
+              ? 'How many (Nx) and edited volumes are recorded with this method run. Linked components deduct stock from Inside lab.'
               : 'Linked components deduct stock from Inside lab. Reagent recipes can also create a new lot.'}
           </p>
           <p className="text-xs text-muted">
