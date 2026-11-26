@@ -47,7 +47,7 @@ export function InventoryLotsPage() {
               <Link href="/inventory/prep">Prep reagent</Link>
             </Button>
             <Button asChild>
-              <Link href="/inventory/receive">Receive lot</Link>
+              <Link href="/inventory/receive">Receive</Link>
             </Button>
           </div>
         }

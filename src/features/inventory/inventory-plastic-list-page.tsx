@@ -37,7 +37,7 @@ export function InventoryPlasticListPage() {
               <Link href="/inventory/stations">Stations</Link>
             </Button>
             <Button asChild>
-              <Link href="/inventory/plastic/receive">Receive boxes</Link>
+              <Link href="/inventory/receive">Receive</Link>
             </Button>
           </div>
         }
@@ -75,7 +75,7 @@ export function InventoryPlasticListPage() {
         rows={data?.data ?? []}
         loading={isLoading}
         emptyTitle="No plastic stock"
-        emptyDescription="Receive gloves or tip boxes, then print a station QR for that location."
+        emptyDescription="Receive gloves or tip boxes via Receive — stock attaches to the room QR you choose."
       />
     </>
   );

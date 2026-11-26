@@ -1,7 +1,6 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { InventoryPlasticReceivePage } from '@/features/inventory/inventory-plastic-receive-page';
-
+/** Plastic/box receive is part of the unified receive journey. */
 export default function Page() {
-  return <InventoryPlasticReceivePage />;
+  redirect('/inventory/receive');
 }
