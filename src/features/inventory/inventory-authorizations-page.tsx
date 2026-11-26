@@ -64,9 +64,10 @@ export function InventoryAuthorizationsPage() {
     const employeeId = employeeIdFixed ?? String(form.get('employeeId') ?? '');
     const canUsage = form.get('canUsage') === 'on';
     const canReceipt = form.get('canReceipt') === 'on';
-    const canPrep = form.get('canPrep') === 'on';
+    // Prep sessions retired — keep existing canPrep flags on edit, never grant new ones.
+    const canPrep = employeeIdFixed ? Boolean(editing?.canPrep) : false;
     if (!canUsage && !canReceipt && !canPrep) {
-      toast.error('Grant at least one of usage, receipt, or prep.');
+      toast.error('Grant at least usage or receipt.');
       return;
     }
     try {
@@ -121,8 +122,8 @@ export function InventoryAuthorizationsPage() {
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Grant who may enter receipts or run reagent prep in the portal. QR kiosk usage does not need
-        a grant — anyone can pick their name on the scan card and submit.
+        Grant who may enter receipts in the portal. QR kiosk usage does not need a grant — anyone can
+        pick their name on the scan card, choose a work type, and submit.
       </p>
       {isError ? <p className="mb-4 text-sm">Unable to load authorizations.</p> : null}
 
@@ -161,7 +162,7 @@ export function InventoryAuthorizationsPage() {
         rows={data?.data ?? []}
         loading={isLoading}
         emptyTitle="No authorizations yet"
-        emptyDescription="Grant receipt or prep rights for staff who help IM in the portal."
+        emptyDescription="Grant receipt rights for staff who help IM enter stock in the portal."
       />
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -191,10 +192,6 @@ export function InventoryAuthorizationsPage() {
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="canReceipt" />
                 Receipt / stock entry
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="canPrep" />
-                Reagent prep
               </label>
             </fieldset>
             <div>
@@ -230,10 +227,6 @@ export function InventoryAuthorizationsPage() {
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" name="canReceipt" defaultChecked={editing.canReceipt} />
                   Receipt / stock entry
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" name="canPrep" defaultChecked={editing.canPrep} />
-                  Reagent prep
                 </label>
               </fieldset>
               <div>

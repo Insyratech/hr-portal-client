@@ -410,13 +410,13 @@ const INVENTORY_CATEGORIES: FaqCategory[] = [
         id: 'inv-home',
         question: 'Where do I land after login?',
         answer:
-          'As Inventory Manager you open the Inventory workspace at /inventory. Receive measured lots and bought reagents, run Prep for lab-made reagents, receive plastic boxes and print station QR labels, and manage Locations / Catalog / Authorizations (receipt and prep). Scan URLs are public kiosk cards — no login; pick your name and submit. Lot aliquots use the parent QR; plastics use the station picker.',
+          'As Inventory Manager you open the Inventory workspace at /inventory. Receive stock via Receive (attach to a room QR), manage Lab recipes for Inside lab work types, receive plastic boxes, and manage Locations / Catalog / Authorizations. Scan a room QR on the public kiosk — no login; pick your name, work type, and submit.',
       },
       {
         id: 'inv-prep',
         question: 'How do lab-made reagents work?',
         answer:
-          'Open Prep, choose a Reagents catalog item and target volume, issue Chemicals/Solvents into the session, then Complete to create one parent QR lot. Expense reports use the component costs, not a second reagent purchase. Bought reagents still use Receive with purchase cost.',
+          'Inventory Manager defines work types and recipes under Lab recipes (for example Reagent preparation). Staff scan the Inside lab room QR, choose that work type, and submit. Output lots attach to the room QR; reportable spend is component cost. Bought reagents still use Receive with purchase cost.',
       },
       {
         id: 'inv-plastic',

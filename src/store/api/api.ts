@@ -103,7 +103,6 @@ import type {
   InventoryLotExpense,
   InventoryLotPrint,
   InventoryMovement,
-  InventoryPrepSession,
   InventoryPlasticMovement,
   InventoryPlasticStock,
   InventoryPublicScanPayload,
@@ -307,7 +306,6 @@ export const api = createApi({
     'InventoryCatalog',
     'InventoryAuthorizations',
     'InventoryLots',
-    'InventoryPrep',
     'InventoryPlastic',
     'InventoryStations',
     'InventoryCentralQrs',
@@ -3802,57 +3800,6 @@ export const api = createApi({
       query: (id) => `/api/v1/inventory/lots/${id}/expense`,
       providesTags: (_r, _e, id) => [{ type: 'InventoryLots', id: `${id}-expense` }],
     }),
-    getInventoryPrepSessions: builder.query<ApiSuccess<InventoryPrepSession[]>, void>({
-      query: () => '/api/v1/inventory/prep-sessions',
-      providesTags: ['InventoryPrep'],
-    }),
-    getInventoryPrepSession: builder.query<ApiSuccess<InventoryPrepSession>, string>({
-      query: (id) => `/api/v1/inventory/prep-sessions/${id}`,
-      providesTags: (_r, _e, id) => [{ type: 'InventoryPrep', id }],
-    }),
-    createInventoryPrepSession: builder.mutation<
-      ApiSuccess<InventoryPrepSession>,
-      {
-        catalogItemId: string;
-        locationId: string;
-        targetQty: number;
-        unit?: string;
-        qtyChips?: number[];
-        notes?: string;
-      }
-    >({
-      query: (body) => ({ url: '/api/v1/inventory/prep-sessions', method: 'POST', body }),
-      invalidatesTags: ['InventoryPrep', 'InventoryOverview'],
-    }),
-    addInventoryPrepInput: builder.mutation<
-      ApiSuccess<InventoryPrepSession>,
-      { id: string; body: { sourceLotId: string; qty: number; notes?: string } }
-    >({
-      query: ({ id, body }) => ({
-        url: `/api/v1/inventory/prep-sessions/${id}/inputs`,
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: ['InventoryPrep', 'InventoryLots'],
-    }),
-    completeInventoryPrepSession: builder.mutation<
-      ApiSuccess<InventoryPrepSession>,
-      { id: string; body?: { expiryDate?: string | null; notes?: string } }
-    >({
-      query: ({ id, body }) => ({
-        url: `/api/v1/inventory/prep-sessions/${id}/complete`,
-        method: 'POST',
-        body: body ?? {},
-      }),
-      invalidatesTags: ['InventoryPrep', 'InventoryLots', 'InventoryOverview'],
-    }),
-    cancelInventoryPrepSession: builder.mutation<ApiSuccess<InventoryPrepSession>, string>({
-      query: (id) => ({
-        url: `/api/v1/inventory/prep-sessions/${id}/cancel`,
-        method: 'POST',
-      }),
-      invalidatesTags: ['InventoryPrep', 'InventoryOverview'],
-    }),
     getInventoryCentralQrs: builder.query<ApiSuccess<InventoryCentralQr[]>, void>({
       query: () => '/api/v1/inventory/central-qrs',
       providesTags: ['InventoryCentralQrs'],
@@ -4640,12 +4587,6 @@ export const {
   useGetInventoryLotMovementsQuery,
   useAdjustInventoryLotMutation,
   useGetInventoryLotExpenseQuery,
-  useGetInventoryPrepSessionsQuery,
-  useGetInventoryPrepSessionQuery,
-  useCreateInventoryPrepSessionMutation,
-  useAddInventoryPrepInputMutation,
-  useCompleteInventoryPrepSessionMutation,
-  useCancelInventoryPrepSessionMutation,
   useGetInventoryStationsQuery,
   useGetInventoryStationQuery,
   useGetInventoryCentralQrsQuery,

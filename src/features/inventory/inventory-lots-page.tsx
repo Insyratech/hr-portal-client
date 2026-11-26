@@ -42,14 +42,9 @@ export function InventoryLotsPage() {
         kicker="Inventory"
         title="Lots"
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link href="/inventory/prep">Prep reagent</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/inventory/receive">Receive</Link>
-            </Button>
-          </div>
+          <Button asChild>
+            <Link href="/inventory/receive">Receive</Link>
+          </Button>
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-muted">
@@ -101,7 +96,7 @@ export function InventoryLotsPage() {
         rows={data?.data ?? []}
         loading={isLoading}
         emptyTitle="No lots yet"
-        emptyDescription="Receive a measured lot or complete a reagent prep to create the first QR lot."
+        emptyDescription="Receive stock via Receive (attaches to a room QR), or create an output lot by scanning a room QR and choosing Reagent preparation."
       />
     </>
   );

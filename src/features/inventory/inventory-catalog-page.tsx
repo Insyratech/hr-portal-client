@@ -159,7 +159,7 @@ export function InventoryCatalogPage() {
         <span className="text-foreground">Catalogue number</span> and{' '}
         <span className="text-foreground">brand name</span> are optional — add them when the item has them.
         Search filters by brand, catalogue number, or name. When set, catalogue number is shown with the name
-        in receive and prep pickers. <span className="text-foreground">Unit</span> is how this item is
+        in receive and lab recipe pickers. <span className="text-foreground">Unit</span> is how this item is
         measured (g, ml, …). Stock amounts live on each received lot — not here. Duplicate name (same
         category) or a non-empty catalogue number is blocked.
       </p>

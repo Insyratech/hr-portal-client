@@ -342,7 +342,6 @@ export const INVENTORY_OVERVIEW_NAV: readonly NavItem[] = [
 export const INVENTORY_STOCK_NAV: readonly NavItem[] = [
   { href: '/inventory/receive', label: 'Receive', icon: 'file' },
   { href: '/inventory/lots', label: 'Lots', icon: 'grid' },
-  { href: '/inventory/prep', label: 'Prep', icon: 'file' },
   { href: '/inventory/plastic', label: 'Plastic', icon: 'grid' },
   { href: '/inventory/central-qrs', label: 'Room QRs', icon: 'building' },
   { href: '/inventory/lab-recipes', label: 'Lab recipes', icon: 'file' },

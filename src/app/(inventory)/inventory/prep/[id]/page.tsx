@@ -1,7 +1,6 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { InventoryPrepDetailPage } from '@/features/inventory/inventory-prep-detail-page';
-
+/** Prep sessions retired — use Lab recipes / room QR work types. */
 export default function Page() {
-  return <InventoryPrepDetailPage />;
+  redirect('/inventory/lab-recipes');
 }
