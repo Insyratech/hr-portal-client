@@ -1,7 +1,6 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { InventoryStationsPage } from '@/features/inventory/inventory-stations-page';
-
+/** Station QRs retired — usage goes through the three Usage areas. */
 export default function Page() {
-  return <InventoryStationsPage />;
+  redirect('/inventory/central-qrs');
 }

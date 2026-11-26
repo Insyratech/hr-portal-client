@@ -12,8 +12,8 @@ export function InventoryPublicScanHubPage() {
       <p className="text-xs uppercase tracking-[0.2em] text-meta">Lab inventory</p>
       <h1 className="mt-2 text-xl font-medium">Scan a label</h1>
       <p className="mt-2 text-sm text-muted">
-        Use this page on a lab phone. Allow camera access, then point at a lot or station QR. You will
-        land on the usage card to pick your name and quantity.
+        Use this page on a lab phone. Allow camera access, then point at a usage area QR. You will
+        land on the usage card to pick your name and quantity (or work type).
       </p>
       <div className="mt-6">
         <InventoryQrScanner

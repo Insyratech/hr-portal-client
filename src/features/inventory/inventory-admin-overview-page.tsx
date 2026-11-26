@@ -119,7 +119,6 @@ export function InventoryAdminOverviewPage() {
                 ['Catalog', dashboard.kpis.catalogItems],
                 ['Active lots', dashboard.kpis.activeLots],
                 ['Plastic SKUs', dashboard.kpis.plasticStock],
-                ['Stations', dashboard.kpis.stations],
                 ['Authorizations', dashboard.kpis.authorizations],
                 ['Active alerts', dashboard.kpis.activeAlerts],
                 ['Spend in range', formatInr(dashboard.kpis.spendInRange)],

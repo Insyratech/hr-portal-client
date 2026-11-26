@@ -65,7 +65,7 @@ function validateQtyChipsField(raw: string, opts: { integers: boolean }): string
 }
 
 const STEPS: Array<{ step: ReceiveJourneyStep; title: string; subtitle: string }> = [
-  { step: 1, title: 'Where to keep', subtitle: 'Room QR and category' },
+  { step: 1, title: 'Usage area', subtitle: 'Area QR and category' },
   { step: 2, title: 'Item details', subtitle: 'Fields for this category' },
   { step: 3, title: 'Confirm', subtitle: 'Review and receive' },
 ];
@@ -139,7 +139,7 @@ export function InventoryReceiveJourneyPage() {
   }
 
   function validateStep1(): string | null {
-    if (!draft.centralQrId) return 'Select where to keep (room QR).';
+    if (!draft.centralQrId) return 'Select a usage area.';
     if (!draft.categoryId) return 'Select a category.';
     if (!draft.locationId) return 'Select a shelf / location.';
     if (isBox && !canPlastic) return 'You cannot receive box categories.';
@@ -241,7 +241,7 @@ export function InventoryReceiveJourneyPage() {
           notes: draft.notes.trim(),
         }).unwrap();
         clearReceiveJourneyDraft();
-        toast.success(`Received and attached to ${selectedRoom?.name ?? 'room QR'}.`);
+        toast.success(`Received and attached to ${selectedRoom?.name ?? 'usage area'}.`);
         router.push(`/inventory/lots/${created.data.id}`);
         return;
       }
@@ -266,7 +266,7 @@ export function InventoryReceiveJourneyPage() {
         notes: draft.notes.trim(),
       }).unwrap();
       clearReceiveJourneyDraft();
-      toast.success(`Boxes received and attached to ${selectedRoom?.name ?? 'room QR'}.`);
+      toast.success(`Boxes received and attached to ${selectedRoom?.name ?? 'usage area'}.`);
       router.push(`/inventory/plastic/${created.data.id}`);
     } catch (cause) {
       toast.error(apiErrorMessage(cause, 'Unable to receive stock.'));
@@ -297,8 +297,8 @@ export function InventoryReceiveJourneyPage() {
         </button>
       </div>
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        One receive journey for every category. Choose the room QR first — stock attaches there for
-        usage. No per-bottle QR is printed.
+        One receive journey for every category. Choose the usage area first — stock attaches there for
+        scanning. Shelf placement is set separately. No per-bottle QR is printed.
       </p>
 
       <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
@@ -403,7 +403,7 @@ export function InventoryReceiveJourneyPage() {
                 </Button>
               ) : (
                 <Button type="button" disabled={isLoading} onClick={() => void onSubmit()}>
-                  {isLoading ? 'Receiving…' : 'Receive & attach to room QR'}
+                  {isLoading ? 'Receiving…' : 'Receive & attach to usage area'}
                 </Button>
               )}
             </div>
@@ -447,21 +447,21 @@ function StepDestination({
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-lg font-medium">Where to keep</h2>
+        <h2 className="text-lg font-medium">Usage area</h2>
         <p className="mt-1 text-sm text-muted">
-          Pick the room QR this stock belongs to, then the category. The next step shows the right
-          fields.
+          Pick which usage area this stock attaches to for scanning, then the category. Shelf /
+          location is where it sits physically.
         </p>
       </div>
       <div>
-        <Label htmlFor="centralQrId">Keep in (room QR)</Label>
+        <Label htmlFor="centralQrId">Usage area</Label>
         <select
           id="centralQrId"
           className={SELECT_CLASS}
           value={draft.centralQrId}
           onChange={(event) => onChange({ centralQrId: event.target.value })}
         >
-          <option value="">Select room</option>
+          <option value="">Select usage area</option>
           {centralQrs.map((room) => (
             <option key={room.id} value={room.id}>
               {room.name}
@@ -538,8 +538,8 @@ function StepDetails({
         <h2 className="text-lg font-medium">{category.name}</h2>
         <p className="mt-1 text-sm text-muted">
           {isBox
-            ? 'Box stock — enter boxes, size, and manufacturer. Attaches to the room QR from step 1.'
-            : 'Measured stock — enter amount in the catalog unit. Attaches to the room QR from step 1.'}
+            ? 'Box stock — enter boxes, size, and manufacturer. Attaches to the usage area from step 1.'
+            : 'Measured stock — enter amount in the catalog unit. Attaches to the usage area from step 1.'}
         </p>
       </div>
 
@@ -758,13 +758,13 @@ function StepReview({
       <div>
         <h2 className="text-lg font-medium">Confirm receive</h2>
         <p className="mt-1 text-sm text-muted">
-          Stock will attach to <span className="text-foreground">{roomName}</span>. Usage goes through
-          that room QR.
+          Stock will attach to <span className="text-foreground">{roomName}</span>. Usage is recorded
+          by scanning that usage area QR.
         </p>
       </div>
       <dl className="grid gap-2 text-sm sm:grid-cols-2">
         <div>
-          <dt className="text-xs uppercase tracking-wide text-muted">Keep in</dt>
+          <dt className="text-xs uppercase tracking-wide text-muted">Usage area</dt>
           <dd>{roomName}</dd>
         </div>
         <div>

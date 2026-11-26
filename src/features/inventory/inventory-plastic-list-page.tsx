@@ -32,19 +32,14 @@ export function InventoryPlasticListPage() {
         kicker="Inventory"
         title="Plastic stock"
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link href="/inventory/stations">Stations</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/inventory/receive">Receive</Link>
-            </Button>
-          </div>
+          <Button asChild>
+            <Link href="/inventory/receive">Receive</Link>
+          </Button>
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Box-level stock (gloves, tips, tubes). Issue from a stock-room station QR — not per-box
-        labels.
+        Box-level stock (gloves, tips, tubes). Attach to a usage area on receive, then issue by
+        scanning that area QR — not per-box labels.
       </p>
       {isError ? <p className="mb-4 text-sm">Unable to load plastic stock.</p> : null}
 
@@ -75,7 +70,7 @@ export function InventoryPlasticListPage() {
         rows={data?.data ?? []}
         loading={isLoading}
         emptyTitle="No plastic stock"
-        emptyDescription="Receive gloves or tip boxes via Receive — stock attaches to the room QR you choose."
+        emptyDescription="Receive gloves or tip boxes via Receive — stock attaches to the usage area you choose."
       />
     </>
   );

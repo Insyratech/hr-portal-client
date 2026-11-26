@@ -107,7 +107,7 @@ export function InventoryCategoriesPage() {
       />
       <p className="mb-6 max-w-2xl text-sm text-muted">
         Add a category when the lab needs a new kind of stock. Measured categories are received as lots.
-        Box categories, such as Plastic wares and Miscellaneous, use the room QR.
+        Box categories, such as Plastic wares and Miscellaneous, issue through a usage area QR.
       </p>
       {isError ? <p className="mb-4 text-sm">Unable to load categories.</p> : null}
 
@@ -226,7 +226,7 @@ export function InventoryCategoriesPage() {
         <DialogContent>
           <DialogTitle>Add category</DialogTitle>
           <DialogDescription>
-            Measured stock is received as a lot. Box stock uses a room QR and can include several items.
+            Measured stock is received as a lot. Box stock issues through a usage area QR and can include several items.
           </DialogDescription>
           <form className="mt-4 space-y-4" onSubmit={onCreate}>
             <div>
@@ -237,7 +237,7 @@ export function InventoryCategoriesPage() {
               <Label htmlFor="deductionMode">Deduction</Label>
               <select id="deductionMode" name="deductionMode" className={SELECT_CLASS} defaultValue="box">
                 <option value="measured">Measured (one lot QR)</option>
-                <option value="box">Box (room QR, several items)</option>
+                <option value="box">Box (usage area QR, several items)</option>
               </select>
             </div>
             <div>

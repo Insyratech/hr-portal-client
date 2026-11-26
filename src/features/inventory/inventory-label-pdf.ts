@@ -1,6 +1,6 @@
 import { toDataURL } from 'qrcode';
 import { jsPDF } from 'jspdf';
-import type { InventoryCentralQrPrint, InventoryLotPrint, InventoryStationPrint } from '@/types/api';
+import type { InventoryCentralQrPrint, InventoryLotPrint } from '@/types/api';
 
 function showDate(value: string | null | undefined): string {
   if (!value) return '—';
@@ -12,13 +12,6 @@ function showDate(value: string | null | undefined): string {
 function fileSlug(value: string): string {
   const slug = value.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-|-$/g, '');
   return slug.slice(0, 60) || 'qr';
-}
-
-function stationKind(station: InventoryStationPrint['station']): string {
-  if (station.categoryName?.trim()) return station.categoryName.trim();
-  const haystack = `${station.name} ${station.locationName}`.toLowerCase();
-  if (haystack.includes('stationer')) return 'Miscellaneous';
-  return 'Plasticware';
 }
 
 async function qrImage(scanUrl: string): Promise<string> {
@@ -90,18 +83,6 @@ async function renderLabel(title: string, rows: [string, string][], scanUrl: str
   return doc;
 }
 
-async function stationDoc(payload: InventoryStationPrint): Promise<jsPDF> {
-  return renderLabel(
-    payload.station.name,
-    [
-      ['Kind', stationKind(payload.station)],
-      ['Store', `${payload.station.locationName} (${payload.station.locationCode})`],
-      ['Use', 'One visit, several items'],
-    ],
-    payload.scanUrl,
-  );
-}
-
 async function lotDoc(payload: InventoryLotPrint): Promise<jsPDF> {
   const { lot } = payload;
   return renderLabel(
@@ -136,20 +117,11 @@ async function centralDoc(payload: InventoryCentralQrPrint): Promise<jsPDF> {
     payload.central.name,
     [
       ['Kind', kindLabel],
-      ['Use', 'Room QR — pick items on scan'],
+      ['Use', 'Usage area — pick items on scan'],
       ['Notes', payload.central.notes || '—'],
     ],
     payload.scanUrl,
   );
-}
-
-export async function printInventoryStationLabel(payload: InventoryStationPrint): Promise<void> {
-  openForPrint(await stationDoc(payload));
-}
-
-export async function downloadInventoryStationLabel(payload: InventoryStationPrint): Promise<void> {
-  const doc = await stationDoc(payload);
-  doc.save(`qr-${fileSlug(payload.station.name)}.pdf`);
 }
 
 export async function printInventoryCentralQrLabel(payload: InventoryCentralQrPrint): Promise<void> {

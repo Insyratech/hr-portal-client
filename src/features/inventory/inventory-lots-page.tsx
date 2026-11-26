@@ -96,7 +96,7 @@ export function InventoryLotsPage() {
         rows={data?.data ?? []}
         loading={isLoading}
         emptyTitle="No lots yet"
-        emptyDescription="Receive stock via Receive (attaches to a room QR), or create an output lot by scanning a room QR and choosing Reagent preparation."
+        emptyDescription="Receive stock via Receive (attaches to a usage area), or create an output lot by scanning a usage area QR and choosing Reagent preparation."
       />
     </>
   );

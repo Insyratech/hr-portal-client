@@ -234,7 +234,7 @@ function LotScanCard({
         <div className="mt-6 space-y-3">
           <StatusMessage tone="danger">
             {card.issueDisabledMessage ??
-              'Bottle QRs no longer record usage. Scan the room QR instead.'}
+              'Bottle QRs no longer record usage. Scan a usage area QR instead.'}
           </StatusMessage>
           <p className="text-sm">
             <Link href="/scan" className="underline-offset-2 hover:underline">
@@ -689,7 +689,7 @@ function CentralScanCard({
       </p>
 
       {empty ? (
-        <p className="mt-6 text-sm text-muted">Nothing is attached to this room QR yet.</p>
+        <p className="mt-6 text-sm text-muted">Nothing is attached to this usage area yet.</p>
       ) : (
         <div className="mt-8 space-y-5">
           <div>

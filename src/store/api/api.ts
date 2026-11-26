@@ -114,8 +114,6 @@ import type {
   InventoryLabActivity,
   InventoryLabRecipe,
   InventoryLabUsageResult,
-  InventoryStation,
-  InventoryStationPrint,
   InventoryAlert,
   InventoryAlertLogEntry,
   InventoryAdminDashboard,
@@ -307,7 +305,6 @@ export const api = createApi({
     'InventoryAuthorizations',
     'InventoryLots',
     'InventoryPlastic',
-    'InventoryStations',
     'InventoryCentralQrs',
     'InventoryLab',
     'InventoryAlerts',
@@ -3942,31 +3939,6 @@ export const api = createApi({
         body,
       }),
     }),
-    getInventoryStations: builder.query<ApiSuccess<InventoryStation[]>, void>({
-      query: () => '/api/v1/inventory/stations',
-      providesTags: ['InventoryStations'],
-    }),
-    getInventoryStation: builder.query<ApiSuccess<InventoryStation>, string>({
-      query: (id) => `/api/v1/inventory/stations/${id}`,
-      providesTags: (_r, _e, id) => [{ type: 'InventoryStations', id }],
-    }),
-    createInventoryStation: builder.mutation<
-      ApiSuccess<InventoryStation>,
-      { locationId: string; name: string; notes?: string; categoryId?: string }
-    >({
-      query: (body) => ({ url: '/api/v1/inventory/stations', method: 'POST', body }),
-      invalidatesTags: ['InventoryStations', 'InventoryOverview'],
-    }),
-    updateInventoryStation: builder.mutation<
-      ApiSuccess<InventoryStation>,
-      { id: string; body: { name?: string; notes?: string; status?: 'active' | 'inactive' } }
-    >({
-      query: ({ id, body }) => ({ url: `/api/v1/inventory/stations/${id}`, method: 'PATCH', body }),
-      invalidatesTags: ['InventoryStations', 'InventoryOverview'],
-    }),
-    getInventoryStationPrint: builder.query<ApiSuccess<InventoryStationPrint>, string>({
-      query: (id) => `/api/v1/inventory/stations/${id}/print`,
-    }),
     getInventoryPlasticStock: builder.query<ApiSuccess<InventoryPlasticStock[]>, void>({
       query: () => '/api/v1/inventory/plastic-stock',
       providesTags: ['InventoryPlastic'],
@@ -4587,8 +4559,6 @@ export const {
   useGetInventoryLotMovementsQuery,
   useAdjustInventoryLotMutation,
   useGetInventoryLotExpenseQuery,
-  useGetInventoryStationsQuery,
-  useGetInventoryStationQuery,
   useGetInventoryCentralQrsQuery,
   useLazyGetInventoryCentralQrPrintQuery,
   useGetInventoryLabActivitiesQuery,
@@ -4601,9 +4571,6 @@ export const {
   useDeleteInventoryLabRecipeMutation,
   useGetInventoryPublicLabRecipesQuery,
   useSubmitInventoryPublicLabUsageMutation,
-  useCreateInventoryStationMutation,
-  useUpdateInventoryStationMutation,
-  useLazyGetInventoryStationPrintQuery,
   useGetInventoryPlasticStockQuery,
   useGetInventoryPlasticStockItemQuery,
   useReceiveInventoryPlasticStockMutation,

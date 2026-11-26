@@ -410,19 +410,19 @@ const INVENTORY_CATEGORIES: FaqCategory[] = [
         id: 'inv-home',
         question: 'Where do I land after login?',
         answer:
-          'As Inventory Manager you open the Inventory workspace at /inventory. Receive stock via Receive (attach to a room QR), manage Lab recipes for Inside lab work types, receive plastic boxes, and manage Locations / Catalog / Authorizations. Scan a room QR on the public kiosk — no login; pick your name, work type, and submit.',
+          'As Inventory Manager you open the Inventory workspace at /inventory. Receive stock via Receive (attach to a usage area), manage Lab recipes for Inside lab work types, print Usage area QRs, and manage Locations / Catalog / Authorizations. Locations are shelves; Usage areas are the three scan QRs (Stock room, Stationery, Inside lab).',
       },
       {
         id: 'inv-prep',
         question: 'How do lab-made reagents work?',
         answer:
-          'Inventory Manager defines work types and recipes under Lab recipes (for example Reagent preparation). Staff scan the Inside lab room QR, choose that work type, and submit. Output lots attach to the room QR; reportable spend is component cost. Bought reagents still use Receive with purchase cost.',
+          'Inventory Manager defines work types and recipes under Lab recipes (for example Reagent preparation). Staff scan the Inside lab usage area QR, choose that work type, and submit. Output lots attach to that usage area; reportable spend is component cost. Bought reagents still use Receive with purchase cost.',
       },
       {
         id: 'inv-plastic',
         question: 'How do plastic wares (gloves, tips) work?',
         answer:
-          'Receive boxes under Plastic (type, manufacturer, size). Create a Station QR for the stock-room location and print it. Anyone scanning that QR picks item + size + box count. Stock deducts whole boxes only — no per-glove counting.',
+          'Receive boxes via Receive and attach them to a usage area (usually Stock room). Print that usage area QR from Usage areas. Anyone scanning it picks item + size + box count. Stock deducts whole boxes only — no per-glove counting. Shelf placement uses Locations.',
       },
       {
         id: 'inv-alerts',
@@ -434,7 +434,7 @@ const INVENTORY_CATEGORIES: FaqCategory[] = [
         id: 'inv-scan-camera',
         question: 'How do I scan a label without a separate QR app?',
         answer:
-          'On a lab phone open /scan (or Inventory → Scan while signed in). Tap Scan with camera, allow camera access, and point at a printed lot or station label. The portal opens the public usage card. No login and no IM usage grant — pick your name and quantity, then submit. Labels also work if the phone camera opens the URL directly.',
+          'On a lab phone open /scan (or Inventory → Scan while signed in). Tap Scan with camera, allow camera access, and point at a printed usage area QR. The portal opens the public usage card. No login and no IM usage grant — pick your name and quantity (or work type), then submit. Labels also work if the phone camera opens the URL directly.',
       },
       {
         id: 'inv-scan-offline',

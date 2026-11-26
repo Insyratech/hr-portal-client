@@ -21,7 +21,7 @@ import type { InventoryCentralQr } from '@/types/api';
 const KIND_HINT: Record<string, string> = {
   stock_room: 'Take out measured lots and plasticwares',
   stationery: 'Take out stationery / miscellaneous boxes',
-  inside_lab: 'Lab work logging (recipes) — next phase',
+  inside_lab: 'Lab work logging via recipes and work types',
 };
 
 export function InventoryCentralQrsPage() {
@@ -38,7 +38,7 @@ export function InventoryCentralQrsPage() {
       const print = await fetchPrint(id).unwrap();
       await downloadInventoryCentralQrLabel(print.data);
     } catch (cause) {
-      toast.error(apiErrorMessage(cause, 'Unable to download the room QR.'));
+      toast.error(apiErrorMessage(cause, 'Unable to download the usage area QR.'));
     }
   }
 
@@ -47,14 +47,14 @@ export function InventoryCentralQrsPage() {
       const print = await fetchPrint(id).unwrap();
       await printInventoryCentralQrLabel(print.data);
     } catch (cause) {
-      toast.error(apiErrorMessage(cause, 'Unable to open room QR label.'));
+      toast.error(apiErrorMessage(cause, 'Unable to open usage area QR label.'));
     }
   }
 
   if (!canManage) {
     return (
       <>
-        <PageHeader kicker="Inventory" title="Room QRs" />
+        <PageHeader kicker="Inventory" title="Usage areas" />
         <p className="text-sm text-muted">You need lots or plastic manage permission.</p>
       </>
     );
@@ -63,18 +63,19 @@ export function InventoryCentralQrsPage() {
   return (
     <>
       <DelayedLoadingOverlay active={printing} />
-      <PageHeader kicker="Inventory" title="Room QRs" />
+      <PageHeader kicker="Inventory" title="Usage areas" />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Three fixed QRs for the stock room, stationery, and inside lab. Print and post these — all
-        usage goes through them. On receive, choose which room the stock belongs to.
+        Three fixed scan QRs — Stock room, Stationery, and Inside lab. Print and post these for
+        usage. On receive, attach stock to one of these areas. Shelf placement is separate under
+        Locations.
       </p>
       {isError ? (
-        <p className="mb-4 text-sm">Unable to load room QRs. Apply migration 095 if missing.</p>
+        <p className="mb-4 text-sm">Unable to load usage areas. Apply migration 095 if missing.</p>
       ) : null}
 
       <DataTable<InventoryCentralQr>
         columns={[
-          { id: 'name', header: 'Room', cell: (row) => row.name },
+          { id: 'name', header: 'Area', cell: (row) => row.name },
           {
             id: 'kind',
             header: 'Use',
@@ -98,7 +99,7 @@ export function InventoryCentralQrsPage() {
         ]}
         rows={data?.data ?? []}
         loading={isLoading}
-        emptyTitle="No room QRs"
+        emptyTitle="No usage areas"
         emptyDescription="Apply migration 095 to seed Stock room, Stationery, and Inside lab."
       />
     </>

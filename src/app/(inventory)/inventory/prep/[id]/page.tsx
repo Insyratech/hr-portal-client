@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-/** Prep sessions retired — use Lab recipes / room QR work types. */
+/** Prep sessions retired — use Lab recipes / usage area work types. */
 export default function Page() {
   redirect('/inventory/lab-recipes');
 }

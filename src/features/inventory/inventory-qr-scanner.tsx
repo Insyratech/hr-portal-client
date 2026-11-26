@@ -96,7 +96,7 @@ export function InventoryQrScanner({ onToken, className }: Props) {
           if (handledRef.current) return;
           const token = extractInventoryScanToken(decoded);
           if (!token) {
-            setHint('QR read, but it is not an inventory label. Point at a lot or station QR.');
+            setHint('QR read, but it is not an inventory label. Point at a usage area QR.');
             return;
           }
           handledRef.current = true;
