@@ -229,6 +229,8 @@ function slipSheetHtml(slip: SalarySlip, logoHtml: string): string {
         <td class="sign right">Authorised signatory</td>
       </tr>
     </table>
+
+    <p class="note" style="margin-top:6px;text-align:left">* This is a computer generated statement and does not require signature.</p>
   </div>`;
 }
 
@@ -697,6 +699,13 @@ export async function downloadSalarySlipPdf(slip: SalarySlip): Promise<void> {
     signH,
     [signW, signW],
   );
+
+  y += 2;
+  setFont(false, 7.2);
+  pdf.setTextColor(muted);
+  pdf.text('* This is a computer generated statement and does not require signature.', x0, y + 2.5);
+  pdf.setTextColor(ink);
+  y += 4;
 
   // Outer border with padding gap (matches view article border + inner tables)
   pdf.setDrawColor(ink);

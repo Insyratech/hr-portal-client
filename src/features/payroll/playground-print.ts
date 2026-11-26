@@ -238,6 +238,7 @@ function sheetHtml(preview: PayslipPlaygroundPreview): string {
         </p>
         <p class="note" style="margin:0;text-align:right">Ephemeral preview — not a published payslip.</p>
       </div>
+      <p class="note" style="margin-top:4px;text-align:left">* This is a computer generated statement and does not require signature.</p>
     </div>
   `;
 }
@@ -557,10 +558,12 @@ export async function downloadPayslipPlaygroundPdf(preview: PayslipPlaygroundPre
     );
   }
 
-  ensureSpace(6);
+  ensureSpace(10);
   setFont(false, 7);
   pdf.setTextColor('#555555');
   pdf.text('Ephemeral preview — not a published payslip.', x0 + contentW, y + 4, { align: 'right' });
+  y += 5;
+  pdf.text('* This is a computer generated statement and does not require signature.', x0, y + 3);
   pdf.setTextColor(ink);
 
   // Outer border on every page

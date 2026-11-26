@@ -241,6 +241,10 @@ export function SalarySlipDocument({ slip }: { slip: SalarySlip }) {
           </tr>
         </tbody>
       </table>
+
+      <p className="mt-2 text-[10px] text-neutral-600">
+        * This is a computer generated statement and does not require signature.
+      </p>
     </article>
   );
 }

@@ -303,6 +303,9 @@ export function PayslipPlaygroundDocument({ preview }: { preview: PayslipPlaygro
         )}
         <p className="text-right">Ephemeral preview — not a published payslip.</p>
       </div>
+      <p className="mt-1 text-[8px] leading-tight text-neutral-600">
+        * This is a computer generated statement and does not require signature.
+      </p>
     </article>
   );
 }
