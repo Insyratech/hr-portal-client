@@ -185,15 +185,20 @@ export function InventoryLabRecipesPage() {
     }
     const form = new FormData(event.currentTarget);
     const name = String(form.get('name') ?? '').trim();
-    const finalVolumeRaw = String(form.get('finalVolumeValue') ?? '').trim();
+    const finalVolumeRaw = isMethodActivity
+      ? ''
+      : String(form.get('finalVolumeValue') ?? '').trim();
     const finalVolumeValue = finalVolumeRaw ? Number(finalVolumeRaw) : null;
+    const finalVolumeUnit = isMethodActivity
+      ? ''
+      : String(form.get('finalVolumeUnit') ?? '').trim();
     const components = draftComponents
       .map((row, index) => {
-        const qtyRaw = row.quantityValue.trim();
+        const qtyRaw = isMethodActivity ? '' : row.quantityValue.trim();
         return {
           name: row.name.trim(),
           quantityValue: qtyRaw ? Number(qtyRaw) : null,
-          quantityUnit: row.quantityUnit.trim(),
+          quantityUnit: isMethodActivity ? '' : row.quantityUnit.trim(),
           notes: row.notes.trim(),
           sortOrder: (index + 1) * 10,
           catalogItemId: row.catalogItemId.trim() || null,
@@ -211,7 +216,10 @@ export function InventoryLabRecipesPage() {
       toast.error('Select an output catalog item for the prepared reagent.');
       return;
     }
-    if (components.some((row) => row.quantityValue !== null && !Number.isFinite(row.quantityValue))) {
+    if (
+      !isMethodActivity &&
+      components.some((row) => row.quantityValue !== null && !Number.isFinite(row.quantityValue))
+    ) {
       toast.error('Component quantities must be numbers (or blank).');
       return;
     }
@@ -223,7 +231,7 @@ export function InventoryLabRecipesPage() {
           body: {
             name,
             finalVolumeValue,
-            finalVolumeUnit: String(form.get('finalVolumeUnit') ?? '').trim(),
+            finalVolumeUnit,
             notes: String(form.get('notes') ?? '').trim(),
             status: String(form.get('status') ?? 'active') as 'active' | 'inactive',
             createsOutputLot: allowOutputLot,
@@ -238,7 +246,7 @@ export function InventoryLabRecipesPage() {
           activityId: selectedActivityId,
           name,
           finalVolumeValue,
-          finalVolumeUnit: String(form.get('finalVolumeUnit') ?? '').trim(),
+          finalVolumeUnit,
           notes: String(form.get('notes') ?? '').trim(),
           createsOutputLot: allowOutputLot,
           outputCatalogItemId: allowOutputLot ? outputId : null,
@@ -301,8 +309,9 @@ export function InventoryLabRecipesPage() {
       />
       <p className="mb-6 max-w-2xl text-sm text-muted">
         DNA Extraction, PCR, Gel, and Loading use <span className="text-foreground">methods</span>{' '}
-        (components + volumes; staff pick how many Nx on the Inside lab QR). Reagent preparation
-        stays as <span className="text-foreground">recipes</span> with optional output lots.
+        (component list + optional catalog links; staff pick how many Nx on the Inside lab QR).
+        Reagent preparation stays as <span className="text-foreground">recipes</span> with measured
+        volumes and optional output lots.
       </p>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-[16rem_1fr]">
@@ -360,14 +369,18 @@ export function InventoryLabRecipesPage() {
                 header: 'SOP',
                 cell: (row) => row.sopTitle || '—',
               },
-              {
-                id: 'volume',
-                header: isMethodActivity ? 'Base volume' : 'Final volume',
-                cell: (row) =>
-                  row.finalVolumeValue != null
-                    ? `${row.finalVolumeValue} ${row.finalVolumeUnit}`.trim()
-                    : row.finalVolumeUnit || '—',
-              },
+              ...(isMethodActivity
+                ? []
+                : [
+                    {
+                      id: 'volume',
+                      header: 'Final volume',
+                      cell: (row: InventoryLabRecipe) =>
+                        row.finalVolumeValue != null
+                          ? `${row.finalVolumeValue} ${row.finalVolumeUnit}`.trim()
+                          : row.finalVolumeUnit || '—',
+                    },
+                  ]),
               {
                 id: 'components',
                 header: 'Components',
@@ -399,7 +412,7 @@ export function InventoryLabRecipesPage() {
             emptyTitle={isMethodActivity ? 'No methods yet' : 'No recipes yet'}
             emptyDescription={
               isMethodActivity
-                ? 'Add a method with component volumes (e.g. Blood DNA Extraction).'
+                ? 'Add a method with its component list (e.g. Blood DNA Extraction).'
                 : 'Add a recipe with composition lines (e.g. 6X Loading Dye).'
             }
           />
@@ -434,8 +447,8 @@ export function InventoryLabRecipesPage() {
                 className={SELECT_CLASS}
                 defaultValue="method"
               >
-                <option value="method">Method (Nx multiplier on scan)</option>
-                <option value="recipe">Recipe (reagent prep / output lot)</option>
+                <option value="method">Method (component list + how many Nx)</option>
+                <option value="recipe">Recipe (reagent prep / measured volumes)</option>
               </select>
             </div>
             <Button type="submit" disabled={creatingActivity}>
@@ -452,51 +465,57 @@ export function InventoryLabRecipesPage() {
           </DialogTitle>
           <DialogDescription>
             {isMethodActivity
-              ? `Define component volumes for ${selectedActivity?.name ?? 'this work type'}. On the Inside lab QR, staff pick how many (Nx) and volumes scale automatically.`
+              ? `List the components used in this ${selectedActivity?.name ?? 'work type'} method. On the Inside lab QR, staff choose the method and how many (Nx).`
               : `Predefined composition for ${selectedActivity?.name ?? 'this work type'}. Employees can adjust quantities when they submit from the Inside lab QR.`}
           </DialogDescription>
           <form className="mt-4 space-y-4" onSubmit={onSaveRecipe}>
             <div>
-              <Label htmlFor="recipe-name">Recipe name</Label>
+              <Label htmlFor="recipe-name">{isMethodActivity ? 'Method name' : 'Recipe name'}</Label>
               <Input
                 id="recipe-name"
                 name="name"
                 required
                 defaultValue={editingRecipe?.name ?? ''}
-                placeholder="e.g. 6X Loading Dye"
+                placeholder={
+                  isMethodActivity ? 'e.g. Blood DNA Extraction' : 'e.g. 6X Loading Dye'
+                }
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="finalVolumeValue">Final volume</Label>
-                <Input
-                  id="finalVolumeValue"
-                  name="finalVolumeValue"
-                  type="number"
-                  step="any"
-                  defaultValue={
-                    editingRecipe?.finalVolumeValue != null ? String(editingRecipe.finalVolumeValue) : ''
-                  }
-                  placeholder="3"
-                />
+            {!isMethodActivity ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="finalVolumeValue">Final volume</Label>
+                  <Input
+                    id="finalVolumeValue"
+                    name="finalVolumeValue"
+                    type="number"
+                    step="any"
+                    defaultValue={
+                      editingRecipe?.finalVolumeValue != null
+                        ? String(editingRecipe.finalVolumeValue)
+                        : ''
+                    }
+                    placeholder="3"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="finalVolumeUnit">Volume unit</Label>
+                  <Input
+                    id="finalVolumeUnit"
+                    name="finalVolumeUnit"
+                    defaultValue={editingRecipe?.finalVolumeUnit ?? ''}
+                    placeholder="mL"
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="finalVolumeUnit">Volume unit</Label>
-                <Input
-                  id="finalVolumeUnit"
-                  name="finalVolumeUnit"
-                  defaultValue={editingRecipe?.finalVolumeUnit ?? ''}
-                  placeholder="mL"
-                />
-              </div>
-            </div>
+            ) : null}
             <div>
               <Label htmlFor="recipe-notes">Notes</Label>
               <Input
                 id="recipe-notes"
                 name="notes"
                 defaultValue={editingRecipe?.notes ?? ''}
-                placeholder="Optional prep notes"
+                placeholder={isMethodActivity ? 'Optional method notes' : 'Optional prep notes'}
               />
             </div>
             {editingRecipe ? (
@@ -543,8 +562,8 @@ export function InventoryLabRecipesPage() {
               </>
             ) : (
               <p className="text-xs text-muted">
-                Method work types deduct component volumes × how many (Nx) on the Inside lab scan.
-                They do not create output lots.
+                Methods have no measured volumes here. Staff record how many (Nx) on the Inside lab
+                scan. Link catalog items only if you want those components tracked on the method.
               </p>
             )}
 
@@ -606,39 +625,45 @@ export function InventoryLabRecipesPage() {
                         ),
                       )
                     }
-                    placeholder="e.g. Bromophenol Blue powder"
+                    placeholder={
+                      isMethodActivity
+                        ? 'e.g. Proteinase K'
+                        : 'e.g. Bromophenol Blue powder'
+                    }
                     required={index === 0}
                   />
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <Input
-                      value={component.quantityValue}
-                      onChange={(event) =>
-                        setDraftComponents((current) =>
-                          current.map((row) =>
-                            row.key === component.key
-                              ? { ...row, quantityValue: event.target.value }
-                              : row,
-                          ),
-                        )
-                      }
-                      placeholder="Qty (blank = as required)"
-                      type="number"
-                      step="any"
-                    />
-                    <Input
-                      value={component.quantityUnit}
-                      onChange={(event) =>
-                        setDraftComponents((current) =>
-                          current.map((row) =>
-                            row.key === component.key
-                              ? { ...row, quantityUnit: event.target.value }
-                              : row,
-                          ),
-                        )
-                      }
-                      placeholder="Unit (mg, µL, mL…)"
-                    />
-                  </div>
+                  {!isMethodActivity ? (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Input
+                        value={component.quantityValue}
+                        onChange={(event) =>
+                          setDraftComponents((current) =>
+                            current.map((row) =>
+                              row.key === component.key
+                                ? { ...row, quantityValue: event.target.value }
+                                : row,
+                            ),
+                          )
+                        }
+                        placeholder="Qty (blank = as required)"
+                        type="number"
+                        step="any"
+                      />
+                      <Input
+                        value={component.quantityUnit}
+                        onChange={(event) =>
+                          setDraftComponents((current) =>
+                            current.map((row) =>
+                              row.key === component.key
+                                ? { ...row, quantityUnit: event.target.value }
+                                : row,
+                            ),
+                          )
+                        }
+                        placeholder="Unit (mg, µL, mL…)"
+                      />
+                    </div>
+                  ) : null}
                   <Input
                     value={component.notes}
                     onChange={(event) =>
@@ -648,7 +673,11 @@ export function InventoryLabRecipesPage() {
                         ),
                       )
                     }
-                    placeholder="Notes (make up to… / adjust pH…)"
+                    placeholder={
+                      isMethodActivity
+                        ? 'Optional notes for this component'
+                        : 'Notes (make up to… / adjust pH…)'
+                    }
                   />
                   <InventoryCatalogLinkPicker
                     id={`component-link-${component.key}`}

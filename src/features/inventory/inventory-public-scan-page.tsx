@@ -1113,7 +1113,7 @@ function LabScanCard({
                 {recipes.map((recipe) => (
                   <option key={recipe.id} value={recipe.id}>
                     {recipe.name}
-                    {recipe.finalVolumeValue != null
+                    {!isMethod && recipe.finalVolumeValue != null
                       ? ` (${recipe.finalVolumeValue} ${recipe.finalVolumeUnit})`
                       : ''}
                   </option>
@@ -1177,8 +1177,7 @@ function LabScanCard({
                     placeholder="1"
                   />
                   <p className="mt-1 text-xs text-muted">
-                    Default 1X. Enter 2 for two extractions/reactions — every component volume becomes
-                    2X and is deducted at 2X.
+                    Default 1. Enter 2 if you ran this method twice (logged as 2X).
                   </p>
                 </div>
               ) : null}
@@ -1200,51 +1199,51 @@ function LabScanCard({
               ) : null}
 
               <div className="space-y-3">
-                <Label>
-                  {isMethod
-                    ? `Components at ${multiplierOk ? `${multiplier}X` : '—'} (from method)`
-                    : 'Components (editable)'}
-                </Label>
+                <Label>{isMethod ? 'Components (from method)' : 'Components (editable)'}</Label>
                 {components.map((component, index) => (
                   <div key={component.key} className="space-y-2 rounded border border-border p-3">
                     <p className="text-sm font-medium">{component.name || `Component ${index + 1}`}</p>
                     {isMethod ? (
-                      <p className="text-sm tabular-nums">
-                        {component.quantityValue || '—'} {component.quantityUnit}
-                      </p>
+                      component.notes ? (
+                        <p className="text-xs text-muted">{component.notes}</p>
+                      ) : null
                     ) : (
-                      <div className="grid grid-cols-[1fr_5rem] gap-2">
-                        <Input
-                          type="number"
-                          step="any"
-                          value={component.quantityValue}
-                          onChange={(event) =>
-                            setComponents((current) =>
-                              current.map((row) =>
-                                row.key === component.key
-                                  ? { ...row, quantityValue: event.target.value }
-                                  : row,
-                              ),
-                            )
-                          }
-                          placeholder="Qty"
-                        />
-                        <Input
-                          value={component.quantityUnit}
-                          onChange={(event) =>
-                            setComponents((current) =>
-                              current.map((row) =>
-                                row.key === component.key
-                                  ? { ...row, quantityUnit: event.target.value }
-                                  : row,
-                              ),
-                            )
-                          }
-                          placeholder="Unit"
-                        />
-                      </div>
+                      <>
+                        <div className="grid grid-cols-[1fr_5rem] gap-2">
+                          <Input
+                            type="number"
+                            step="any"
+                            value={component.quantityValue}
+                            onChange={(event) =>
+                              setComponents((current) =>
+                                current.map((row) =>
+                                  row.key === component.key
+                                    ? { ...row, quantityValue: event.target.value }
+                                    : row,
+                                ),
+                              )
+                            }
+                            placeholder="Qty"
+                          />
+                          <Input
+                            value={component.quantityUnit}
+                            onChange={(event) =>
+                              setComponents((current) =>
+                                current.map((row) =>
+                                  row.key === component.key
+                                    ? { ...row, quantityUnit: event.target.value }
+                                    : row,
+                                ),
+                              )
+                            }
+                            placeholder="Unit"
+                          />
+                        </div>
+                        {component.notes ? (
+                          <p className="text-xs text-muted">{component.notes}</p>
+                        ) : null}
+                      </>
                     )}
-                    {component.notes ? <p className="text-xs text-muted">{component.notes}</p> : null}
                   </div>
                 ))}
               </div>
@@ -1264,7 +1263,7 @@ function LabScanCard({
           </Button>
           <p className="text-xs text-muted">
             {isMethod
-              ? 'Method volumes scale with How many (Nx) and deduct from Inside lab stock.'
+              ? 'How many (Nx) is recorded with this method run. Reagent recipes still use measured volumes.'
               : 'Linked components deduct stock from Inside lab. Reagent recipes can also create a new lot.'}
           </p>
           <p className="text-xs text-muted">
