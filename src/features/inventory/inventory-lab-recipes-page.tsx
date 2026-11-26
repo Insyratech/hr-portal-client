@@ -125,6 +125,9 @@ export function InventoryLabRecipesPage() {
     () => activities.find((row) => row.id === selectedActivityId) ?? null,
     [activities, selectedActivityId],
   );
+  const isMethodActivity = selectedActivity?.usageMode === 'method';
+  const itemNoun = isMethodActivity ? 'method' : 'recipe';
+  const itemNounTitle = isMethodActivity ? 'Method' : 'Recipe';
 
   function openNewRecipe() {
     setEditingRecipe(null);
@@ -147,10 +150,12 @@ export function InventoryLabRecipesPage() {
   async function onCreateActivity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const usageModeRaw = String(form.get('usageMode') ?? 'method');
     try {
       const created = await createActivity({
         name: String(form.get('name') ?? '').trim(),
         description: String(form.get('description') ?? '').trim(),
+        usageMode: usageModeRaw === 'recipe' ? 'recipe' : 'method',
       }).unwrap();
       setActivityOpen(false);
       setSelectedActivityId(created.data.id);
@@ -198,10 +203,11 @@ export function InventoryLabRecipesPage() {
     const outputId = createsOutputLot ? outputCatalogItemId.trim() || null : null;
 
     if (!name) {
-      toast.error('Recipe name is required.');
+      toast.error(`${itemNounTitle} name is required.`);
       return;
     }
-    if (createsOutputLot && !outputId) {
+    const allowOutputLot = !isMethodActivity && createsOutputLot;
+    if (allowOutputLot && !outputId) {
       toast.error('Select an output catalog item for the prepared reagent.');
       return;
     }
@@ -220,13 +226,13 @@ export function InventoryLabRecipesPage() {
             finalVolumeUnit: String(form.get('finalVolumeUnit') ?? '').trim(),
             notes: String(form.get('notes') ?? '').trim(),
             status: String(form.get('status') ?? 'active') as 'active' | 'inactive',
-            createsOutputLot,
-            outputCatalogItemId: outputId,
+            createsOutputLot: allowOutputLot,
+            outputCatalogItemId: allowOutputLot ? outputId : null,
             sopFileId: sopFileId.trim() || null,
             components,
           },
         }).unwrap();
-        toast.success('Recipe updated.');
+        toast.success(`${itemNounTitle} updated.`);
       } else {
         await createRecipe({
           activityId: selectedActivityId,
@@ -234,12 +240,12 @@ export function InventoryLabRecipesPage() {
           finalVolumeValue,
           finalVolumeUnit: String(form.get('finalVolumeUnit') ?? '').trim(),
           notes: String(form.get('notes') ?? '').trim(),
-          createsOutputLot,
-          outputCatalogItemId: outputId,
+          createsOutputLot: allowOutputLot,
+          outputCatalogItemId: allowOutputLot ? outputId : null,
           sopFileId: sopFileId.trim() || null,
           components,
         }).unwrap();
-        toast.success('Recipe created.');
+        toast.success(`${itemNounTitle} created.`);
       }
       setRecipeOpen(false);
       setEditingRecipe(null);
@@ -249,12 +255,12 @@ export function InventoryLabRecipesPage() {
   }
 
   async function onDeleteRecipe(recipe: InventoryLabRecipe) {
-    if (!window.confirm(`Delete recipe “${recipe.name}”? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete ${itemNoun} “${recipe.name}”? This cannot be undone.`)) return;
     try {
       await deleteRecipe(recipe.id).unwrap();
-      toast.success('Recipe deleted.');
+      toast.success(`${itemNounTitle} deleted.`);
     } catch (cause) {
-      toast.error(apiErrorMessage(cause, 'Unable to delete recipe.'));
+      toast.error(apiErrorMessage(cause, `Unable to delete ${itemNoun}.`));
     }
   }
 
@@ -288,15 +294,15 @@ export function InventoryLabRecipesPage() {
               Add work type
             </Button>
             <Button type="button" onClick={openNewRecipe} disabled={!selectedActivityId}>
-              Add recipe
+              Add {itemNoun}
             </Button>
           </div>
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Inventory Manager sandbox for Inside lab work: DNA Extraction, PCR, Gel prep, DNA loading,
-        Reagent preparation, and any types you add. Recipes hold the predefined composition lines
-        employees can edit when they scan the Inside lab QR.
+        DNA Extraction, PCR, Gel, and Loading use <span className="text-foreground">methods</span>{' '}
+        (components + volumes; staff pick how many Nx on the Inside lab QR). Reagent preparation
+        stays as <span className="text-foreground">recipes</span> with optional output lots.
       </p>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-[16rem_1fr]">
@@ -320,7 +326,10 @@ export function InventoryLabRecipesPage() {
                     selectedActivityId === activity.id ? 'text-background/80' : 'text-muted'
                   }`}
                 >
-                  {activity.recipeCount} recipe{activity.recipeCount === 1 ? '' : 's'}
+                  {activity.recipeCount}{' '}
+                  {activity.usageMode === 'method'
+                    ? `method${activity.recipeCount === 1 ? '' : 's'}`
+                    : `recipe${activity.recipeCount === 1 ? '' : 's'}`}
                   {activity.status !== 'active' ? ' · inactive' : ''}
                 </span>
               </button>
@@ -345,7 +354,7 @@ export function InventoryLabRecipesPage() {
           ) : null}
           <DataTable<InventoryLabRecipe>
             columns={[
-              { id: 'name', header: 'Recipe', cell: (row) => row.name },
+              { id: 'name', header: itemNounTitle, cell: (row) => row.name },
               {
                 id: 'sop',
                 header: 'SOP',
@@ -353,7 +362,7 @@ export function InventoryLabRecipesPage() {
               },
               {
                 id: 'volume',
-                header: 'Final volume',
+                header: isMethodActivity ? 'Base volume' : 'Final volume',
                 cell: (row) =>
                   row.finalVolumeValue != null
                     ? `${row.finalVolumeValue} ${row.finalVolumeUnit}`.trim()
@@ -387,8 +396,12 @@ export function InventoryLabRecipesPage() {
             ]}
             rows={recipes}
             loading={loadingRecipes}
-            emptyTitle="No recipes yet"
-            emptyDescription="Add a recipe with composition lines (e.g. 6X Loading Dye)."
+            emptyTitle={isMethodActivity ? 'No methods yet' : 'No recipes yet'}
+            emptyDescription={
+              isMethodActivity
+                ? 'Add a method with component volumes (e.g. Blood DNA Extraction).'
+                : 'Add a recipe with composition lines (e.g. 6X Loading Dye).'
+            }
           />
         </section>
       </div>
@@ -397,7 +410,8 @@ export function InventoryLabRecipesPage() {
         <DialogContent>
           <DialogTitle>Add work type</DialogTitle>
           <DialogDescription>
-            Appears on the Inside lab scan form (e.g. a new PCR family or extraction protocol).
+            Appears on the Inside lab scan form. Use Method for DNA/PCR/Gel/Loading-style work;
+            Recipe for reagent preparation.
           </DialogDescription>
           <form className="mt-4 space-y-4" onSubmit={onCreateActivity}>
             <div>
@@ -412,6 +426,18 @@ export function InventoryLabRecipesPage() {
                 placeholder="Short hint for lab staff"
               />
             </div>
+            <div>
+              <Label htmlFor="activity-usage-mode">Mode</Label>
+              <select
+                id="activity-usage-mode"
+                name="usageMode"
+                className={SELECT_CLASS}
+                defaultValue="method"
+              >
+                <option value="method">Method (Nx multiplier on scan)</option>
+                <option value="recipe">Recipe (reagent prep / output lot)</option>
+              </select>
+            </div>
             <Button type="submit" disabled={creatingActivity}>
               Save work type
             </Button>
@@ -421,10 +447,13 @@ export function InventoryLabRecipesPage() {
 
       <Dialog open={recipeOpen} onOpenChange={setRecipeOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
-          <DialogTitle>{editingRecipe ? 'Edit recipe' : 'Add recipe'}</DialogTitle>
+          <DialogTitle>
+            {editingRecipe ? `Edit ${itemNoun}` : `Add ${itemNoun}`}
+          </DialogTitle>
           <DialogDescription>
-            Predefined composition for {selectedActivity?.name ?? 'this work type'}. Employees can
-            adjust quantities when they submit from the Inside lab QR.
+            {isMethodActivity
+              ? `Define component volumes for ${selectedActivity?.name ?? 'this work type'}. On the Inside lab QR, staff pick how many (Nx) and volumes scale automatically.`
+              : `Predefined composition for ${selectedActivity?.name ?? 'this work type'}. Employees can adjust quantities when they submit from the Inside lab QR.`}
           </DialogDescription>
           <form className="mt-4 space-y-4" onSubmit={onSaveRecipe}>
             <div>
@@ -485,30 +514,39 @@ export function InventoryLabRecipesPage() {
               </div>
             ) : null}
 
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={createsOutputLot}
-                onChange={(event) => {
-                  setCreatesOutputLot(event.target.checked);
-                  if (!event.target.checked) setOutputCatalogItemId('');
-                }}
-              />
-              Create output reagent lot on submit (reagent prep)
-            </label>
-            {createsOutputLot ? (
-              <InventoryCatalogLinkPicker
-                id="outputCatalogItemId"
-                label="Output catalog item"
-                value={outputCatalogItemId}
-                onChange={setOutputCatalogItemId}
-                catalogItems={catalogItems}
-                recipes={allRecipes}
-                excludeRecipeId={editingRecipe?.id}
-                required
-                emptyLabel="Select catalog item"
-              />
-            ) : null}
+            {!isMethodActivity ? (
+              <>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={createsOutputLot}
+                    onChange={(event) => {
+                      setCreatesOutputLot(event.target.checked);
+                      if (!event.target.checked) setOutputCatalogItemId('');
+                    }}
+                  />
+                  Create output reagent lot on submit (reagent prep)
+                </label>
+                {createsOutputLot ? (
+                  <InventoryCatalogLinkPicker
+                    id="outputCatalogItemId"
+                    label="Output catalog item"
+                    value={outputCatalogItemId}
+                    onChange={setOutputCatalogItemId}
+                    catalogItems={catalogItems}
+                    recipes={allRecipes}
+                    excludeRecipeId={editingRecipe?.id}
+                    required
+                    emptyLabel="Select catalog item"
+                  />
+                ) : null}
+              </>
+            ) : (
+              <p className="text-xs text-muted">
+                Method work types deduct component volumes × how many (Nx) on the Inside lab scan.
+                They do not create output lots.
+              </p>
+            )}
 
             <div>
               <Label htmlFor="recipe-sop">Linked SOP (optional)</Label>
@@ -631,7 +669,7 @@ export function InventoryLabRecipesPage() {
             </div>
 
             <Button type="submit" disabled={creatingRecipe || updatingRecipe}>
-              {editingRecipe ? 'Save changes' : 'Create recipe'}
+              {editingRecipe ? 'Save changes' : `Create ${itemNoun}`}
             </Button>
           </form>
         </DialogContent>

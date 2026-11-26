@@ -3758,12 +3758,16 @@ export type InventoryPublicTransferResult = {
 };
 export type InventoryPrepStatus = 'open' | 'completed' | 'cancelled';
 
+/** method = DNA/PCR/Gel/Loading with Nx multiplier; recipe = reagent prep composition. */
+export type InventoryLabUsageMode = 'method' | 'recipe';
+
 export type InventoryLabActivity = {
   id: string;
   name: string;
   description: string;
   sortOrder: number;
   status: InventoryStatus;
+  usageMode: InventoryLabUsageMode;
   recipeCount: number;
   createdAt: string;
   updatedAt: string;

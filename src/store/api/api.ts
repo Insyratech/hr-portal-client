@@ -3834,7 +3834,12 @@ export const api = createApi({
     }),
     createInventoryLabActivity: builder.mutation<
       ApiSuccess<InventoryLabActivity>,
-      { name: string; description?: string; sortOrder?: number }
+      {
+        name: string;
+        description?: string;
+        sortOrder?: number;
+        usageMode?: 'method' | 'recipe';
+      }
     >({
       query: (body) => ({ url: '/api/v1/inventory/lab/activities', method: 'POST', body }),
       invalidatesTags: ['InventoryLab'],
@@ -3848,6 +3853,7 @@ export const api = createApi({
           description?: string;
           sortOrder?: number;
           status?: 'active' | 'inactive';
+          usageMode?: 'method' | 'recipe';
         };
       }
     >({
@@ -4035,7 +4041,8 @@ export const api = createApi({
           recipeId: string;
           notes?: string;
           outputQty?: number | null;
-          components: Array<{
+          quantityMultiplier?: number | null;
+          components?: Array<{
             name: string;
             quantityValue?: number | null;
             quantityUnit?: string;
