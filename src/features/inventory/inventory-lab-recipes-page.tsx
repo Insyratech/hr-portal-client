@@ -15,10 +15,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
-import {
-  SELECT_CLASS,
-  formatCatalogItemLabel,
-} from '@/features/inventory/inventory-constants';
+import { SELECT_CLASS } from '@/features/inventory/inventory-constants';
+import { InventoryCatalogLinkPicker } from '@/features/inventory/inventory-catalog-link-picker';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
@@ -90,6 +88,7 @@ export function InventoryLabRecipesPage() {
   const activities = activitiesData?.data ?? [];
   const [selectedActivityId, setSelectedActivityId] = useState('');
   const [createsOutputLot, setCreatesOutputLot] = useState(false);
+  const [outputCatalogItemId, setOutputCatalogItemId] = useState('');
 
   useEffect(() => {
     if (!selectedActivityId && activities.length) {
@@ -102,6 +101,10 @@ export function InventoryLabRecipesPage() {
     { skip: !canManage || !selectedActivityId },
   );
   const recipes = recipesData?.data ?? [];
+
+  /** All recipes (every work type) so prepared outputs can be linked as components. */
+  const { data: allRecipesData } = useGetInventoryLabRecipesQuery(undefined, { skip: !canManage });
+  const allRecipes = allRecipesData?.data ?? [];
 
   const [createActivity, { isLoading: creatingActivity }] = useCreateInventoryLabActivityMutation();
   const [updateActivity, { isLoading: updatingActivity }] = useUpdateInventoryLabActivityMutation();
@@ -122,6 +125,7 @@ export function InventoryLabRecipesPage() {
   function openNewRecipe() {
     setEditingRecipe(null);
     setCreatesOutputLot(false);
+    setOutputCatalogItemId('');
     setDraftComponents([emptyComponent()]);
     setRecipeOpen(true);
   }
@@ -129,6 +133,7 @@ export function InventoryLabRecipesPage() {
   function openEditRecipe(recipe: InventoryLabRecipe) {
     setEditingRecipe(recipe);
     setCreatesOutputLot(Boolean(recipe.createsOutputLot));
+    setOutputCatalogItemId(recipe.outputCatalogItemId ?? '');
     setDraftComponents(componentsFromRecipe(recipe));
     setRecipeOpen(true);
   }
@@ -184,10 +189,14 @@ export function InventoryLabRecipesPage() {
         };
       })
       .filter((row) => row.name);
-    const outputCatalogItemId = String(form.get('outputCatalogItemId') ?? '').trim() || null;
+    const outputId = createsOutputLot ? outputCatalogItemId.trim() || null : null;
 
     if (!name) {
       toast.error('Recipe name is required.');
+      return;
+    }
+    if (createsOutputLot && !outputId) {
+      toast.error('Select an output catalog item for the prepared reagent.');
       return;
     }
     if (components.some((row) => row.quantityValue !== null && !Number.isFinite(row.quantityValue))) {
@@ -206,7 +215,7 @@ export function InventoryLabRecipesPage() {
             notes: String(form.get('notes') ?? '').trim(),
             status: String(form.get('status') ?? 'active') as 'active' | 'inactive',
             createsOutputLot,
-            outputCatalogItemId,
+            outputCatalogItemId: outputId,
             components,
           },
         }).unwrap();
@@ -219,7 +228,7 @@ export function InventoryLabRecipesPage() {
           finalVolumeUnit: String(form.get('finalVolumeUnit') ?? '').trim(),
           notes: String(form.get('notes') ?? '').trim(),
           createsOutputLot,
-          outputCatalogItemId,
+          outputCatalogItemId: outputId,
           components,
         }).unwrap();
         toast.success('Recipe created.');
@@ -467,31 +476,26 @@ export function InventoryLabRecipesPage() {
               <input
                 type="checkbox"
                 checked={createsOutputLot}
-                onChange={(event) => setCreatesOutputLot(event.target.checked)}
+                onChange={(event) => {
+                  setCreatesOutputLot(event.target.checked);
+                  if (!event.target.checked) setOutputCatalogItemId('');
+                }}
               />
               Create output reagent lot on submit (reagent prep)
             </label>
             {createsOutputLot ? (
-              <div>
-                <Label htmlFor="outputCatalogItemId">Output catalog item</Label>
-                <select
-                  id="outputCatalogItemId"
-                  name="outputCatalogItemId"
-                  className={SELECT_CLASS}
-                  defaultValue={editingRecipe?.outputCatalogItemId ?? ''}
-                  required={createsOutputLot}
-                >
-                  <option value="">Select catalog item</option>
-                  {catalogItems.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {formatCatalogItemLabel(item, { withCategory: true, withUnit: true })}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <input type="hidden" name="outputCatalogItemId" value="" />
-            )}
+              <InventoryCatalogLinkPicker
+                id="outputCatalogItemId"
+                label="Output catalog item"
+                value={outputCatalogItemId}
+                onChange={setOutputCatalogItemId}
+                catalogItems={catalogItems}
+                recipes={allRecipes}
+                excludeRecipeId={editingRecipe?.id}
+                required
+                emptyLabel="Select catalog item"
+              />
+            ) : null}
 
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
@@ -575,29 +579,20 @@ export function InventoryLabRecipesPage() {
                     }
                     placeholder="Notes (make up to… / adjust pH…)"
                   />
-                  <div>
-                    <Label>Link catalog item (for stock deduct)</Label>
-                    <select
-                      className={SELECT_CLASS}
-                      value={component.catalogItemId}
-                      onChange={(event) =>
-                        setDraftComponents((current) =>
-                          current.map((row) =>
-                            row.key === component.key
-                              ? { ...row, catalogItemId: event.target.value }
-                              : row,
-                          ),
-                        )
-                      }
-                    >
-                      <option value="">No stock deduct</option>
-                      {catalogItems.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {formatCatalogItemLabel(item, { withCategory: true, withUnit: true })}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <InventoryCatalogLinkPicker
+                    id={`component-link-${component.key}`}
+                    value={component.catalogItemId}
+                    onChange={(catalogItemId) =>
+                      setDraftComponents((current) =>
+                        current.map((row) =>
+                          row.key === component.key ? { ...row, catalogItemId } : row,
+                        ),
+                      )
+                    }
+                    catalogItems={catalogItems}
+                    recipes={allRecipes}
+                    excludeRecipeId={editingRecipe?.id}
+                  />
                 </div>
               ))}
             </div>

@@ -37,6 +37,7 @@ import {
   INVENTORY_MASTERS_NAV,
   INVENTORY_OVERVIEW_NAV,
   INVENTORY_STOCK_NAV,
+  INVENTORY_STORAGE_NAV,
   MY_WORK_ACCOUNT_NAV,
   MY_WORK_DASHBOARD,
   MY_WORK_DOCS_NAV,
@@ -269,6 +270,7 @@ function ManagerialNavGroups({
       <>
         <NavGroup label="Overview" items={INVENTORY_OVERVIEW_NAV} collapsed={collapsed} />
         <NavGroup label="Stock" items={INVENTORY_STOCK_NAV} collapsed={collapsed} />
+        <NavGroup label="Storage" items={INVENTORY_STORAGE_NAV} collapsed={collapsed} />
         <NavGroup label="Masters" items={INVENTORY_MASTERS_NAV} collapsed={collapsed} />
       </>
     );

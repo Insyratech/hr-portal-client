@@ -32,6 +32,7 @@ import {
   useGetInventoryLotMovementsQuery,
   useGetInventoryLotQuery,
   useLazyGetInventoryLotPrintQuery,
+  useTransferInventoryLotInsideLabMutation,
 } from '@/store/api/api';
 
 export function InventoryLotDetailPage() {
@@ -48,9 +49,15 @@ export function InventoryLotDetailPage() {
   const { data: expenseData } = useGetInventoryLotExpenseQuery(id, { skip: !canManage || !id });
   const [fetchPrint, { isFetching: printing }] = useLazyGetInventoryLotPrintQuery();
   const [adjustLot, { isLoading: adjusting }] = useAdjustInventoryLotMutation();
+  const [transferLot, { isLoading: transferring }] = useTransferInventoryLotInsideLabMutation();
   const [adjustOpen, setAdjustOpen] = useState(false);
   const lot = data?.data;
   const expense = expenseData?.data;
+  const canTransfer =
+    lot != null &&
+    lot.status === 'active' &&
+    lot.remainingQty > 0 &&
+    lot.centralQrKind === 'stock_room';
 
   async function onDownload() {
     if (!lot) return;
@@ -90,6 +97,25 @@ export function InventoryLotDetailPage() {
     }
   }
 
+  async function onTransfer() {
+    if (!lot) return;
+    if (
+      !window.confirm(
+        `Transfer “${lot.catalogItemName} · ${lot.lotCode}” from Stock room to Inside lab?\n\nQuantity stays the same. Unit consumption happens only in Inside lab.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      const result = await transferLot({ id: lot.id }).unwrap();
+      toast.success(
+        `Transferred to ${result.data.toArea} (${result.data.lot.remainingQty} ${result.data.lot.unit}).`,
+      );
+    } catch (cause) {
+      toast.error(apiErrorMessage(cause, 'Unable to transfer lot.'));
+    }
+  }
+
   if (!canManage) {
     return (
       <>
@@ -124,7 +150,7 @@ export function InventoryLotDetailPage() {
 
   return (
     <>
-      <DelayedLoadingOverlay active={printing || adjusting} />
+      <DelayedLoadingOverlay active={printing || adjusting || transferring} />
       <PageHeader
         kicker="Inventory"
         title={lot.lotCode}
@@ -136,6 +162,11 @@ export function InventoryLotDetailPage() {
             <Button type="button" onClick={() => void onPrint()}>
               Print QR label
             </Button>
+            {canTransfer ? (
+              <Button type="button" variant="outline" disabled={transferring} onClick={() => void onTransfer()}>
+                Transfer to Inside lab
+              </Button>
+            ) : null}
             {canAdjust ? (
               <Button type="button" variant="outline" onClick={() => setAdjustOpen(true)}>
                 Adjust stock
@@ -149,7 +180,8 @@ export function InventoryLotDetailPage() {
       />
 
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        One physical bottle with its own QR. Aliquots always scan this same parent label.
+        One physical bottle. Chemicals/reagents stay in Stock room until transferred to Inside lab for
+        unit consumption.
       </p>
 
       <section className="mb-8 max-w-3xl">
@@ -208,12 +240,25 @@ export function InventoryLotDetailPage() {
           </p>
         </div>
         <div className="rounded border border-border px-4 py-3">
+          <Meta>Storage area</Meta>
+          <p className="mt-1 text-sm">{lot.centralQrName || '—'}</p>
+          <p className="text-xs text-muted capitalize">
+            {lot.centralQrKind === 'stock_room'
+              ? 'Not consumed here — transfer to Inside lab first.'
+              : lot.centralQrKind === 'inside_lab'
+                ? 'Unit consumption via Inside lab work.'
+                : lot.centralQrKind
+                  ? lot.centralQrKind.replace('_', ' ')
+                  : 'No usage area attached.'}
+          </p>
+        </div>
+        <div className="rounded border border-border px-4 py-3">
           <Meta>Kiosk chips</Meta>
           <p className="mt-1 text-sm">
             {lot.qtyChips.length ? formatQtyChips(lot.qtyChips) : '—'}{' '}
             <span className="text-muted">{lot.unit}</span>
           </p>
-          <p className="text-xs text-muted">Quick amounts on the public scan card for this lot.</p>
+          <p className="text-xs text-muted">Quick amounts when consuming from Inside lab.</p>
         </div>
         <div className="rounded border border-border px-4 py-3">
           <Meta>Expiry & origin</Meta>
@@ -244,7 +289,7 @@ export function InventoryLotDetailPage() {
       <section>
         <h2 className="mb-1 text-sm font-medium">Movement ledger</h2>
         <p className="mb-3 text-xs text-muted">
-          Every receive, issue (kiosk), and adjustment for this bottle.
+          Every receive, transfer, issue (consumption), and adjustment for this bottle.
         </p>
         <DataTable
           columns={[

@@ -109,6 +109,10 @@ import type {
   InventoryPublicIssueResult,
   InventoryPublicPlasticIssueBatchResult,
   InventoryPublicPlasticIssueResult,
+  InventoryPublicTransferResult,
+  InventoryLotTransferResult,
+  InventoryStorageArea,
+  InventoryStorageKind,
   InventoryCentralQr,
   InventoryCentralQrPrint,
   InventoryLabActivity,
@@ -306,6 +310,7 @@ export const api = createApi({
     'InventoryLots',
     'InventoryPlastic',
     'InventoryCentralQrs',
+    'InventoryStorage',
     'InventoryLab',
     'InventoryAlerts',
     'HrInvoices',
@@ -3777,7 +3782,7 @@ export const api = createApi({
       }
     >({
       query: (body) => ({ url: '/api/v1/inventory/lots', method: 'POST', body }),
-      invalidatesTags: ['InventoryLots', 'InventoryOverview', 'InventoryCentralQrs'],
+      invalidatesTags: ['InventoryLots', 'InventoryOverview', 'InventoryCentralQrs', 'InventoryStorage'],
     }),
     getInventoryLotPrint: builder.query<ApiSuccess<InventoryLotPrint>, string>({
       query: (id) => `/api/v1/inventory/lots/${id}/print`,
@@ -3791,7 +3796,22 @@ export const api = createApi({
       { id: string; body: { remainingQty: number; notes: string } }
     >({
       query: ({ id, body }) => ({ url: `/api/v1/inventory/lots/${id}/adjust`, method: 'POST', body }),
-      invalidatesTags: ['InventoryLots', 'InventoryOverview'],
+      invalidatesTags: ['InventoryLots', 'InventoryOverview', 'InventoryStorage'],
+    }),
+    transferInventoryLotInsideLab: builder.mutation<
+      ApiSuccess<InventoryLotTransferResult>,
+      { id: string; body?: { notes?: string; employeeId?: string } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/inventory/lots/${id}/transfer-inside-lab`,
+        method: 'POST',
+        body: body ?? {},
+      }),
+      invalidatesTags: ['InventoryLots', 'InventoryOverview', 'InventoryStorage', 'InventoryCentralQrs'],
+    }),
+    getInventoryStorageArea: builder.query<ApiSuccess<InventoryStorageArea>, InventoryStorageKind>({
+      query: (kind) => `/api/v1/inventory/storage/${encodeURIComponent(kind)}`,
+      providesTags: (_r, _e, kind) => [{ type: 'InventoryStorage', id: kind }, 'InventoryStorage'],
     }),
     getInventoryLotExpense: builder.query<ApiSuccess<InventoryLotExpense>, string>({
       query: (id) => `/api/v1/inventory/lots/${id}/expense`,
@@ -3938,6 +3958,7 @@ export const api = createApi({
         method: 'POST',
         body,
       }),
+      invalidatesTags: ['InventoryLots', 'InventoryOverview', 'InventoryStorage', 'InventoryLab'],
     }),
     getInventoryPlasticStock: builder.query<ApiSuccess<InventoryPlasticStock[]>, void>({
       query: () => '/api/v1/inventory/plastic-stock',
@@ -3966,7 +3987,7 @@ export const api = createApi({
       }
     >({
       query: (body) => ({ url: '/api/v1/inventory/plastic-stock', method: 'POST', body }),
-      invalidatesTags: ['InventoryPlastic', 'InventoryOverview', 'InventoryCentralQrs'],
+      invalidatesTags: ['InventoryPlastic', 'InventoryOverview', 'InventoryCentralQrs', 'InventoryStorage'],
     }),
     getInventoryPlasticMovements: builder.query<ApiSuccess<InventoryPlasticMovement[]>, string>({
       query: (id) => `/api/v1/inventory/plastic-stock/${id}/movements`,
@@ -3981,7 +4002,7 @@ export const api = createApi({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['InventoryPlastic', 'InventoryOverview'],
+      invalidatesTags: ['InventoryPlastic', 'InventoryOverview', 'InventoryStorage'],
     }),
     getInventoryPublicScan: builder.query<ApiSuccess<InventoryPublicScanPayload>, string>({
       query: (token) => `/api/v1/inventory/public/scan/${encodeURIComponent(token)}`,
@@ -3996,6 +4017,17 @@ export const api = createApi({
         body,
       }),
     }),
+    transferInventoryPublicInsideLab: builder.mutation<
+      ApiSuccess<InventoryPublicTransferResult>,
+      { token: string; body: { employeeId: string; lotId: string; notes?: string } }
+    >({
+      query: ({ token, body }) => ({
+        url: `/api/v1/inventory/public/scan/${encodeURIComponent(token)}/transfer-inside-lab`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['InventoryLots', 'InventoryOverview', 'InventoryStorage', 'InventoryCentralQrs'],
+    }),
     issueInventoryPublicPlastic: builder.mutation<
       ApiSuccess<InventoryPublicPlasticIssueResult>,
       {
@@ -4008,6 +4040,7 @@ export const api = createApi({
         method: 'POST',
         body,
       }),
+      invalidatesTags: ['InventoryPlastic', 'InventoryOverview', 'InventoryStorage'],
     }),
     issueInventoryPublicPlasticBatch: builder.mutation<
       ApiSuccess<InventoryPublicPlasticIssueBatchResult>,
@@ -4021,6 +4054,7 @@ export const api = createApi({
         method: 'POST',
         body,
       }),
+      invalidatesTags: ['InventoryPlastic', 'InventoryOverview', 'InventoryStorage'],
     }),
     getInventoryAlerts: builder.query<ApiSuccess<InventoryAlert[]>, void>({
       query: () => '/api/v1/inventory/alerts',
@@ -4558,6 +4592,8 @@ export const {
   useLazyGetInventoryLotPrintQuery,
   useGetInventoryLotMovementsQuery,
   useAdjustInventoryLotMutation,
+  useTransferInventoryLotInsideLabMutation,
+  useGetInventoryStorageAreaQuery,
   useGetInventoryLotExpenseQuery,
   useGetInventoryCentralQrsQuery,
   useLazyGetInventoryCentralQrPrintQuery,
@@ -4578,6 +4614,7 @@ export const {
   useAdjustInventoryPlasticStockMutation,
   useGetInventoryPublicScanQuery,
   useIssueInventoryPublicScanMutation,
+  useTransferInventoryPublicInsideLabMutation,
   useIssueInventoryPublicPlasticMutation,
   useIssueInventoryPublicPlasticBatchMutation,
   useGetInventoryAlertsQuery,

@@ -15,6 +15,7 @@ import {
   useIssueInventoryPublicPlasticBatchMutation,
   useIssueInventoryPublicScanMutation,
   useSubmitInventoryPublicLabUsageMutation,
+  useTransferInventoryPublicInsideLabMutation,
 } from '@/store/api/api';
 import type {
   InventoryPublicCentralCard,
@@ -556,39 +557,33 @@ function CentralScanCard({
   online: boolean;
   onDone: () => void;
 }) {
-  const [issueLot, { isLoading: issuingLot }] = useIssueInventoryPublicScanMutation();
+  const [transferLot, { isLoading: transferringLot }] = useTransferInventoryPublicInsideLabMutation();
   const [issueBatch, { isLoading: issuingPlastic }] = useIssueInventoryPublicPlasticBatchMutation();
   const [employeeId, setEmployeeId] = useState('');
-  const [mode, setMode] = useState<'lot' | 'box'>(card.lots.length > 0 ? 'lot' : 'box');
+  const [mode, setMode] = useState<'transfer' | 'box'>(card.lots.length > 0 ? 'transfer' : 'box');
   const [lotId, setLotId] = useState('');
-  const [qty, setQty] = useState<number | null>(null);
-  const [customQty, setCustomQty] = useState('');
   const [lines, setLines] = useState<DraftPlasticLine[]>([emptyPlasticLine()]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const selectedLot: InventoryPublicCentralLotItem | undefined = card.lots.find((lot) => lot.id === lotId);
-  const selectedQty = useMemo(() => {
-    if (customQty.trim()) {
-      const parsed = Number(customQty);
-      return Number.isFinite(parsed) ? parsed : null;
-    }
-    return qty;
-  }, [customQty, qty]);
 
   const empty = card.lots.length === 0 && card.plasticItems.length === 0;
-  const submitting = issuingLot || issuingPlastic;
-  const showLots = (mode === 'lot' || card.plasticItems.length === 0) && card.lots.length > 0;
+  const submitting = transferringLot || issuingPlastic;
+  const showTransfer =
+    card.centralKind === 'stock_room' &&
+    (mode === 'transfer' || card.plasticItems.length === 0) &&
+    card.lots.length > 0;
 
   function updateLine(key: string, patch: Partial<DraftPlasticLine>) {
     setLines((current) => current.map((line) => (line.key === key ? { ...line, ...patch } : line)));
   }
 
-  async function onSubmitLot() {
+  async function onSubmitTransfer() {
     setError(null);
     setSuccess(null);
     if (!online) {
-      setError('You are offline. Connect to the network before submitting — usage was not recorded.');
+      setError('You are offline. Connect to the network before submitting — transfer was not recorded.');
       return;
     }
     if (!employeeId) {
@@ -596,31 +591,25 @@ function CentralScanCard({
       return;
     }
     if (!lotId) {
-      setError('Select a lot.');
-      return;
-    }
-    if (selectedQty == null || selectedQty <= 0) {
-      setError('Choose a quantity.');
+      setError('Select a chemical or reagent lot to transfer.');
       return;
     }
     try {
-      const result = await issueLot({
+      const result = await transferLot({
         token,
-        body: { employeeId, lotId, qty: selectedQty },
+        body: { employeeId, lotId },
       }).unwrap();
       setSuccess(
-        `Recorded ${result.data.qtyIssued} ${result.data.unit} for ${result.data.employeeName}. Remaining ${result.data.remainingQty} ${result.data.unit}.`,
+        `Transferred ${result.data.itemName} (${result.data.lotCode}) ${result.data.fromArea} → ${result.data.toArea}. On hand ${result.data.remainingQty} ${result.data.unit}.`,
       );
       setLotId('');
-      setQty(null);
-      setCustomQty('');
       onDone();
     } catch (cause) {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        setError('You are offline. Connect to the network before submitting — usage was not recorded.');
+        setError('You are offline. Connect to the network before submitting — transfer was not recorded.');
         return;
       }
-      setError(apiErrorMessage(cause, 'Unable to submit usage.'));
+      setError(apiErrorMessage(cause, 'Unable to transfer lot.'));
     }
   }
 
@@ -685,7 +674,9 @@ function CentralScanCard({
       <p className="text-xs uppercase tracking-[0.2em] text-meta">Lab inventory</p>
       <h1 className="mt-2 text-xl font-medium">{card.name}</h1>
       <p className="mt-1 text-sm text-muted">
-        {card.centralKind === 'stock_room' ? 'Stock room take-out' : 'Stationery take-out'}
+        {card.centralKind === 'stock_room'
+          ? 'Stock room — take out plastic boxes, or transfer chemicals/reagents to Inside lab'
+          : 'Stationery take-out'}
       </p>
 
       {empty ? (
@@ -709,18 +700,18 @@ function CentralScanCard({
             </select>
           </div>
 
-          {card.lots.length > 0 && card.plasticItems.length > 0 ? (
+          {card.centralKind === 'stock_room' && card.lots.length > 0 && card.plasticItems.length > 0 ? (
             <div className="flex gap-2">
               <button
                 type="button"
                 className={`rounded border px-3 py-2 text-sm ${
-                  mode === 'lot'
+                  mode === 'transfer'
                     ? 'border-foreground bg-foreground text-background'
                     : 'border-border bg-background'
                 }`}
-                onClick={() => setMode('lot')}
+                onClick={() => setMode('transfer')}
               >
-                Measured lot
+                Transfer to Inside lab
               </button>
               <button
                 type="button"
@@ -731,24 +722,20 @@ function CentralScanCard({
                 }`}
                 onClick={() => setMode('box')}
               >
-                Boxes
+                Plastic boxes
               </button>
             </div>
           ) : null}
 
-          {showLots ? (
+          {showTransfer ? (
             <>
               <div>
-                <Label htmlFor="central-lot">2. Lot</Label>
+                <Label htmlFor="central-lot">2. Chemical / reagent lot</Label>
                 <select
                   id="central-lot"
                   className={SELECT_CLASS}
                   value={lotId}
-                  onChange={(event) => {
-                    setLotId(event.target.value);
-                    setQty(null);
-                    setCustomQty('');
-                  }}
+                  onChange={(event) => setLotId(event.target.value)}
                 >
                   <option value="">Select lot</option>
                   {card.lots.map((lot) => (
@@ -757,45 +744,14 @@ function CentralScanCard({
                     </option>
                   ))}
                 </select>
+                <p className="mt-1 text-xs text-muted">
+                  Moves the whole lot to Inside lab. Quantity is not consumed here.
+                </p>
               </div>
               {selectedLot ? (
-                <div>
-                  <Label>3. Quantity ({selectedLot.unit})</Label>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {selectedLot.qtyChips.map((chip) => (
-                      <button
-                        key={chip}
-                        type="button"
-                        className={`rounded border px-3 py-2 text-sm tabular-nums ${
-                          qty === chip && !customQty.trim()
-                            ? 'border-foreground bg-foreground text-background'
-                            : 'border-border bg-background'
-                        }`}
-                        onClick={() => {
-                          setQty(chip);
-                          setCustomQty('');
-                        }}
-                      >
-                        {chip}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-3">
-                    <Label htmlFor="central-custom-qty">Or enter amount</Label>
-                    <Input
-                      id="central-custom-qty"
-                      type="number"
-                      min={0.0001}
-                      step="any"
-                      value={customQty}
-                      onChange={(event) => {
-                        setCustomQty(event.target.value);
-                        setQty(null);
-                      }}
-                      placeholder={`Max ${selectedLot.remainingQty}`}
-                    />
-                  </div>
-                </div>
+                <p className="text-sm text-muted">
+                  Will transfer {selectedLot.remainingQty} {selectedLot.unit} on hand to Inside lab.
+                </p>
               ) : null}
               {error ? <StatusMessage tone="danger">{error}</StatusMessage> : null}
               {success ? <StatusMessage tone="success">{success}</StatusMessage> : null}
@@ -803,9 +759,9 @@ function CentralScanCard({
                 type="button"
                 className="w-full"
                 disabled={submitting || !online}
-                onClick={() => void onSubmitLot()}
+                onClick={() => void onSubmitTransfer()}
               >
-                {submitting ? 'Submitting…' : 'Submit'}
+                {submitting ? 'Transferring…' : 'Transfer to Inside lab'}
               </Button>
             </>
           ) : (

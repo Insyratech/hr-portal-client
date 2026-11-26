@@ -47,6 +47,39 @@ function matchesCatalogSearch(item: InventoryCatalogItem, query: string): boolea
   return haystack.includes(q);
 }
 
+/** Client-side duplicate guard (case-insensitive). Server still enforces. */
+function findCatalogDuplicate(
+  items: readonly InventoryCatalogItem[],
+  input: { categoryId: string; name: string; catalogNumber: string; excludeId?: string },
+): string | null {
+  const nameKey = input.name.trim().toLowerCase();
+  const catalogNumberKey = input.catalogNumber.trim().toLowerCase();
+  if (!nameKey) return 'Name is required.';
+
+  const nameClash = items.find(
+    (item) =>
+      item.id !== input.excludeId &&
+      item.categoryId === input.categoryId &&
+      item.name.trim().toLowerCase() === nameKey,
+  );
+  if (nameClash) {
+    return 'A catalog item with this name already exists in the category.';
+  }
+
+  if (catalogNumberKey) {
+    const numberClash = items.find(
+      (item) =>
+        item.id !== input.excludeId &&
+        (item.catalogNumber ?? '').trim().toLowerCase() === catalogNumberKey,
+    );
+    if (numberClash) {
+      return 'A catalog item with this catalogue number already exists.';
+    }
+  }
+
+  return null;
+}
+
 export function InventoryCatalogPage() {
   const toast = useToast();
   const permissions = useAppSelector((state) => state.permissions.permissions);
@@ -67,10 +100,19 @@ export function InventoryCatalogPage() {
 
   async function onCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (creating) return;
     const form = new FormData(event.currentTarget);
     const chips = parseQtyChipsInput(String(form.get('defaultQtyChips') ?? ''));
     if (chips.length > 15) {
       toast.error('At most 15 default qty chips are allowed.');
+      return;
+    }
+    const categoryId = String(form.get('categoryId') ?? '');
+    const name = String(form.get('name') ?? '').trim();
+    const catalogNumber = String(form.get('catalogNumber') ?? '').trim();
+    const duplicate = findCatalogDuplicate(allItems, { categoryId, name, catalogNumber });
+    if (duplicate) {
+      toast.error(duplicate);
       return;
     }
     const reorderRaw = String(form.get('reorderQty') ?? '').trim();
@@ -78,10 +120,10 @@ export function InventoryCatalogPage() {
     const expiryRaw = String(form.get('expiryLeadDays') ?? '').trim();
     try {
       await createItem({
-        categoryId: String(form.get('categoryId') ?? ''),
-        name: String(form.get('name') ?? '').trim(),
+        categoryId,
+        name,
         brandName: String(form.get('brandName') ?? '').trim(),
-        catalogNumber: String(form.get('catalogNumber') ?? '').trim(),
+        catalogNumber,
         unit: String(form.get('unit') ?? '').trim(),
         defaultQtyChips: chips,
         alertMode: String(form.get('alertMode') ?? 'both') as InventoryCatalogItem['alertMode'],
@@ -99,11 +141,23 @@ export function InventoryCatalogPage() {
 
   async function onUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!editing) return;
+    if (!editing || updating) return;
     const form = new FormData(event.currentTarget);
     const chips = parseQtyChipsInput(String(form.get('defaultQtyChips') ?? ''));
     if (chips.length > 15) {
       toast.error('At most 15 default qty chips are allowed.');
+      return;
+    }
+    const name = String(form.get('name') ?? '').trim();
+    const catalogNumber = String(form.get('catalogNumber') ?? '').trim();
+    const duplicate = findCatalogDuplicate(allItems, {
+      categoryId: editing.categoryId,
+      name,
+      catalogNumber,
+      excludeId: editing.id,
+    });
+    if (duplicate) {
+      toast.error(duplicate);
       return;
     }
     const reorderRaw = String(form.get('reorderQty') ?? '').trim();
@@ -113,9 +167,9 @@ export function InventoryCatalogPage() {
       await updateItem({
         id: editing.id,
         body: {
-          name: String(form.get('name') ?? '').trim(),
+          name,
           brandName: String(form.get('brandName') ?? '').trim(),
-          catalogNumber: String(form.get('catalogNumber') ?? '').trim(),
+          catalogNumber,
           unit: String(form.get('unit') ?? '').trim(),
           defaultQtyChips: chips,
           alertMode: String(form.get('alertMode') ?? 'both') as InventoryCatalogItem['alertMode'],
@@ -161,7 +215,7 @@ export function InventoryCatalogPage() {
         Search filters by brand, catalogue number, or name. When set, catalogue number is shown with the name
         in receive and lab recipe pickers. <span className="text-foreground">Unit</span> is how this item is
         measured (g, ml, …). Stock amounts live on each received lot — not here. Duplicate name (same
-        category) or a non-empty catalogue number is blocked.
+        category, ignoring letter case) or a non-empty catalogue number is blocked.
       </p>
       {isError ? <p className="mb-4 text-sm">Unable to load catalog.</p> : null}
 

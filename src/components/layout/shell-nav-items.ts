@@ -28,6 +28,7 @@ import {
   INVENTORY_MASTERS_NAV,
   INVENTORY_OVERVIEW_NAV,
   INVENTORY_STOCK_NAV,
+  INVENTORY_STORAGE_NAV,
   MY_PROJECT_NAV,
   MY_WORK_ACCOUNT_NAV,
   MY_WORK_DASHBOARD,
@@ -131,6 +132,7 @@ function managerialSection(variant: Exclude<ShellVariant, 'employee' | 'super-ad
       groups: [
         { label: 'Overview', items: INVENTORY_OVERVIEW_NAV },
         { label: 'Stock', items: INVENTORY_STOCK_NAV },
+        { label: 'Storage', items: INVENTORY_STORAGE_NAV },
         { label: 'Masters', items: INVENTORY_MASTERS_NAV },
       ],
     };

@@ -347,6 +347,12 @@ export const INVENTORY_STOCK_NAV: readonly NavItem[] = [
   { href: '/inventory/lab-recipes', label: 'Lab recipes', icon: 'file' },
 ];
 
+export const INVENTORY_STORAGE_NAV: readonly NavItem[] = [
+  { href: '/inventory/storage/stock-room', label: 'Stock room', icon: 'building' },
+  { href: '/inventory/storage/inside-lab', label: 'Inside lab', icon: 'building' },
+  { href: '/inventory/storage/stationery', label: 'Stationery', icon: 'building' },
+];
+
 export const INVENTORY_MASTERS_NAV: readonly NavItem[] = [
   { href: '/inventory/locations', label: 'Locations', icon: 'building' },
   { href: '/inventory/categories', label: 'Categories', icon: 'grid' },
@@ -357,6 +363,7 @@ export const INVENTORY_MASTERS_NAV: readonly NavItem[] = [
 export const INVENTORY_NAV: readonly NavItem[] = [
   ...INVENTORY_OVERVIEW_NAV,
   ...INVENTORY_STOCK_NAV,
+  ...INVENTORY_STORAGE_NAV,
   ...INVENTORY_MASTERS_NAV,
 ];
 
