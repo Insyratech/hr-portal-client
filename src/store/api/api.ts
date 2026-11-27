@@ -120,6 +120,8 @@ import type {
   InventoryLabGelComponentKey,
   InventoryLabRecipe,
   InventoryLabUsageResult,
+  InventoryLogsBundle,
+  InventoryLogsExcelExport,
   InventorySopFolder,
   InventorySopFile,
   InventorySopFileContent,
@@ -4215,6 +4217,41 @@ export const api = createApi({
         return `/api/v1/inventory/reports${qs ? `?${qs}` : ''}`;
       },
     }),
+    getInventoryLogs: builder.query<
+      ApiSuccess<InventoryLogsBundle>,
+      { period?: string; from?: string; to?: string } | void
+    >({
+      query: (args) => {
+        const params = new URLSearchParams();
+        if (args?.from && args?.to) {
+          params.set('from', args.from);
+          params.set('to', args.to);
+        } else if (args?.period) {
+          params.set('period', args.period);
+        } else {
+          params.set('period', 'month');
+        }
+        const qs = params.toString();
+        return `/api/v1/inventory/logs${qs ? `?${qs}` : ''}`;
+      },
+      providesTags: ['InventoryLab', 'InventoryLots', 'InventoryPlastic', 'InventoryOverview'],
+    }),
+    exportInventoryLogsExcel: builder.query<
+      ApiSuccess<InventoryLogsExcelExport>,
+      { period?: string; from?: string; to?: string }
+    >({
+      query: (args) => {
+        const params = new URLSearchParams();
+        if (args.from && args.to) {
+          params.set('from', args.from);
+          params.set('to', args.to);
+        } else if (args.period) {
+          params.set('period', args.period);
+        }
+        const qs = params.toString();
+        return `/api/v1/inventory/logs/export${qs ? `?${qs}` : ''}`;
+      },
+    }),
     getInventoryAdminDashboard: builder.query<
       ApiSuccess<InventoryAdminDashboard>,
       { period?: string; from?: string; to?: string } | void
@@ -4765,6 +4802,8 @@ export const {
   useGetInventoryAlertsQuery,
   useGetInventoryAlertLogQuery,
   useGetInventoryReportsQuery,
+  useGetInventoryLogsQuery,
+  useLazyExportInventoryLogsExcelQuery,
   useGetInventoryAdminDashboardQuery,
   useLazyExportInventoryAuditQuery,
   useGetHrInvoiceClientsQuery,

@@ -336,6 +336,7 @@ export const INVENTORY_OVERVIEW_NAV: readonly NavItem[] = [
   { href: '/inventory', label: 'Overview', icon: 'overview' },
   { href: '/inventory/scan', label: 'Scan', icon: 'grid' },
   { href: '/inventory/alerts', label: 'Alerts', icon: 'bell' },
+  { href: '/inventory/log', label: 'Log', icon: 'audit' },
   { href: '/inventory/reports', label: 'Reports', icon: 'file' },
 ];
 

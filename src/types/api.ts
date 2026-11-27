@@ -4304,6 +4304,95 @@ export type InventoryAuditExport = {
   range: { from: string; to: string };
 };
 
+export type InventoryLogPlasticIssueRow = {
+  id: string;
+  createdAt: string;
+  employeeName: string;
+  employeeCode: string;
+  itemName: string;
+  sizeLabel: string;
+  boxes: number;
+  boxesAfter: number;
+  notes: string;
+  areaName: string;
+};
+
+export type InventoryLogLotTransferRow = {
+  id: string;
+  createdAt: string;
+  employeeName: string;
+  employeeCode: string;
+  lotCode: string;
+  itemName: string;
+  qty: number;
+  unit: string;
+  notes: string;
+  fromArea: string;
+  toArea: string;
+};
+
+export type InventoryLogLabComponentRow = {
+  name: string;
+  quantityValue: number | null;
+  quantityUnit: string;
+  notes: string;
+  catalogItemName: string;
+  qtyDeducted: number | null;
+};
+
+export type InventoryLogLabSubmissionRow = {
+  id: string;
+  createdAt: string;
+  employeeName: string;
+  employeeCode: string;
+  activityName: string;
+  usageMode: InventoryLabUsageMode;
+  runName: string;
+  quantityMultiplier: number;
+  gelPercent: number | null;
+  gelVolumeMl: number | null;
+  notes: string;
+  outputLotCode: string;
+  components: InventoryLogLabComponentRow[];
+};
+
+export type InventoryLogInsideLabActivitySection = {
+  activityId: string;
+  activityName: string;
+  usageMode: InventoryLabUsageMode;
+  submissions: InventoryLogLabSubmissionRow[];
+};
+
+export type InventoryLogsBundle = {
+  range: {
+    from: string;
+    to: string;
+    period: InventoryReportPeriod | 'custom';
+    label: string;
+  };
+  stockRoom: {
+    areaName: string;
+    plasticIssues: InventoryLogPlasticIssueRow[];
+    lotTransfers: InventoryLogLotTransferRow[];
+  };
+  stationery: {
+    areaName: string;
+    plasticIssues: InventoryLogPlasticIssueRow[];
+  };
+  insideLab: {
+    areaName: string;
+    byActivity: InventoryLogInsideLabActivitySection[];
+  };
+};
+
+export type InventoryLogsExcelExport = {
+  filename: string;
+  contentType: string;
+  contentBase64: string;
+  sheetCount: number;
+  range: { from: string; to: string };
+};
+
 export type HrInvoiceCurrency = 'INR' | 'GBP' | 'USD' | 'EUR';
 
 export type HrInvoiceClient = {
