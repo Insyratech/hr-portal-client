@@ -14,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
+import { InventoryCatalogItemPicker } from '@/features/inventory/inventory-catalog-item-picker';
 import {
   SELECT_CLASS,
   formatCatalogItemLabel,
@@ -544,24 +545,18 @@ function StepDetails({
       </div>
 
       <div>
-        <Label htmlFor="catalogItemId">Catalog item</Label>
-        <select
+        <InventoryCatalogItemPicker
           id="catalogItemId"
-          className={SELECT_CLASS}
+          label="Catalog item"
           value={draft.catalogItemId}
-          onChange={(event) => {
-            const item = catalogItems.find((row) => row.id === event.target.value);
+          catalogItems={catalogItems}
+          emptyLabel="Select item"
+          onChange={(catalogItemId) => {
+            const item = catalogItems.find((row) => row.id === catalogItemId);
             if (item) onSelectCatalog(item);
             else onChange({ catalogItemId: '' });
           }}
-        >
-          <option value="">Select item</option>
-          {catalogItems.map((item) => (
-            <option key={item.id} value={item.id}>
-              {formatCatalogItemLabel(item, { withUnit: true })}
-            </option>
-          ))}
-        </select>
+        />
         {catalogItems.length === 0 ? (
           <p className="mt-1 text-xs text-muted">No active catalog items in this category yet.</p>
         ) : null}
