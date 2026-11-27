@@ -4,10 +4,17 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Meta } from '@/components/layout/meta';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DelayedLoadingOverlay } from '@/components/ui/delayed-loading-overlay';
 import { StatusMessage } from '@/components/ui/status-message';
+import { SELECT_CLASS } from '@/features/inventory/inventory-constants';
 import {
   INVENTORY_PERIOD_OPTIONS,
   inventoryMonthRange,
@@ -28,6 +35,8 @@ import type {
   InventoryLogPlasticIssueRow,
   InventoryReportPeriod,
 } from '@/types/api';
+
+const PREVIEW_LIMIT = 5;
 
 type PeriodSelection = InventoryReportPeriod | 'last_month';
 type AreaTab = 'stock_room' | 'stationery' | 'inside_lab';
@@ -71,13 +80,7 @@ function EmptyRows({ label }: { label: string }) {
   return <p className="px-3 py-4 text-sm text-muted">{label}</p>;
 }
 
-function LogTable({
-  headers,
-  children,
-}: {
-  headers: string[];
-  children: ReactNode;
-}) {
+function LogTable({ headers, children }: { headers: string[]; children: ReactNode }) {
   return (
     <div className="overflow-x-auto rounded border border-border">
       <table className="min-w-full text-left text-sm">
@@ -96,12 +99,14 @@ function LogTable({
   );
 }
 
-function PlasticIssuesTable({ rows }: { rows: InventoryLogPlasticIssueRow[] }) {
-  if (!rows.length) return <EmptyRows label="No plastic take-outs in this period." />;
+function matchesQuery(haystack: string, query: string): boolean {
+  if (!query.trim()) return true;
+  return haystack.toLowerCase().includes(query.trim().toLowerCase());
+}
+
+function PlasticIssueRows({ rows }: { rows: InventoryLogPlasticIssueRow[] }) {
   return (
-    <LogTable
-      headers={['When', 'Employee', 'Item', 'Size', 'Boxes taken', 'Boxes left', 'Notes']}
-    >
+    <>
       {rows.map((row) => (
         <tr key={row.id} className="border-b border-border/60 align-top">
           <td className="whitespace-nowrap px-3 py-2">{formatWhen(row.createdAt)}</td>
@@ -118,14 +123,13 @@ function PlasticIssuesTable({ rows }: { rows: InventoryLogPlasticIssueRow[] }) {
           <td className="px-3 py-2 text-muted">{row.notes || '—'}</td>
         </tr>
       ))}
-    </LogTable>
+    </>
   );
 }
 
-function TransfersTable({ rows }: { rows: InventoryLogLotTransferRow[] }) {
-  if (!rows.length) return <EmptyRows label="No lot transfers in this period." />;
+function TransferRows({ rows }: { rows: InventoryLogLotTransferRow[] }) {
   return (
-    <LogTable headers={['When', 'Employee', 'Lot', 'Item', 'Qty', 'From → To', 'Notes']}>
+    <>
       {rows.map((row) => (
         <tr key={row.id} className="border-b border-border/60 align-top">
           <td className="whitespace-nowrap px-3 py-2">{formatWhen(row.createdAt)}</td>
@@ -146,18 +150,263 @@ function TransfersTable({ rows }: { rows: InventoryLogLotTransferRow[] }) {
           <td className="px-3 py-2 text-muted">{row.notes || '—'}</td>
         </tr>
       ))}
-    </LogTable>
+    </>
   );
 }
 
-function LabActivitySection({ section }: { section: InventoryLogInsideLabActivitySection }) {
+function LabSubmissionRows({
+  rows,
+  usageMode,
+}: {
+  rows: InventoryLogLabSubmissionRow[];
+  usageMode: InventoryLogInsideLabActivitySection['usageMode'];
+}) {
+  return (
+    <>
+      {rows.map((row) => (
+        <tr key={row.id} className="border-b border-border/60 align-top">
+          <td className="whitespace-nowrap px-3 py-2">{formatWhen(row.createdAt)}</td>
+          <td className="px-3 py-2">
+            {row.employeeName}
+            {row.employeeCode ? (
+              <span className="block text-xs text-muted">{row.employeeCode}</span>
+            ) : null}
+          </td>
+          {usageMode === 'gel' ? (
+            <>
+              <td className="px-3 py-2 tabular-nums">
+                {row.gelPercent != null ? `${row.gelPercent}%` : '—'}
+              </td>
+              <td className="px-3 py-2 tabular-nums">
+                {row.gelVolumeMl != null ? `${row.gelVolumeMl} mL` : '—'}
+              </td>
+              <td className="px-3 py-2">{row.runName || '—'}</td>
+              <td className="max-w-md px-3 py-2 text-muted">{formatComponents(row) || '—'}</td>
+              <td className="px-3 py-2 text-muted">{row.notes || '—'}</td>
+            </>
+          ) : usageMode === 'method' ? (
+            <>
+              <td className="px-3 py-2">{row.runName || '—'}</td>
+              <td className="px-3 py-2 tabular-nums">{row.quantityMultiplier}X</td>
+              <td className="max-w-md px-3 py-2 text-muted">{formatComponents(row) || '—'}</td>
+              <td className="px-3 py-2 text-muted">{row.notes || '—'}</td>
+            </>
+          ) : (
+            <>
+              <td className="px-3 py-2">{row.runName || '—'}</td>
+              <td className="max-w-md px-3 py-2 text-muted">{formatComponents(row) || '—'}</td>
+              <td className="px-3 py-2">{row.outputLotCode || '—'}</td>
+              <td className="px-3 py-2 text-muted">{row.notes || '—'}</td>
+            </>
+          )}
+        </tr>
+      ))}
+    </>
+  );
+}
+
+function LogPreviewBlock({
+  searchId,
+  title,
+  description,
+  totalCount,
+  emptyLabel,
+  headers,
+  previewBody,
+  modalBody,
+  search,
+  onSearchChange,
+  searchPlaceholder,
+}: {
+  searchId: string;
+  title: string;
+  description?: string;
+  totalCount: number;
+  emptyLabel: string;
+  headers: string[];
+  previewBody: ReactNode;
+  modalBody: ReactNode;
+  search: string;
+  onSearchChange: (value: string) => void;
+  searchPlaceholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const hasMore = totalCount > PREVIEW_LIMIT;
+
+  return (
+    <section className="space-y-3 rounded border border-border p-4">
+      <div>
+        <Meta>{title}</Meta>
+        {description ? <p className="mt-1 text-xs text-muted">{description}</p> : null}
+        <p className="mt-1 text-xs text-muted">
+          {totalCount} entr{totalCount === 1 ? 'y' : 'ies'} in this period
+        </p>
+      </div>
+
+      {!totalCount ? (
+        <EmptyRows label={emptyLabel} />
+      ) : (
+        <>
+          <LogTable headers={headers}>{previewBody}</LogTable>
+          {hasMore ? (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-muted">
+                Showing recent {PREVIEW_LIMIT} of {totalCount}
+              </p>
+              <button
+                type="button"
+                className="text-sm underline-offset-2 hover:underline"
+                onClick={() => setOpen(true)}
+              >
+                Show more
+              </button>
+            </div>
+          ) : null}
+        </>
+      )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className="text-muted">
+            Full log · {totalCount} entr{totalCount === 1 ? 'y' : 'ies'}
+          </DialogDescription>
+          <div className="mt-4 space-y-3">
+            <div>
+              <Label htmlFor={searchId}>Search</Label>
+              <Input
+                id={searchId}
+                className="mt-1"
+                value={search}
+                onChange={(event) => onSearchChange(event.target.value)}
+                placeholder={searchPlaceholder}
+              />
+            </div>
+            <LogTable headers={headers}>{modalBody}</LogTable>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
+
+function PlasticLogBlock({
+  searchId,
+  title,
+  description,
+  rows,
+}: {
+  searchId: string;
+  title: string;
+  description: string;
+  rows: InventoryLogPlasticIssueRow[];
+}) {
+  const [search, setSearch] = useState('');
+  const filtered = useMemo(
+    () =>
+      rows.filter((row) =>
+        matchesQuery(
+          [
+            row.createdAt,
+            row.employeeName,
+            row.employeeCode,
+            row.itemName,
+            row.sizeLabel,
+            String(row.boxes),
+            row.notes,
+          ].join(' '),
+          search,
+        ),
+      ),
+    [rows, search],
+  );
+  const headers = ['When', 'Employee', 'Item', 'Size', 'Boxes taken', 'Boxes left', 'Notes'];
+
+  return (
+    <LogPreviewBlock
+      searchId={searchId}
+      title={title}
+      description={description}
+      totalCount={rows.length}
+      emptyLabel="No plastic take-outs in this period."
+      headers={headers}
+      previewBody={<PlasticIssueRows rows={rows.slice(0, PREVIEW_LIMIT)} />}
+      modalBody={
+        filtered.length ? (
+          <PlasticIssueRows rows={filtered} />
+        ) : (
+          <tr>
+            <td colSpan={headers.length}>
+              <EmptyRows label="No matches for that search." />
+            </td>
+          </tr>
+        )
+      }
+      search={search}
+      onSearchChange={setSearch}
+      searchPlaceholder="Search employee, item, size, notes…"
+    />
+  );
+}
+
+function TransferLogBlock({ rows }: { rows: InventoryLogLotTransferRow[] }) {
+  const [search, setSearch] = useState('');
+  const filtered = useMemo(
+    () =>
+      rows.filter((row) =>
+        matchesQuery(
+          [
+            row.createdAt,
+            row.employeeName,
+            row.employeeCode,
+            row.lotCode,
+            row.itemName,
+            row.notes,
+            row.fromArea,
+            row.toArea,
+          ].join(' '),
+          search,
+        ),
+      ),
+    [rows, search],
+  );
+  const headers = ['When', 'Employee', 'Lot', 'Item', 'Qty', 'From → To', 'Notes'];
+
+  return (
+    <LogPreviewBlock
+      searchId="log-search-transfers"
+      title="Chemical / reagent transfer → Inside lab"
+      description="Matches the Stock room transfer form (employee, lot moved into Inside lab)."
+      totalCount={rows.length}
+      emptyLabel="No lot transfers in this period."
+      headers={headers}
+      previewBody={<TransferRows rows={rows.slice(0, PREVIEW_LIMIT)} />}
+      modalBody={
+        filtered.length ? (
+          <TransferRows rows={filtered} />
+        ) : (
+          <tr>
+            <td colSpan={headers.length}>
+              <EmptyRows label="No matches for that search." />
+            </td>
+          </tr>
+        )
+      }
+      search={search}
+      onSearchChange={setSearch}
+      searchPlaceholder="Search employee, lot, item, notes…"
+    />
+  );
+}
+
+function LabActivityLogBlock({ section }: { section: InventoryLogInsideLabActivitySection }) {
+  const [search, setSearch] = useState('');
   const modeLabel =
     section.usageMode === 'gel'
       ? 'gel chart'
       : section.usageMode === 'method'
         ? 'methods'
         : 'recipes';
-
   const headers =
     section.usageMode === 'gel'
       ? ['When', 'Employee', 'Agarose %', 'Volume', 'Run', 'Components', 'Notes']
@@ -165,59 +414,59 @@ function LabActivitySection({ section }: { section: InventoryLogInsideLabActivit
         ? ['When', 'Employee', 'Method', 'How many (Nx)', 'Components', 'Notes']
         : ['When', 'Employee', 'Recipe', 'Components', 'Output lot', 'Notes'];
 
+  const filtered = useMemo(
+    () =>
+      section.submissions.filter((row) =>
+        matchesQuery(
+          [
+            row.createdAt,
+            row.employeeName,
+            row.employeeCode,
+            row.runName,
+            row.notes,
+            row.outputLotCode,
+            String(row.quantityMultiplier),
+            row.gelPercent ?? '',
+            row.gelVolumeMl ?? '',
+            formatComponents(row),
+          ].join(' '),
+          search,
+        ),
+      ),
+    [section.submissions, search],
+  );
+
   return (
-    <section className="space-y-3 rounded border border-border p-4">
-      <div>
-        <h3 className="text-sm font-medium">{section.activityName}</h3>
-        <p className="text-xs text-muted">
-          {section.submissions.length} run{section.submissions.length === 1 ? '' : 's'} · {modeLabel}
-        </p>
-      </div>
-      {!section.submissions.length ? (
-        <EmptyRows label="No submissions for this work type in the selected period." />
-      ) : (
-        <LogTable headers={headers}>
-          {section.submissions.map((row) => (
-            <tr key={row.id} className="border-b border-border/60 align-top">
-              <td className="whitespace-nowrap px-3 py-2">{formatWhen(row.createdAt)}</td>
-              <td className="px-3 py-2">
-                {row.employeeName}
-                {row.employeeCode ? (
-                  <span className="block text-xs text-muted">{row.employeeCode}</span>
-                ) : null}
-              </td>
-              {section.usageMode === 'gel' ? (
-                <>
-                  <td className="px-3 py-2 tabular-nums">
-                    {row.gelPercent != null ? `${row.gelPercent}%` : '—'}
-                  </td>
-                  <td className="px-3 py-2 tabular-nums">
-                    {row.gelVolumeMl != null ? `${row.gelVolumeMl} mL` : '—'}
-                  </td>
-                  <td className="px-3 py-2">{row.runName || '—'}</td>
-                  <td className="max-w-md px-3 py-2 text-muted">{formatComponents(row) || '—'}</td>
-                  <td className="px-3 py-2 text-muted">{row.notes || '—'}</td>
-                </>
-              ) : section.usageMode === 'method' ? (
-                <>
-                  <td className="px-3 py-2">{row.runName || '—'}</td>
-                  <td className="px-3 py-2 tabular-nums">{row.quantityMultiplier}X</td>
-                  <td className="max-w-md px-3 py-2 text-muted">{formatComponents(row) || '—'}</td>
-                  <td className="px-3 py-2 text-muted">{row.notes || '—'}</td>
-                </>
-              ) : (
-                <>
-                  <td className="px-3 py-2">{row.runName || '—'}</td>
-                  <td className="max-w-md px-3 py-2 text-muted">{formatComponents(row) || '—'}</td>
-                  <td className="px-3 py-2">{row.outputLotCode || '—'}</td>
-                  <td className="px-3 py-2 text-muted">{row.notes || '—'}</td>
-                </>
-              )}
-            </tr>
-          ))}
-        </LogTable>
-      )}
-    </section>
+    <LogPreviewBlock
+      searchId={`log-search-lab-${section.activityId}`}
+      title={section.activityName}
+      description={`${section.submissions.length} run${
+        section.submissions.length === 1 ? '' : 's'
+      } · ${modeLabel}`}
+      totalCount={section.submissions.length}
+      emptyLabel="No submissions for this work type in the selected period."
+      headers={headers}
+      previewBody={
+        <LabSubmissionRows
+          rows={section.submissions.slice(0, PREVIEW_LIMIT)}
+          usageMode={section.usageMode}
+        />
+      }
+      modalBody={
+        filtered.length ? (
+          <LabSubmissionRows rows={filtered} usageMode={section.usageMode} />
+        ) : (
+          <tr>
+            <td colSpan={headers.length}>
+              <EmptyRows label="No matches for that search." />
+            </td>
+          </tr>
+        )
+      }
+      search={search}
+      onSearchChange={setSearch}
+      searchPlaceholder="Search employee, method/recipe, components, notes…"
+    />
   );
 }
 
@@ -272,9 +521,8 @@ export function InventoryLogsPage() {
       <DelayedLoadingOverlay active={isLoading || isFetching || exporting} />
       <PageHeader kicker="Inventory" title="Log" />
       <p className="mb-6 max-w-3xl text-sm text-muted">
-        Track who took what from each usage-area QR. Stock room and Stationery show plastic take-outs
-        (and Stock room chemical transfers). Inside lab is split by work type with columns matching the
-        scan form. Download Excel for the same period.
+        Track who took what from each usage-area QR. Choose an area, browse the recent five entries per
+        log type, then open Show more for the full searchable list. Download Excel for the same period.
       </p>
 
       <form
@@ -288,7 +536,7 @@ export function InventoryLogsPage() {
           <Label htmlFor="log-period">Period</Label>
           <select
             id="log-period"
-            className="mt-1 flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+            className={`${SELECT_CLASS} mt-1`}
             value={selection}
             onChange={(event) => setSelection(event.target.value as PeriodSelection)}
           >
@@ -326,7 +574,12 @@ export function InventoryLogsPage() {
           </>
         ) : null}
         <Button type="submit">Load log</Button>
-        <Button type="button" variant="outline" disabled={exporting} onClick={() => void onExportExcel()}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={exporting}
+          onClick={() => void onExportExcel()}
+        >
           {exporting ? 'Exporting…' : 'Download Excel'}
         </Button>
       </form>
@@ -346,66 +599,49 @@ export function InventoryLogsPage() {
             Showing {logs.range.label} ({logs.range.from} → {logs.range.to})
           </p>
 
-          <div className="flex flex-wrap gap-2">
-            {(
-              [
-                ['stock_room', logs.stockRoom.areaName],
-                ['stationery', logs.stationery.areaName],
-                ['inside_lab', logs.insideLab.areaName],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                className={`rounded border px-3 py-1.5 text-sm ${
-                  areaTab === key
-                    ? 'border-foreground bg-foreground text-background'
-                    : 'border-border hover:bg-surface'
-                }`}
-                onClick={() => setAreaTab(key)}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="max-w-sm">
+            <Label htmlFor="log-area">Usage area QR</Label>
+            <select
+              id="log-area"
+              className={`${SELECT_CLASS} mt-1`}
+              value={areaTab}
+              onChange={(event) => setAreaTab(event.target.value as AreaTab)}
+            >
+              <option value="stock_room">{logs.stockRoom.areaName}</option>
+              <option value="stationery">{logs.stationery.areaName}</option>
+              <option value="inside_lab">{logs.insideLab.areaName}</option>
+            </select>
           </div>
 
           {areaTab === 'stock_room' ? (
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Meta>Plastic take-out</Meta>
-                <p className="text-xs text-muted">
-                  Matches the Stock room QR box take-out form (employee, item, boxes).
-                </p>
-                <PlasticIssuesTable rows={logs.stockRoom.plasticIssues} />
-              </div>
-              <div className="space-y-2">
-                <Meta>Chemical / reagent transfer → Inside lab</Meta>
-                <p className="text-xs text-muted">
-                  Matches the Stock room transfer form (employee, lot moved into Inside lab).
-                </p>
-                <TransfersTable rows={logs.stockRoom.lotTransfers} />
-              </div>
+            <div className="space-y-4">
+              <PlasticLogBlock
+                searchId="log-search-stock-plastic"
+                title="Plastic take-out"
+                description="Matches the Stock room QR box take-out form (employee, item, boxes)."
+                rows={logs.stockRoom.plasticIssues}
+              />
+              <TransferLogBlock rows={logs.stockRoom.lotTransfers} />
             </div>
           ) : null}
 
           {areaTab === 'stationery' ? (
-            <div className="space-y-2">
-              <Meta>Plastic take-out</Meta>
-              <p className="text-xs text-muted">
-                Matches the Stationery QR box take-out form (employee, item, boxes).
-              </p>
-              <PlasticIssuesTable rows={logs.stationery.plasticIssues} />
-            </div>
+            <PlasticLogBlock
+              searchId="log-search-stationery-plastic"
+              title="Plastic take-out"
+              description="Matches the Stationery QR box take-out form (employee, item, boxes)."
+              rows={logs.stationery.plasticIssues}
+            />
           ) : null}
 
           {areaTab === 'inside_lab' ? (
             <div className="space-y-4">
               <p className="text-xs text-muted">
-                One section per work type. Columns follow the Inside lab scan fields for that mode
-                (method + Nx, gel % + volume, or reagent recipe).
+                One section per work type. Recent five shown here; Show more opens the full searchable
+                log for that type.
               </p>
               {logs.insideLab.byActivity.map((section) => (
-                <LabActivitySection key={section.activityId} section={section} />
+                <LabActivityLogBlock key={section.activityId} section={section} />
               ))}
               {!logs.insideLab.byActivity.length ? (
                 <EmptyRows label="No lab work types configured yet." />
