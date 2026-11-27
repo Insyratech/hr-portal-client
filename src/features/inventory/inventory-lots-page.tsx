@@ -1,15 +1,40 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/dashboard/data-table';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { downloadInventoryLotLabel } from '@/features/inventory/inventory-lot-print';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
 import { PERMISSIONS } from '@/types/permissions';
 import { useGetInventoryLotsQuery, useLazyGetInventoryLotPrintQuery } from '@/store/api/api';
+import type { InventoryLot } from '@/types/api';
+
+function matchesLotSearch(row: InventoryLot, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const haystack = [
+    row.lotCode,
+    row.catalogItemName,
+    row.catalogNumber,
+    row.categoryName,
+    row.origin ?? 'purchase',
+    row.locationName,
+    row.supplierName,
+    row.centralQrName,
+    row.unit,
+    row.status,
+    row.notes,
+  ]
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(q);
+}
 
 export function InventoryLotsPage() {
   const permissions = useAppSelector((state) => state.permissions.permissions);
@@ -17,6 +42,12 @@ export function InventoryLotsPage() {
   const { data, isLoading, isError } = useGetInventoryLotsQuery(undefined, { skip: !canManage });
   const [fetchPrint] = useLazyGetInventoryLotPrintQuery();
   const toast = useToast();
+  const [search, setSearch] = useState('');
+  const allRows = data?.data ?? [];
+  const filteredRows = useMemo(
+    () => allRows.filter((row) => matchesLotSearch(row, search)),
+    [allRows, search],
+  );
 
   async function onDownload(id: string) {
     try {
@@ -52,6 +83,21 @@ export function InventoryLotsPage() {
         receive. Open a lot to print its label or review the ledger.
       </p>
       {isError ? <p className="mb-4 text-sm">Unable to load lots.</p> : null}
+
+      <div className="mb-4 max-w-md space-y-2">
+        <Label htmlFor="lots-search">Search lots</Label>
+        <Input
+          id="lots-search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Lot code, item, category, location…"
+          autoComplete="off"
+        />
+        <p className="text-xs text-muted">
+          Showing {filteredRows.length} of {allRows.length}
+          {search.trim() ? ' matching' : ''} lot{allRows.length === 1 ? '' : 's'}.
+        </p>
+      </div>
 
       <DataTable
         columns={[
@@ -93,10 +139,14 @@ export function InventoryLotsPage() {
             ),
           },
         ]}
-        rows={data?.data ?? []}
+        rows={filteredRows}
         loading={isLoading}
-        emptyTitle="No lots yet"
-        emptyDescription="Receive stock via Receive (attaches to a usage area), or create an output lot by scanning a usage area QR and choosing Reagent preparation."
+        emptyTitle={search.trim() ? 'No matching lots' : 'No lots yet'}
+        emptyDescription={
+          search.trim()
+            ? 'Try a different search term.'
+            : 'Receive stock via Receive (attaches to a usage area), or create an output lot by scanning a usage area QR and choosing Reagent preparation.'
+        }
       />
     </>
   );
