@@ -184,7 +184,7 @@ function LabSubmissionRows({
               <td className="max-w-md px-3 py-2 text-muted">{formatComponents(row) || '—'}</td>
               <td className="px-3 py-2 text-muted">{row.notes || '—'}</td>
             </>
-          ) : usageMode === 'method' ? (
+          ) : usageMode === 'method' || usageMode === 'pcr' ? (
             <>
               <td className="px-3 py-2">{row.runName || '—'}</td>
               <td className="px-3 py-2 tabular-nums">{row.quantityMultiplier}X</td>
@@ -404,14 +404,23 @@ function LabActivityLogBlock({ section }: { section: InventoryLogInsideLabActivi
   const modeLabel =
     section.usageMode === 'gel'
       ? 'gel chart'
-      : section.usageMode === 'method'
-        ? 'methods'
-        : 'recipes';
+      : section.usageMode === 'pcr'
+        ? 'master mixes'
+        : section.usageMode === 'method'
+          ? 'methods'
+          : 'recipes';
   const headers =
     section.usageMode === 'gel'
       ? ['When', 'Employee', 'Agarose %', 'Volume', 'Run', 'Components', 'Notes']
-      : section.usageMode === 'method'
-        ? ['When', 'Employee', 'Method', 'How many (Nx)', 'Components', 'Notes']
+      : section.usageMode === 'method' || section.usageMode === 'pcr'
+        ? [
+            'When',
+            'Employee',
+            section.usageMode === 'pcr' ? 'Master mix' : 'Method',
+            section.usageMode === 'pcr' ? 'Reactions (Nx)' : 'How many (Nx)',
+            'Components',
+            'Notes',
+          ]
         : ['When', 'Employee', 'Recipe', 'Components', 'Output lot', 'Notes'];
 
   const filtered = useMemo(
@@ -465,7 +474,7 @@ function LabActivityLogBlock({ section }: { section: InventoryLogInsideLabActivi
       }
       search={search}
       onSearchChange={setSearch}
-      searchPlaceholder="Search employee, method/recipe, components, notes…"
+      searchPlaceholder="Search employee, method/master mix/recipe, components, notes…"
     />
   );
 }

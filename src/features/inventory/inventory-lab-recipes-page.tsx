@@ -110,9 +110,11 @@ export function InventoryLabRecipesPage() {
     [activities, selectedActivityId],
   );
   const isMethodActivity = selectedActivity?.usageMode === 'method';
+  const isPcrActivity = selectedActivity?.usageMode === 'pcr';
   const isGelActivity = selectedActivity?.usageMode === 'gel';
-  const itemNoun = isMethodActivity ? 'method' : 'recipe';
-  const itemNounTitle = isMethodActivity ? 'Method' : 'Recipe';
+  const isNxActivity = isMethodActivity || isPcrActivity;
+  const itemNoun = isPcrActivity ? 'master mix' : isMethodActivity ? 'method' : 'recipe';
+  const itemNounTitle = isPcrActivity ? 'Master mix' : isMethodActivity ? 'Method' : 'Recipe';
 
   const { data: recipesData, isLoading: loadingRecipes } = useGetInventoryLabRecipesQuery(
     selectedActivityId ? { activityId: selectedActivityId } : undefined,
@@ -171,7 +173,17 @@ export function InventoryLabRecipesPage() {
     setCreatesOutputLot(false);
     setOutputCatalogItemId('');
     setSopFileId('');
-    setDraftComponents([emptyComponent()]);
+    setDraftComponents(
+      selectedActivity?.usageMode === 'pcr'
+        ? [
+            {
+              ...emptyComponent(),
+              quantityValue: '10',
+              quantityUnit: 'µL',
+            },
+          ]
+        : [emptyComponent()],
+    );
     setRecipeOpen(true);
   }
 
@@ -189,7 +201,13 @@ export function InventoryLabRecipesPage() {
     const form = new FormData(event.currentTarget);
     const usageModeRaw = String(form.get('usageMode') ?? 'method');
     const usageMode =
-      usageModeRaw === 'recipe' ? 'recipe' : usageModeRaw === 'gel' ? 'gel' : 'method';
+      usageModeRaw === 'recipe'
+        ? 'recipe'
+        : usageModeRaw === 'gel'
+          ? 'gel'
+          : usageModeRaw === 'pcr'
+            ? 'pcr'
+            : 'method';
     try {
       const created = await createActivity({
         name: String(form.get('name') ?? '').trim(),
@@ -241,20 +259,29 @@ export function InventoryLabRecipesPage() {
     }
     const form = new FormData(event.currentTarget);
     const name = String(form.get('name') ?? '').trim();
-    const finalVolumeRaw = isMethodActivity
-      ? ''
-      : String(form.get('finalVolumeValue') ?? '').trim();
+    const keepVolumes = !isMethodActivity;
+    const finalVolumeRaw = keepVolumes ? String(form.get('finalVolumeValue') ?? '').trim() : '';
     const finalVolumeValue = finalVolumeRaw ? Number(finalVolumeRaw) : null;
-    const finalVolumeUnit = isMethodActivity
-      ? ''
-      : String(form.get('finalVolumeUnit') ?? '').trim();
+    const finalVolumeUnit = keepVolumes
+      ? String(form.get('finalVolumeUnit') ?? '').trim() || (isPcrActivity ? 'µL' : '')
+      : '';
     const components = draftComponents
       .map((row, index) => {
-        const qtyRaw = isMethodActivity ? '' : row.quantityValue.trim();
+        const qtyRaw = keepVolumes ? row.quantityValue.trim() : '';
+        let quantityValue = qtyRaw ? Number(qtyRaw) : null;
+        let quantityUnit = keepVolumes ? row.quantityUnit.trim() : '';
+        // PCR: if the stock line volume is blank, fall back to default volume / reaction.
+        if (isPcrActivity && quantityValue === null && finalVolumeValue !== null) {
+          quantityValue = finalVolumeValue;
+        }
+        if (isPcrActivity && !quantityUnit && finalVolumeUnit) {
+          quantityUnit = finalVolumeUnit;
+        }
+        const componentName = row.name.trim() || (isPcrActivity ? name : '');
         return {
-          name: row.name.trim(),
-          quantityValue: qtyRaw ? Number(qtyRaw) : null,
-          quantityUnit: isMethodActivity ? '' : row.quantityUnit.trim(),
+          name: componentName,
+          quantityValue,
+          quantityUnit,
           notes: row.notes.trim(),
           sortOrder: (index + 1) * 10,
           catalogItemId: row.catalogItemId.trim() || null,
@@ -267,16 +294,20 @@ export function InventoryLabRecipesPage() {
       toast.error(`${itemNounTitle} name is required.`);
       return;
     }
-    const allowOutputLot = !isMethodActivity && createsOutputLot;
+    const allowOutputLot = !isNxActivity && createsOutputLot;
     if (allowOutputLot && !outputId) {
       toast.error('Select an output catalog item for the prepared reagent.');
       return;
     }
     if (
-      !isMethodActivity &&
+      keepVolumes &&
       components.some((row) => row.quantityValue !== null && !Number.isFinite(row.quantityValue))
     ) {
       toast.error('Component quantities must be numbers (or blank).');
+      return;
+    }
+    if (isPcrActivity && !components.length) {
+      toast.error('Add the master mix component with default volume (e.g. 10 µL).');
       return;
     }
 
@@ -366,11 +397,13 @@ export function InventoryLabRecipesPage() {
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        DNA Extraction, PCR, and Loading use <span className="text-foreground">methods</span>{' '}
-        (component list + optional catalog links; staff pick how many Nx on the Inside lab QR).
-        Gel preparation uses the <span className="text-foreground">agarose % + volume chart</span>.
-        Reagent preparation stays as <span className="text-foreground">recipes</span> with measured
-        volumes and optional output lots.
+        DNA Extraction and Loading use <span className="text-foreground">methods</span> (component
+        list + optional catalog links; staff pick how many Nx on the Inside lab QR). PCR reaction
+        uses <span className="text-foreground">master mixes</span> (pick mix + number of reactions;
+        deduction = Nx × volume). Gel preparation uses the{' '}
+        <span className="text-foreground">agarose % + volume chart</span>. Reagent preparation stays
+        as <span className="text-foreground">recipes</span> with measured volumes and optional
+        output lots.
       </p>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-[16rem_1fr]">
@@ -397,9 +430,11 @@ export function InventoryLabRecipesPage() {
                   {activity.usageMode === 'gel'
                     ? 'chart'
                     : `${activity.recipeCount} ${
-                        activity.usageMode === 'method'
-                          ? `method${activity.recipeCount === 1 ? '' : 's'}`
-                          : `recipe${activity.recipeCount === 1 ? '' : 's'}`
+                        activity.usageMode === 'pcr'
+                          ? `master mix${activity.recipeCount === 1 ? '' : 'es'}`
+                          : activity.usageMode === 'method'
+                            ? `method${activity.recipeCount === 1 ? '' : 's'}`
+                            : `recipe${activity.recipeCount === 1 ? '' : 's'}`
                       }`}
                   {activity.status !== 'active' ? ' · inactive' : ''}
                 </span>
@@ -527,7 +562,7 @@ export function InventoryLabRecipesPage() {
                   : [
                       {
                         id: 'volume',
-                        header: 'Final volume',
+                        header: isPcrActivity ? 'Default volume' : 'Final volume',
                         cell: (row: InventoryLabRecipe) =>
                           row.finalVolumeValue != null
                             ? `${row.finalVolumeValue} ${row.finalVolumeUnit}`.trim()
@@ -536,7 +571,7 @@ export function InventoryLabRecipesPage() {
                     ]),
                 {
                   id: 'components',
-                  header: 'Components',
+                  header: isPcrActivity ? 'Stock lines' : 'Components',
                   cell: (row) => String(row.components.length),
                 },
                 { id: 'status', header: 'Status', cell: (row) => row.status },
@@ -567,11 +602,19 @@ export function InventoryLabRecipesPage() {
               ]}
               rows={recipes}
               loading={loadingRecipes}
-              emptyTitle={isMethodActivity ? 'No methods yet' : 'No recipes yet'}
+              emptyTitle={
+                isPcrActivity
+                  ? 'No master mixes yet'
+                  : isMethodActivity
+                    ? 'No methods yet'
+                    : 'No recipes yet'
+              }
               emptyDescription={
-                isMethodActivity
-                  ? 'Add a method with its component list (e.g. Blood DNA Extraction).'
-                  : 'Add a recipe with composition lines (e.g. 6X Loading Dye).'
+                isPcrActivity
+                  ? 'Add a master mix with default volume per reaction (e.g. Leo 2x Mastermix · 10 µL).'
+                  : isMethodActivity
+                    ? 'Add a method with its component list (e.g. Blood DNA Extraction).'
+                    : 'Add a recipe with composition lines (e.g. 6X Loading Dye).'
               }
             />
           )}
@@ -582,8 +625,8 @@ export function InventoryLabRecipesPage() {
         <DialogContent>
           <DialogTitle>Add work type</DialogTitle>
           <DialogDescription>
-            Appears on the Inside lab scan form. Use Method for DNA/PCR/Loading-style work, Gel chart
-            for agarose % + volume, or Recipe for reagent preparation.
+            Appears on the Inside lab scan form. Use Method for DNA/Loading, PCR master mix for PCR
+            reactions, Gel chart for agarose % + volume, or Recipe for reagent preparation.
           </DialogDescription>
           <form className="mt-4 space-y-4" onSubmit={onCreateActivity}>
             <div>
@@ -607,6 +650,7 @@ export function InventoryLabRecipesPage() {
                 defaultValue="method"
               >
                 <option value="method">Method (component list + how many Nx)</option>
+                <option value="pcr">PCR master mix (mix + reactions Nx)</option>
                 <option value="gel">Gel chart (agarose % + volume)</option>
                 <option value="recipe">Recipe (reagent prep / measured volumes)</option>
               </select>
@@ -624,27 +668,37 @@ export function InventoryLabRecipesPage() {
             {editingRecipe ? `Edit ${itemNoun}` : `Add ${itemNoun}`}
           </DialogTitle>
           <DialogDescription>
-            {isMethodActivity
-              ? `List the components used in this ${selectedActivity?.name ?? 'work type'} method. On the Inside lab QR, staff choose the method and how many (Nx).`
-              : `Predefined composition for ${selectedActivity?.name ?? 'this work type'}. Employees can adjust quantities when they submit from the Inside lab QR.`}
+            {isPcrActivity
+              ? 'Name the master mix and set default volume per 1X reaction (usually 10 µL). On the Inside lab QR, staff choose the mix and number of reactions; deduction = Nx × volume.'
+              : isMethodActivity
+                ? `List the components used in this ${selectedActivity?.name ?? 'work type'} method. On the Inside lab QR, staff choose the method and how many (Nx).`
+                : `Predefined composition for ${selectedActivity?.name ?? 'this work type'}. Employees can adjust quantities when they submit from the Inside lab QR.`}
           </DialogDescription>
           <form className="mt-4 space-y-4" onSubmit={onSaveRecipe}>
             <div>
-              <Label htmlFor="recipe-name">{isMethodActivity ? 'Method name' : 'Recipe name'}</Label>
+              <Label htmlFor="recipe-name">
+                {isPcrActivity ? 'Master mix name' : isMethodActivity ? 'Method name' : 'Recipe name'}
+              </Label>
               <Input
                 id="recipe-name"
                 name="name"
                 required
                 defaultValue={editingRecipe?.name ?? ''}
                 placeholder={
-                  isMethodActivity ? 'e.g. Blood DNA Extraction' : 'e.g. 6X Loading Dye'
+                  isPcrActivity
+                    ? 'e.g. Leo 2x Mastermix'
+                    : isMethodActivity
+                      ? 'e.g. Blood DNA Extraction'
+                      : 'e.g. 6X Loading Dye'
                 }
               />
             </div>
             {!isMethodActivity ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label htmlFor="finalVolumeValue">Final volume</Label>
+                  <Label htmlFor="finalVolumeValue">
+                    {isPcrActivity ? 'Default volume / reaction' : 'Final volume'}
+                  </Label>
                   <Input
                     id="finalVolumeValue"
                     name="finalVolumeValue"
@@ -653,9 +707,11 @@ export function InventoryLabRecipesPage() {
                     defaultValue={
                       editingRecipe?.finalVolumeValue != null
                         ? String(editingRecipe.finalVolumeValue)
-                        : ''
+                        : isPcrActivity
+                          ? '10'
+                          : ''
                     }
-                    placeholder="3"
+                    placeholder={isPcrActivity ? '10' : '3'}
                   />
                 </div>
                 <div>
@@ -663,8 +719,10 @@ export function InventoryLabRecipesPage() {
                   <Input
                     id="finalVolumeUnit"
                     name="finalVolumeUnit"
-                    defaultValue={editingRecipe?.finalVolumeUnit ?? ''}
-                    placeholder="mL"
+                    defaultValue={
+                      editingRecipe?.finalVolumeUnit || (isPcrActivity ? 'µL' : '')
+                    }
+                    placeholder={isPcrActivity ? 'µL' : 'mL'}
                   />
                 </div>
               </div>
@@ -675,7 +733,13 @@ export function InventoryLabRecipesPage() {
                 id="recipe-notes"
                 name="notes"
                 defaultValue={editingRecipe?.notes ?? ''}
-                placeholder={isMethodActivity ? 'Optional method notes' : 'Optional prep notes'}
+                placeholder={
+                  isPcrActivity
+                    ? 'Optional master mix notes'
+                    : isMethodActivity
+                      ? 'Optional method notes'
+                      : 'Optional prep notes'
+                }
               />
             </div>
             {editingRecipe ? (
@@ -693,7 +757,12 @@ export function InventoryLabRecipesPage() {
               </div>
             ) : null}
 
-            {!isMethodActivity ? (
+            {isPcrActivity ? (
+              <p className="text-xs text-muted">
+                Link a catalog item on the component below so Inside lab can deduct stock. Volume on
+                submit defaults to (default volume × reactions) and stays editable.
+              </p>
+            ) : !isMethodActivity ? (
               <>
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -749,14 +818,16 @@ export function InventoryLabRecipesPage() {
 
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <Meta>Composition</Meta>
-                <button
-                  type="button"
-                  className="text-sm underline-offset-2 hover:underline"
-                  onClick={() => setDraftComponents((current) => [...current, emptyComponent()])}
-                >
-                  Add component
-                </button>
+                <Meta>{isPcrActivity ? 'Stock line' : 'Composition'}</Meta>
+                {!isPcrActivity ? (
+                  <button
+                    type="button"
+                    className="text-sm underline-offset-2 hover:underline"
+                    onClick={() => setDraftComponents((current) => [...current, emptyComponent()])}
+                  >
+                    Add component
+                  </button>
+                ) : null}
               </div>
               {draftComponents.map((component, index) => (
                 <div key={component.key} className="space-y-2 rounded border border-border p-3">
@@ -786,11 +857,13 @@ export function InventoryLabRecipesPage() {
                       )
                     }
                     placeholder={
-                      isMethodActivity
-                        ? 'e.g. Proteinase K'
-                        : 'e.g. Bromophenol Blue powder'
+                      isPcrActivity
+                        ? 'e.g. Leo 2x Mastermix (or leave blank to use name above)'
+                        : isMethodActivity
+                          ? 'e.g. Proteinase K'
+                          : 'e.g. Bromophenol Blue powder'
                     }
-                    required={index === 0}
+                    required={index === 0 && !isPcrActivity}
                   />
                   {!isMethodActivity ? (
                     <div className="grid gap-2 sm:grid-cols-2">
@@ -805,7 +878,7 @@ export function InventoryLabRecipesPage() {
                             ),
                           )
                         }
-                        placeholder="Qty (blank = as required)"
+                        placeholder={isPcrActivity ? '10' : 'Qty (blank = as required)'}
                         type="number"
                         step="any"
                       />
@@ -820,7 +893,7 @@ export function InventoryLabRecipesPage() {
                             ),
                           )
                         }
-                        placeholder="Unit (mg, µL, mL…)"
+                        placeholder={isPcrActivity ? 'µL' : 'Unit (mg, µL, mL…)'}
                       />
                     </div>
                   ) : null}
@@ -834,9 +907,11 @@ export function InventoryLabRecipesPage() {
                       )
                     }
                     placeholder={
-                      isMethodActivity
-                        ? 'Optional notes for this component'
-                        : 'Notes (make up to… / adjust pH…)'
+                      isPcrActivity
+                        ? 'Per 1X reaction'
+                        : isMethodActivity
+                          ? 'Optional notes for this component'
+                          : 'Notes (make up to… / adjust pH…)'
                     }
                   />
                   <InventoryCatalogLinkPicker

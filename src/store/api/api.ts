@@ -3842,7 +3842,7 @@ export const api = createApi({
         name: string;
         description?: string;
         sortOrder?: number;
-        usageMode?: 'method' | 'recipe' | 'gel';
+        usageMode?: 'method' | 'pcr' | 'recipe' | 'gel';
       }
     >({
       query: (body) => ({ url: '/api/v1/inventory/lab/activities', method: 'POST', body }),
@@ -3857,7 +3857,7 @@ export const api = createApi({
           description?: string;
           sortOrder?: number;
           status?: 'active' | 'inactive';
-          usageMode?: 'method' | 'recipe' | 'gel';
+          usageMode?: 'method' | 'pcr' | 'recipe' | 'gel';
         };
       }
     >({

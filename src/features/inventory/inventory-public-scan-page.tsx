@@ -926,7 +926,9 @@ function LabScanCard({
 
   const selectedActivity = card.activities.find((row) => row.id === activityId);
   const isMethod = selectedActivity?.usageMode === 'method';
+  const isPcr = selectedActivity?.usageMode === 'pcr';
   const isGel = selectedActivity?.usageMode === 'gel';
+  const isNx = isMethod || isPcr;
 
   const { data: recipesData, isFetching: loadingRecipes } = useGetInventoryPublicLabRecipesQuery(
     activityId,
@@ -968,7 +970,7 @@ function LabScanCard({
     setOutputQty(
       selectedRecipe.finalVolumeValue != null ? String(selectedRecipe.finalVolumeValue) : '',
     );
-    const scale = isMethod && multiplierOk ? multiplier : 1;
+    const scale = isNx && multiplierOk ? multiplier : 1;
     setComponents(
       selectedRecipe.components.map((component) => {
         const base =
@@ -989,7 +991,7 @@ function LabScanCard({
         };
       }),
     );
-  }, [selectedRecipe, isMethod, isGel, howMany, multiplier, multiplierOk]);
+  }, [selectedRecipe, isNx, isGel, howMany, multiplier, multiplierOk]);
 
   useEffect(() => {
     if (!isGel || !gelChart || !gelSelectionOk) {
@@ -1029,11 +1031,17 @@ function LabScanCard({
         return;
       }
     } else if (!recipeId) {
-      setError(isMethod ? 'Select a method.' : 'Select a recipe / type.');
+      setError(
+        isPcr ? 'Select a master mix.' : isMethod ? 'Select a method.' : 'Select a recipe / type.',
+      );
       return;
     }
-    if (isMethod && !multiplierOk) {
-      setError('How many must be a positive number (default 1).');
+    if (isNx && !multiplierOk) {
+      setError(
+        isPcr
+          ? 'Number of reactions must be a positive number (default 1).'
+          : 'How many must be a positive number (default 1).',
+      );
       return;
     }
     const lines = components
@@ -1063,8 +1071,8 @@ function LabScanCard({
           employeeId,
           activityId,
           recipeId: isGel ? null : recipeId,
-          outputQty: !isMethod && !isGel && outputQty.trim() ? Number(outputQty) : null,
-          quantityMultiplier: isMethod ? multiplier : 1,
+          outputQty: !isNx && !isGel && outputQty.trim() ? Number(outputQty) : null,
+          quantityMultiplier: isNx ? multiplier : 1,
           gelPercent: isGel ? selectedGelPercent : null,
           gelVolumeMl: isGel ? selectedGelVolume : null,
           components: lines,
@@ -1073,7 +1081,7 @@ function LabScanCard({
       const deducted = result.data.components.filter((line) => line.qtyDeducted != null).length;
       setSuccess(
         `Recorded ${result.data.activityName} · ${result.data.recipeName}${
-          isMethod ? ` · ${multiplier}X` : ''
+          isNx ? ` · ${multiplier}X` : ''
         } for ${result.data.employeeName} (${result.data.employeeCode}).${
           result.data.outputLotCode ? ` New lot ${result.data.outputLotCode}.` : ''
         }${deducted ? ` Deducted ${deducted} linked component(s).` : ''}`,
@@ -1181,7 +1189,9 @@ function LabScanCard({
 
           {activityId && !isGel ? (
             <div>
-              <Label htmlFor="lab-recipe">{isMethod ? 'Method' : 'Recipe / type'}</Label>
+              <Label htmlFor="lab-recipe">
+                {isPcr ? 'Master mix' : isMethod ? 'Method' : 'Recipe / type'}
+              </Label>
               <select
                 id="lab-recipe"
                 className={SELECT_CLASS}
@@ -1190,12 +1200,18 @@ function LabScanCard({
                 disabled={loadingRecipes}
               >
                 <option value="">
-                  {loadingRecipes ? 'Loading…' : isMethod ? 'Select method' : 'Select recipe'}
+                  {loadingRecipes
+                    ? 'Loading…'
+                    : isPcr
+                      ? 'Select master mix'
+                      : isMethod
+                        ? 'Select method'
+                        : 'Select recipe'}
                 </option>
                 {recipes.map((recipe) => (
                   <option key={recipe.id} value={recipe.id}>
                     {recipe.name}
-                    {!isMethod && recipe.finalVolumeValue != null
+                    {(isPcr || !isMethod) && recipe.finalVolumeValue != null
                       ? ` (${recipe.finalVolumeValue} ${recipe.finalVolumeUnit})`
                       : ''}
                   </option>
@@ -1246,9 +1262,11 @@ function LabScanCard({
                 </div>
               ) : null}
 
-              {isMethod ? (
+              {isNx ? (
                 <div>
-                  <Label htmlFor="lab-how-many">How many (Nx)</Label>
+                  <Label htmlFor="lab-how-many">
+                    {isPcr ? 'Number of reactions (Nx)' : 'How many (Nx)'}
+                  </Label>
                   <Input
                     id="lab-how-many"
                     type="number"
@@ -1259,12 +1277,14 @@ function LabScanCard({
                     placeholder="1"
                   />
                   <p className="mt-1 text-xs text-muted">
-                    Default 1. Enter 2 if you ran this method twice (logged as 2X).
+                    {isPcr
+                      ? 'Default 1. Volume deducted = reactions × volume per reaction (editable below).'
+                      : 'Default 1. Enter 2 if you ran this method twice (logged as 2X).'}
                   </p>
                 </div>
               ) : null}
 
-              {!isMethod && selectedRecipe.createsOutputLot ? (
+              {!isNx && selectedRecipe.createsOutputLot ? (
                 <div>
                   <Label htmlFor="lab-output-qty">
                     Output qty ({selectedRecipe.finalVolumeUnit || selectedRecipe.outputCatalogItemName || 'units'})
@@ -1287,20 +1307,24 @@ function LabScanCard({
               <Label>
                 {isGel
                   ? 'Components (from chart)'
-                  : isMethod
-                    ? 'Components (from method)'
-                    : 'Components (editable)'}
+                  : isPcr
+                    ? 'Master mix volume'
+                    : isMethod
+                      ? 'Components (from method)'
+                      : 'Components (editable)'}
               </Label>
-              {isMethod || isGel ? (
+              {isNx || isGel ? (
                 <p className="text-xs text-muted">
                   {isGel
                     ? 'Amounts come from the agarose chart. Edit a value when this run differs.'
-                    : 'Volumes default from the method × How many (Nx). Edit a volume when this run differs.'}
+                    : isPcr
+                      ? 'Volume defaults to (default µL × number of reactions). Edit when this run differs.'
+                      : 'Volumes default from the method × How many (Nx). Edit a volume when this run differs.'}
                 </p>
               ) : null}
               {components.map((component, index) => (
                 <div key={component.key} className="space-y-2 rounded border border-border p-3">
-                  {isMethod || isGel ? (
+                  {isNx || isGel ? (
                     <>
                       <div className="flex items-center gap-2">
                         <Input
@@ -1394,9 +1418,11 @@ function LabScanCard({
           <p className="text-xs text-muted">
             {isGel
               ? 'Agarose, TAE Buffer, and EtBr are calculated from % and volume. Linked components deduct stock from Inside lab.'
-              : isMethod
-                ? 'How many (Nx) and edited volumes are recorded with this method run. Linked components deduct stock from Inside lab.'
-                : 'Linked components deduct stock from Inside lab. Reagent recipes can also create a new lot.'}
+              : isPcr
+                ? 'Number of reactions × master mix volume is recorded. Linked master mixes deduct stock from Inside lab.'
+                : isMethod
+                  ? 'How many (Nx) and edited volumes are recorded with this method run. Linked components deduct stock from Inside lab.'
+                  : 'Linked components deduct stock from Inside lab. Reagent recipes can also create a new lot.'}
           </p>
           <p className="text-xs text-muted">
             <Link href="/scan" className="underline-offset-2 hover:underline">
