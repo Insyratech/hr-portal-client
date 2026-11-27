@@ -426,7 +426,7 @@ export function InventoryLabRecipesPage() {
 
           {isGelActivity ? (
             <div className="space-y-6">
-              <DelayedLoadingOverlay show={loadingGel} />
+              <DelayedLoadingOverlay active={loadingGel} />
               <div className="rounded border border-border p-4">
                 <Meta>Agarose gel chart</Meta>
                 <p className="mt-2 text-sm text-muted">
