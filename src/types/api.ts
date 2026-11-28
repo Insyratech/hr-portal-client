@@ -3896,7 +3896,22 @@ export type InventoryLabManualUsageResult = InventoryLabUsageResult & {
   recipeId: string;
 };
 
-export type InventoryCentralQrKind = 'stock_room' | 'stationery' | 'inside_lab';
+/** SOP testing-type card for PCR (mixture template; MM stock is separate). */
+export type InventoryPcrTestingComponentTemplate = {
+  name: string;
+  quantityValue: number;
+  quantityUnit: string;
+};
+
+export type InventoryPcrTestingType = {
+  id: string;
+  name: string;
+  totalVolumeValue: number;
+  totalVolumeUnit: string;
+  components: InventoryPcrTestingComponentTemplate[];
+};
+
+export type InventoryCentralQrKind = 'stock_room' | 'stationery' | 'inside_lab' | 'storage_guide';
 
 export type InventoryCentralQr = {
   id: string;
@@ -4177,11 +4192,40 @@ export type InventoryPublicCentralLabCard = {
   employees: InventoryEmployeeOption[];
 };
 
+/** Put-away helper QR: search catalog → shelf locations with remaining qty. */
+export type InventoryPublicStorageGuideCard = {
+  kind: 'storage_guide';
+  centralKind: 'storage_guide';
+  name: string;
+  message: string;
+};
+
+export type InventoryStorageGuideLocationRow = {
+  locationId: string;
+  locationCode: string;
+  locationName: string;
+  locationType: string;
+  usageAreaName: string;
+  remainingQty: number;
+  unit: string;
+  stockKind: 'measured' | 'box';
+  containerCount: number;
+};
+
+export type InventoryStorageGuideLookup = {
+  catalogItemId: string;
+  catalogItemName: string;
+  catalogNumber: string;
+  categoryName: string;
+  locations: InventoryStorageGuideLocationRow[];
+};
+
 export type InventoryPublicScanPayload =
   | InventoryPublicLotScanCard
   | InventoryPublicStationCard
   | InventoryPublicCentralCard
-  | InventoryPublicCentralLabCard;
+  | InventoryPublicCentralLabCard
+  | InventoryPublicStorageGuideCard;
 
 export type InventoryPublicPlasticIssueResult = {
   stockCode: string;

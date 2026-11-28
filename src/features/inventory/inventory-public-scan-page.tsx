@@ -12,6 +12,7 @@ import {
   MANUAL_PROTOCOL_UNITS,
   MANUAL_WORK_TYPE_VALUE,
   SELECT_CLASS,
+  humanizeLocationType,
   type ManualProtocolUnit,
 } from '@/features/inventory/inventory-constants';
 import { computeGelComponents, formatGelPercentLabel } from '@/features/inventory/gel-chart';
@@ -20,7 +21,10 @@ import {
   useGetInventoryPublicLabCatalogQuery,
   useGetInventoryPublicLabGelChartQuery,
   useGetInventoryPublicLabRecipesQuery,
+  useGetInventoryPublicPcrTestingTypesQuery,
   useGetInventoryPublicScanQuery,
+  useGetInventoryStorageGuideCatalogQuery,
+  useGetInventoryStorageGuideLocationsQuery,
   useIssueInventoryPublicPlasticBatchMutation,
   useIssueInventoryPublicScanMutation,
   useLazyGetInventoryPublicRecipeSopQuery,
@@ -35,6 +39,7 @@ import type {
   InventoryPublicLotScanCard,
   InventoryPublicStationCard,
   InventoryPublicStationItem,
+  InventoryPublicStorageGuideCard,
 } from '@/types/api';
 
 function useOnlineStatus(): boolean {
@@ -138,6 +143,10 @@ export function InventoryPublicScanPage() {
     );
   }
 
+  if (payload.kind === 'storage_guide') {
+    return <StorageGuideScanCard token={token} card={payload} online={online} />;
+  }
+
   if (payload.kind === 'central') {
     return (
       <CentralScanCard token={token} card={payload} online={online} onDone={() => void refetch()} />
@@ -151,6 +160,135 @@ export function InventoryPublicScanPage() {
   }
 
   return <LotScanCard token={token} card={payload} online={online} onDone={() => void refetch()} />;
+}
+
+function StorageGuideScanCard({
+  token,
+  card,
+  online,
+}: {
+  token: string;
+  card: InventoryPublicStorageGuideCard;
+  online: boolean;
+}) {
+  const [catalogItemId, setCatalogItemId] = useState('');
+  const {
+    data: catalogData,
+    isLoading: loadingCatalog,
+    isError: catalogError,
+    error: catalogErrorCause,
+    refetch: refetchCatalog,
+  } = useGetInventoryStorageGuideCatalogQuery(token, { skip: !token });
+  const {
+    data: lookupData,
+    isFetching: loadingLocations,
+    isError: locationsError,
+    error: locationsErrorCause,
+  } = useGetInventoryStorageGuideLocationsQuery(
+    { token, catalogItemId },
+    { skip: !token || !catalogItemId },
+  );
+
+  const catalogItems = catalogData?.data ?? [];
+  const lookup = lookupData?.data;
+  const locations = lookup?.locations ?? [];
+
+  return (
+    <main className="mx-auto min-h-screen max-w-md bg-background px-4 py-8">
+      <OfflineBanner online={online} />
+      <p className="text-xs uppercase tracking-[0.2em] text-meta">Lab inventory</p>
+      <h1 className="mt-2 text-xl font-medium">{card.name}</h1>
+      <p className="mt-1 text-sm text-muted">{card.message}</p>
+
+      <div className="mt-8 space-y-5">
+        {loadingCatalog ? (
+          <p className="text-sm text-muted">Loading catalog…</p>
+        ) : catalogError ? (
+          <div className="space-y-2">
+            <StatusMessage tone="danger">
+              {apiErrorMessage(catalogErrorCause, 'Unable to load catalog.')}
+            </StatusMessage>
+            <button
+              type="button"
+              className="text-sm underline-offset-2 hover:underline"
+              onClick={() => void refetchCatalog()}
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <InventoryCatalogItemPicker
+            id="storage-guide-catalog"
+            label="1. Material (name or catalogue no.)"
+            value={catalogItemId}
+            onChange={setCatalogItemId}
+            catalogItems={catalogItems}
+            emptyLabel="Search and select material"
+          />
+        )}
+
+        {catalogItemId ? (
+          <div>
+            <p className="text-sm font-medium">2. Locations with remaining stock</p>
+            {loadingLocations ? (
+              <p className="mt-2 text-sm text-muted">Looking up shelves…</p>
+            ) : locationsError ? (
+              <div className="mt-2">
+                <StatusMessage tone="danger">
+                  {apiErrorMessage(locationsErrorCause, 'Unable to load locations.')}
+                </StatusMessage>
+              </div>
+            ) : locations.length === 0 ? (
+              <p className="mt-2 text-sm text-muted">
+                No active stock found for this material at any shelf yet.
+              </p>
+            ) : (
+              <ul className="mt-3 divide-y divide-border border-y border-border">
+                {locations.map((row) => (
+                  <li
+                    key={`${row.locationId}-${row.stockKind}-${row.unit}`}
+                    className="py-3 text-sm"
+                  >
+                    <p className="font-medium">{row.locationName}</p>
+                    <p className="mt-0.5 text-muted">
+                      {row.locationCode}
+                      {row.locationType
+                        ? ` · ${humanizeLocationType(row.locationType)}`
+                        : ''}
+                      {row.usageAreaName ? ` · ${row.usageAreaName}` : ''}
+                    </p>
+                    <p className="mt-1 tabular-nums">
+                      {row.remainingQty} {row.unit}
+                      <span className="text-muted">
+                        {' '}
+                        remaining
+                        {row.containerCount > 1
+                          ? ` · ${row.containerCount} ${row.stockKind === 'box' ? 'box lines' : 'lots'}`
+                          : ''}
+                      </span>
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {lookup && !loadingLocations && !locationsError ? (
+              <p className="mt-3 text-xs text-muted">
+                {lookup.catalogItemName}
+                {lookup.catalogNumber ? ` (${lookup.catalogNumber})` : ''}
+                {lookup.categoryName ? ` · ${lookup.categoryName}` : ''}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      <p className="mt-8 text-sm">
+        <Link href="/scan" className="underline-offset-2 hover:underline">
+          Scan another label
+        </Link>
+      </p>
+    </main>
+  );
 }
 
 function LotScanCard({
@@ -942,6 +1080,10 @@ function asManualUnit(value: string | null | undefined): ManualProtocolUnit {
   return 'ul';
 }
 
+function isPcrMasterMixComponentName(name: string): boolean {
+  return /master\s*mix/i.test(name.trim());
+}
+
 function LabScanCard({
   token,
   card,
@@ -967,6 +1109,8 @@ function LabScanCard({
   const [manualComponents, setManualComponents] = useState([emptyManualComponent()]);
   const [masterMixVolume, setMasterMixVolume] = useState('10');
   const [masterMixUnit, setMasterMixUnit] = useState<ManualProtocolUnit>('ul');
+  const [pcrTestingEnabled, setPcrTestingEnabled] = useState(false);
+  const [pcrTestingTypeId, setPcrTestingTypeId] = useState('');
   const [mixtureComponents, setMixtureComponents] = useState<
     Array<{ key: string; name: string; quantityValue: string; quantityUnit: ManualProtocolUnit }>
   >([]);
@@ -1003,7 +1147,13 @@ function LabScanCard({
     token,
     { skip: !token || !isManual },
   );
+  const { data: pcrTestsData, isFetching: loadingPcrTests } = useGetInventoryPublicPcrTestingTypesQuery(
+    activityId,
+    { skip: !activityId || !isPcr || !pcrTestingEnabled },
+  );
   const labCatalogItems = labCatalogData?.data ?? [];
+  const pcrTestingTypes = pcrTestsData?.data ?? [];
+  const selectedPcrTestingType = pcrTestingTypes.find((row) => row.id === pcrTestingTypeId) ?? null;
   const gelChart = gelChartData?.data;
   const selectedRecipe = recipes.find((recipe) => recipe.id === recipeId);
   const multiplier = Number(howMany);
@@ -1027,11 +1177,13 @@ function LabScanCard({
     setManualComponents([emptyManualComponent()]);
     setMasterMixVolume('10');
     setMasterMixUnit('ul');
+    setPcrTestingEnabled(false);
+    setPcrTestingTypeId('');
     setMixtureComponents([]);
   }, [activityId]);
 
   useEffect(() => {
-    if (!isPcr || !selectedRecipe) return;
+    if (!isPcr || !selectedRecipe || pcrTestingEnabled) return;
     const defaultVol =
       selectedRecipe.finalVolumeValue != null
         ? selectedRecipe.finalVolumeValue
@@ -1044,7 +1196,30 @@ function LabScanCard({
         selectedRecipe.finalVolumeUnit || selectedRecipe.components[0]?.quantityUnit || 'ul',
       ),
     );
-  }, [isPcr, selectedRecipe]);
+  }, [isPcr, selectedRecipe, pcrTestingEnabled]);
+
+  useEffect(() => {
+    if (!isPcr || !pcrTestingEnabled) return;
+    if (!pcrTestingTypeId) {
+      setMixtureComponents([]);
+      return;
+    }
+    const testingType = (pcrTestsData?.data ?? []).find((row) => row.id === pcrTestingTypeId);
+    if (!testingType) return;
+    setMixtureComponents(
+      testingType.components.map((component, index) => ({
+        key: `${testingType.id}-${index}`,
+        name: component.name,
+        quantityValue: String(component.quantityValue),
+        quantityUnit: asManualUnit(component.quantityUnit),
+      })),
+    );
+    const mmRow = testingType.components.find((row) => isPcrMasterMixComponentName(row.name));
+    if (mmRow) {
+      setMasterMixVolume(String(mmRow.quantityValue));
+      setMasterMixUnit(asManualUnit(mmRow.quantityUnit));
+    }
+  }, [isPcr, pcrTestingEnabled, pcrTestingTypeId, pcrTestsData?.data]);
 
   useEffect(() => {
     if (isManual || isGel || isPcr) return;
@@ -1185,6 +1360,10 @@ function LabScanCard({
       return;
     }
     if (isPcr) {
+      if (pcrTestingEnabled && !pcrTestingTypeId) {
+        setError('Select a testing type.');
+        return;
+      }
       if (!recipeId) {
         setError('Select a master mix.');
         return;
@@ -1217,6 +1396,10 @@ function LabScanCard({
         }
         mixture.push({ name, quantityValue: qty, quantityUnit: row.quantityUnit });
       }
+      if (pcrTestingEnabled && mixture.length === 0) {
+        setError('Add at least one mixture component for this testing type.');
+        return;
+      }
       try {
         const result = await submitUsage({
           token,
@@ -1227,12 +1410,14 @@ function LabScanCard({
             quantityMultiplier: multiplier,
             masterMixVolumePerReaction: mmVol,
             masterMixUnit,
+            pcrTestingTypeId: pcrTestingEnabled ? pcrTestingTypeId : null,
             mixtureComponents: mixture,
           },
         }).unwrap();
         const deducted = result.data.components.filter((line) => line.qtyDeducted != null).length;
+        const testingLabel = selectedPcrTestingType ? ` · ${selectedPcrTestingType.name}` : '';
         setSuccess(
-          `Recorded ${result.data.activityName} · ${result.data.recipeName} · ${multiplier}X for ${result.data.employeeName} (${result.data.employeeCode}).${
+          `Recorded ${result.data.activityName}${testingLabel} · ${result.data.recipeName} · ${multiplier}X for ${result.data.employeeName} (${result.data.employeeCode}).${
             deducted ? ` Deducted master mix stock.` : ' Master mix has no catalog link yet — ask Inventory Manager to link it.'
           }`,
         );
@@ -1241,6 +1426,8 @@ function LabScanCard({
         setHowMany('1');
         setMasterMixVolume('10');
         setMasterMixUnit('ul');
+        setPcrTestingEnabled(false);
+        setPcrTestingTypeId('');
         setMixtureComponents([]);
         onDone();
       } catch (cause) {
@@ -1490,9 +1677,51 @@ function LabScanCard({
             <div className="space-y-4 rounded border border-border p-3">
               <p className="text-sm font-medium">Work type : PCR reaction</p>
               <p className="text-xs text-muted">
-                Flexible mixture per run. Only the master mix deducts from Inside lab lots (Nx ×
-                volume).
+                Only the selected master mix deducts from Inside lab lots (Nx × volume). Mixture
+                rows are logged only.
               </p>
+
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={pcrTestingEnabled}
+                  onChange={(event) => {
+                    const enabled = event.target.checked;
+                    setPcrTestingEnabled(enabled);
+                    if (!enabled) {
+                      setPcrTestingTypeId('');
+                      setMixtureComponents([]);
+                    }
+                  }}
+                />
+                Testing
+              </label>
+
+              {pcrTestingEnabled ? (
+                <div>
+                  <Label htmlFor="lab-pcr-testing-type">Testing type</Label>
+                  <select
+                    id="lab-pcr-testing-type"
+                    className={SELECT_CLASS}
+                    value={pcrTestingTypeId}
+                    onChange={(event) => setPcrTestingTypeId(event.target.value)}
+                    disabled={loadingPcrTests}
+                  >
+                    <option value="">
+                      {loadingPcrTests ? 'Loading…' : 'Select testing type'}
+                    </option>
+                    {pcrTestingTypes.map((row) => (
+                      <option key={row.id} value={row.id}>
+                        {row.name}
+                        {row.totalVolumeValue != null
+                          ? ` (Total vol: ${row.totalVolumeValue} ${row.totalVolumeUnit || 'ul'})`
+                          : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+
               <div>
                 <Label htmlFor="lab-pcr-reactions">Number of reactions (Nx)</Label>
                 <Input
@@ -1560,7 +1789,11 @@ function LabScanCard({
               </div>
               <div className="space-y-3">
                 <p className="text-xs text-muted">
-                  Mixture components (primer / NFW / template…). Logged only — no stock deduct.
+                  {pcrTestingEnabled
+                    ? selectedPcrTestingType
+                      ? `Standard reaction mixture for ${selectedPcrTestingType.name} (per tube). Edit, add, or remove rows. Logged only — no stock deduct.`
+                      : 'Select a testing type to load the standard mixture components.'
+                    : 'Optional mixture components (primer / NFW / template…). Logged only — no stock deduct.'}
                 </p>
                 {mixtureComponents.map((row, index) => (
                   <div key={row.key} className="space-y-2 rounded border border-border p-3">
@@ -1580,14 +1813,15 @@ function LabScanCard({
                     </div>
                     <Input
                       value={row.name}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        const nextName = event.target.value;
                         setMixtureComponents((current) =>
                           current.map((item) =>
-                            item.key === row.key ? { ...item, name: event.target.value } : item,
+                            item.key === row.key ? { ...item, name: nextName } : item,
                           ),
-                        )
-                      }
-                      placeholder="e.g. Forward primer / NFW / Template"
+                        );
+                      }}
+                      placeholder="Name (e.g. W.P.M / NFW / Template)"
                     />
                     <div className="grid grid-cols-[1fr_5.5rem] gap-2">
                       <Input
@@ -1595,32 +1829,37 @@ function LabScanCard({
                         min={0}
                         step="any"
                         value={row.quantityValue}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          const nextVol = event.target.value;
                           setMixtureComponents((current) =>
                             current.map((item) =>
                               item.key === row.key
-                                ? { ...item, quantityValue: event.target.value }
+                                ? { ...item, quantityValue: nextVol }
                                 : item,
                             ),
-                          )
-                        }
+                          );
+                          if (isPcrMasterMixComponentName(row.name)) {
+                            setMasterMixVolume(nextVol);
+                          }
+                        }}
                         placeholder="Vol / reaction"
                       />
                       <select
                         className={SELECT_CLASS}
                         value={row.quantityUnit}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          const nextUnit = event.target.value as ManualProtocolUnit;
                           setMixtureComponents((current) =>
                             current.map((item) =>
                               item.key === row.key
-                                ? {
-                                    ...item,
-                                    quantityUnit: event.target.value as ManualProtocolUnit,
-                                  }
+                                ? { ...item, quantityUnit: nextUnit }
                                 : item,
                             ),
-                          )
-                        }
+                          );
+                          if (isPcrMasterMixComponentName(row.name)) {
+                            setMasterMixUnit(nextUnit);
+                          }
+                        }}
                       >
                         {MANUAL_PROTOCOL_UNITS.map((unit) => (
                           <option key={unit} value={unit}>
@@ -1895,7 +2134,7 @@ function LabScanCard({
               (isManual
                 ? !protocolName.trim() || !manualComponents.length
                 : isPcr
-                  ? !recipeId || !multiplierOk
+                  ? !recipeId || !multiplierOk || (pcrTestingEnabled && !pcrTestingTypeId)
                   : isGel
                     ? !gelSelectionOk
                     : !recipeId)
@@ -1914,7 +2153,7 @@ function LabScanCard({
             {isManual
               ? 'Saves this protocol as a new work type and records this run (1X). Linked catalog items deduct from Inside lab stock.'
               : isPcr
-                ? 'Only the master mix deducts stock (Nx × volume). Mixture rows are logged for the run.'
+                ? 'Only the master mix deducts stock (Nx × volume). Testing-type mixture rows are logged for the run.'
                 : isGel
                   ? 'Agarose, TAE Buffer, and EtBr are calculated from % and volume. Linked components deduct stock from Inside lab.'
                   : isMethod

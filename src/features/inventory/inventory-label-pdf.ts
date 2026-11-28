@@ -112,12 +112,18 @@ async function centralDoc(payload: InventoryCentralQrPrint): Promise<jsPDF> {
       ? 'Stock room'
       : payload.central.kind === 'stationery'
         ? 'Stationery'
-        : 'Inside lab';
+        : payload.central.kind === 'storage_guide'
+          ? 'Where to store'
+          : 'Inside lab';
+  const useLine =
+    payload.central.kind === 'storage_guide'
+      ? 'Lookup — search catalog, see shelf locations'
+      : 'Usage area — pick items on scan';
   return renderLabel(
     payload.central.name,
     [
       ['Kind', kindLabel],
-      ['Use', 'Usage area — pick items on scan'],
+      ['Use', useLine],
       ['Notes', payload.central.notes || '—'],
     ],
     payload.scanUrl,

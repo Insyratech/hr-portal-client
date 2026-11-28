@@ -114,9 +114,20 @@ export function InventoryReceiveJourneyPage() {
     [locationsData?.data],
   );
   const centralQrs = useMemo(
-    () => (centralData?.data ?? []).filter((item) => item.status === 'active'),
+    () =>
+      (centralData?.data ?? []).filter(
+        (item) => item.status === 'active' && item.kind !== 'storage_guide',
+      ),
     [centralData?.data],
   );
+
+  useEffect(() => {
+    if (!draft.centralQrId || !centralData?.data) return;
+    const selected = centralData.data.find((item) => item.id === draft.centralQrId);
+    if (selected && selected.kind === 'storage_guide') {
+      setDraft((current) => ({ ...current, centralQrId: '' }));
+    }
+  }, [centralData?.data, draft.centralQrId]);
 
   const selectedCategory = categories.find((c) => c.id === draft.categoryId) ?? null;
   const isBox = selectedCategory?.deductionMode === 'box';

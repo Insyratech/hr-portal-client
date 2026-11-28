@@ -22,6 +22,7 @@ const KIND_HINT: Record<string, string> = {
   stock_room: 'Take out measured lots and plasticwares',
   stationery: 'Take out stationery / miscellaneous boxes',
   inside_lab: 'Lab work logging via recipes and work types',
+  storage_guide: 'Look up where a catalog item already has remaining stock',
 };
 
 export function InventoryCentralQrsPage() {
@@ -65,12 +66,14 @@ export function InventoryCentralQrsPage() {
       <DelayedLoadingOverlay active={printing} />
       <PageHeader kicker="Inventory" title="Usage areas" />
       <p className="mb-6 max-w-2xl text-sm text-muted">
-        Three fixed scan QRs — Stock room, Stationery, and Inside lab. Print and post these for
-        usage. On receive, attach stock to one of these areas. Shelf placement is separate under
-        Locations.
+        Fixed scan QRs — Stock room, Stationery, and Inside lab for usage, plus Where to store for
+        put-away lookup. Print and post these. On receive, attach stock only to Stock room,
+        Stationery, or Inside lab. Shelf placement is separate under Locations.
       </p>
       {isError ? (
-        <p className="mb-4 text-sm">Unable to load usage areas. Apply migration 095 if missing.</p>
+        <p className="mb-4 text-sm">
+          Unable to load usage areas. Apply migrations 095 and 103 if missing.
+        </p>
       ) : null}
 
       <DataTable<InventoryCentralQr>
@@ -100,7 +103,7 @@ export function InventoryCentralQrsPage() {
         rows={data?.data ?? []}
         loading={isLoading}
         emptyTitle="No usage areas"
-        emptyDescription="Apply migration 095 to seed Stock room, Stationery, and Inside lab."
+        emptyDescription="Apply migrations 095 and 103 to seed Stock room, Stationery, Inside lab, and Where to store."
       />
     </>
   );

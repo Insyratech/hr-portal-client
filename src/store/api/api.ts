@@ -122,6 +122,8 @@ import type {
   InventoryLabRecipe,
   InventoryLabUsageResult,
   InventoryPublicLabCatalogItem,
+  InventoryPcrTestingType,
+  InventoryStorageGuideLookup,
   InventoryLogsBundle,
   InventoryLogsExcelExport,
   InventorySopFolder,
@@ -4066,6 +4068,13 @@ export const api = createApi({
       query: (activityId) =>
         `/api/v1/inventory/public/lab/activities/${encodeURIComponent(activityId)}/gel`,
     }),
+    getInventoryPublicPcrTestingTypes: builder.query<
+      ApiSuccess<InventoryPcrTestingType[]>,
+      string
+    >({
+      query: (activityId) =>
+        `/api/v1/inventory/public/lab/activities/${encodeURIComponent(activityId)}/pcr-tests`,
+    }),
     submitInventoryPublicLabUsage: builder.mutation<
       ApiSuccess<InventoryLabUsageResult>,
       {
@@ -4081,6 +4090,7 @@ export const api = createApi({
           gelVolumeMl?: number | null;
           masterMixVolumePerReaction?: number | null;
           masterMixUnit?: string | null;
+          pcrTestingTypeId?: string | null;
           mixtureComponents?: Array<{
             name: string;
             quantityValue?: number | null;
@@ -4109,6 +4119,20 @@ export const api = createApi({
     >({
       query: (token) =>
         `/api/v1/inventory/public/scan/${encodeURIComponent(token)}/lab-catalog`,
+    }),
+    getInventoryStorageGuideCatalog: builder.query<
+      ApiSuccess<InventoryPublicLabCatalogItem[]>,
+      string
+    >({
+      query: (token) =>
+        `/api/v1/inventory/public/scan/${encodeURIComponent(token)}/storage-guide/catalog`,
+    }),
+    getInventoryStorageGuideLocations: builder.query<
+      ApiSuccess<InventoryStorageGuideLookup>,
+      { token: string; catalogItemId: string }
+    >({
+      query: ({ token, catalogItemId }) =>
+        `/api/v1/inventory/public/scan/${encodeURIComponent(token)}/storage-guide/locations?catalogItemId=${encodeURIComponent(catalogItemId)}`,
     }),
     submitInventoryPublicLabManualUsage: builder.mutation<
       ApiSuccess<InventoryLabManualUsageResult>,
@@ -4827,8 +4851,11 @@ export const {
   useLazyGetInventoryPublicRecipeSopQuery,
   useGetInventoryPublicLabRecipesQuery,
   useGetInventoryPublicLabGelChartQuery,
+  useGetInventoryPublicPcrTestingTypesQuery,
   useSubmitInventoryPublicLabUsageMutation,
   useGetInventoryPublicLabCatalogQuery,
+  useGetInventoryStorageGuideCatalogQuery,
+  useGetInventoryStorageGuideLocationsQuery,
   useSubmitInventoryPublicLabManualUsageMutation,
   useGetInventoryPlasticStockQuery,
   useGetInventoryPlasticStockItemQuery,
