@@ -118,8 +118,10 @@ import type {
   InventoryLabActivity,
   InventoryLabGelChart,
   InventoryLabGelComponentKey,
+  InventoryLabManualUsageResult,
   InventoryLabRecipe,
   InventoryLabUsageResult,
+  InventoryPublicLabCatalogItem,
   InventoryLogsBundle,
   InventoryLogsExcelExport,
   InventorySopFolder,
@@ -4077,6 +4079,13 @@ export const api = createApi({
           quantityMultiplier?: number | null;
           gelPercent?: number | null;
           gelVolumeMl?: number | null;
+          masterMixVolumePerReaction?: number | null;
+          masterMixUnit?: string | null;
+          mixtureComponents?: Array<{
+            name: string;
+            quantityValue?: number | null;
+            quantityUnit?: string;
+          }>;
           components?: Array<{
             name: string;
             quantityValue?: number | null;
@@ -4089,6 +4098,36 @@ export const api = createApi({
     >({
       query: ({ token, body }) => ({
         url: `/api/v1/inventory/public/scan/${encodeURIComponent(token)}/lab-usage`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['InventoryLots', 'InventoryOverview', 'InventoryStorage', 'InventoryLab'],
+    }),
+    getInventoryPublicLabCatalog: builder.query<
+      ApiSuccess<InventoryPublicLabCatalogItem[]>,
+      string
+    >({
+      query: (token) =>
+        `/api/v1/inventory/public/scan/${encodeURIComponent(token)}/lab-catalog`,
+    }),
+    submitInventoryPublicLabManualUsage: builder.mutation<
+      ApiSuccess<InventoryLabManualUsageResult>,
+      {
+        token: string;
+        body: {
+          employeeId: string;
+          protocolName: string;
+          notes?: string;
+          components: Array<{
+            catalogItemId: string;
+            quantityValue: number;
+            quantityUnit: 'mg' | 'g' | 'ul' | 'ml' | 'l';
+          }>;
+        };
+      }
+    >({
+      query: ({ token, body }) => ({
+        url: `/api/v1/inventory/public/scan/${encodeURIComponent(token)}/lab-manual-usage`,
         method: 'POST',
         body,
       }),
@@ -4789,6 +4828,8 @@ export const {
   useGetInventoryPublicLabRecipesQuery,
   useGetInventoryPublicLabGelChartQuery,
   useSubmitInventoryPublicLabUsageMutation,
+  useGetInventoryPublicLabCatalogQuery,
+  useSubmitInventoryPublicLabManualUsageMutation,
   useGetInventoryPlasticStockQuery,
   useGetInventoryPlasticStockItemQuery,
   useReceiveInventoryPlasticStockMutation,

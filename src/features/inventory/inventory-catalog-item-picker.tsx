@@ -7,7 +7,15 @@ import {
   SELECT_CLASS,
   formatCatalogItemLabel,
 } from '@/features/inventory/inventory-constants';
-import type { InventoryCatalogItem } from '@/types/api';
+/** Minimal catalog shape for receive + Manual protocol pickers. */
+export type InventoryCatalogPickItem = {
+  id: string;
+  name: string;
+  brandName?: string | null;
+  catalogNumber?: string | null;
+  categoryName?: string;
+  unit?: string;
+};
 
 type CatalogOption = {
   id: string;
@@ -15,7 +23,7 @@ type CatalogOption = {
   searchText: string;
 };
 
-function buildOptions(catalogItems: readonly InventoryCatalogItem[]): CatalogOption[] {
+function buildOptions(catalogItems: readonly InventoryCatalogPickItem[]): CatalogOption[] {
   return catalogItems
     .map((item) => {
       const label = formatCatalogItemLabel(item, { withUnit: true });
@@ -26,8 +34,8 @@ function buildOptions(catalogItems: readonly InventoryCatalogItem[]): CatalogOpt
           item.name,
           item.brandName ?? '',
           item.catalogNumber ?? '',
-          item.categoryName,
-          item.unit,
+          item.categoryName ?? '',
+          item.unit ?? '',
           label,
         ]
           .join(' ')
@@ -55,7 +63,7 @@ export function InventoryCatalogItemPicker({
   label?: string;
   value: string;
   onChange: (catalogItemId: string) => void;
-  catalogItems: readonly InventoryCatalogItem[];
+  catalogItems: readonly InventoryCatalogPickItem[];
   required?: boolean;
   emptyLabel?: string;
   disabled?: boolean;

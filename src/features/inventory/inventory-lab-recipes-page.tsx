@@ -399,11 +399,12 @@ export function InventoryLabRecipesPage() {
       <p className="mb-6 max-w-2xl text-sm text-muted">
         DNA Extraction and Loading use <span className="text-foreground">methods</span> (component
         list + optional catalog links; staff pick how many Nx on the Inside lab QR). PCR reaction
-        uses <span className="text-foreground">master mixes</span> (pick mix + number of reactions;
-        deduction = Nx × volume). Gel preparation uses the{' '}
+        uses <span className="text-foreground">master mixes</span> (staff pick mix + Nx + optional
+        mixture rows on the QR; only master mix deducts Nx × volume). Gel preparation uses the{' '}
         <span className="text-foreground">agarose % + volume chart</span>. Reagent preparation stays
         as <span className="text-foreground">recipes</span> with measured volumes and optional
-        output lots.
+        output lots. R&amp;D can use <span className="text-foreground">Manual</span> on the Inside
+        lab QR to save a new work type on first run.
       </p>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-[16rem_1fr]">

@@ -7,16 +7,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusMessage } from '@/components/ui/status-message';
-import { SELECT_CLASS } from '@/features/inventory/inventory-constants';
+import { InventoryCatalogItemPicker } from '@/features/inventory/inventory-catalog-item-picker';
+import {
+  MANUAL_PROTOCOL_UNITS,
+  MANUAL_WORK_TYPE_VALUE,
+  SELECT_CLASS,
+  type ManualProtocolUnit,
+} from '@/features/inventory/inventory-constants';
 import { computeGelComponents, formatGelPercentLabel } from '@/features/inventory/gel-chart';
 import { apiErrorMessage } from '@/lib/api-error';
 import {
+  useGetInventoryPublicLabCatalogQuery,
   useGetInventoryPublicLabGelChartQuery,
   useGetInventoryPublicLabRecipesQuery,
   useGetInventoryPublicScanQuery,
   useIssueInventoryPublicPlasticBatchMutation,
   useIssueInventoryPublicScanMutation,
   useLazyGetInventoryPublicRecipeSopQuery,
+  useSubmitInventoryPublicLabManualUsageMutation,
   useSubmitInventoryPublicLabUsageMutation,
   useTransferInventoryPublicInsideLabMutation,
 } from '@/store/api/api';
@@ -481,21 +489,21 @@ function StationScanCard({
                       </button>
                     ) : null}
                   </div>
-                  <select
-                    className={SELECT_CLASS}
+            <select
+              className={SELECT_CLASS}
                     value={line.plasticStockId}
                     onChange={(event) =>
                       updateLine(line.key, { plasticStockId: event.target.value, boxes: null, custom: '' })
                     }
-                  >
-                    <option value="">Select item</option>
-                    {card.items.map((item) => (
+            >
+              <option value="">Select item</option>
+              {card.items.map((item) => (
                       <option key={item.id} value={item.id} disabled={takenElsewhere.has(item.id)}>
-                        {item.itemName} · {item.sizeLabel}
+                  {item.itemName} · {item.sizeLabel}
                         {item.manufacturer ? ` · ${item.manufacturer}` : ''} ({item.boxesOnHand} {item.unit})
-                      </option>
-                    ))}
-                  </select>
+                </option>
+              ))}
+            </select>
                   {selected ? (
                     <>
                       <div className="flex flex-wrap gap-2">
@@ -686,7 +694,7 @@ function CentralScanCard({
         <p className="mt-6 text-sm text-muted">Nothing is attached to this usage area yet.</p>
       ) : (
         <div className="mt-8 space-y-5">
-          <div>
+            <div>
             <Label htmlFor="central-employee">1. Your name</Label>
             <select
               id="central-employee"
@@ -837,24 +845,24 @@ function CentralScanCard({
                         <>
                           <div className="flex flex-wrap gap-2">
                             {selected.qtyChips.map((chip) => (
-                              <button
-                                key={chip}
-                                type="button"
-                                className={`rounded border px-3 py-2 text-sm tabular-nums ${
+                  <button
+                    key={chip}
+                    type="button"
+                    className={`rounded border px-3 py-2 text-sm tabular-nums ${
                                   line.boxes === chip && !line.custom.trim()
-                                    ? 'border-foreground bg-foreground text-background'
-                                    : 'border-border bg-background'
-                                }`}
+                        ? 'border-foreground bg-foreground text-background'
+                        : 'border-border bg-background'
+                    }`}
                                 onClick={() => updateLine(line.key, { boxes: chip, custom: '' })}
-                              >
-                                {chip}
-                              </button>
-                            ))}
-                          </div>
-                          <Input
-                            type="number"
-                            min={1}
-                            step={1}
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+                <Input
+                  type="number"
+                  min={1}
+                  step={1}
                             value={line.custom}
                             onChange={(event) =>
                               updateLine(line.key, { custom: event.target.value, boxes: null })
@@ -891,6 +899,49 @@ function CentralScanCard({
   );
 }
 
+function emptyManualComponent(): {
+  key: string;
+  catalogItemId: string;
+  quantityValue: string;
+  quantityUnit: ManualProtocolUnit;
+} {
+  return {
+    key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    catalogItemId: '',
+    quantityValue: '',
+    quantityUnit: 'ul',
+  };
+}
+
+function emptyMixtureComponent(): {
+  key: string;
+  name: string;
+  quantityValue: string;
+  quantityUnit: ManualProtocolUnit;
+} {
+  return {
+    key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: '',
+    quantityValue: '',
+    quantityUnit: 'ul',
+  };
+}
+
+function asManualUnit(value: string | null | undefined): ManualProtocolUnit {
+  const normalized = (value ?? '').trim().toLowerCase();
+  if (
+    normalized === 'mg' ||
+    normalized === 'g' ||
+    normalized === 'ul' ||
+    normalized === 'ml' ||
+    normalized === 'l'
+  ) {
+    return normalized;
+  }
+  if (normalized === 'µl' || normalized === 'μl') return 'ul';
+  return 'ul';
+}
+
 function LabScanCard({
   token,
   card,
@@ -903,6 +954,7 @@ function LabScanCard({
   onDone: () => void;
 }) {
   const [submitUsage, { isLoading: submitting }] = useSubmitInventoryPublicLabUsageMutation();
+  const [submitManual, { isLoading: submittingManual }] = useSubmitInventoryPublicLabManualUsageMutation();
   const [fetchSop, { isFetching: loadingSop }] = useLazyGetInventoryPublicRecipeSopQuery();
   const [employeeId, setEmployeeId] = useState('');
   const [activityId, setActivityId] = useState('');
@@ -911,6 +963,13 @@ function LabScanCard({
   const [gelPercent, setGelPercent] = useState('');
   const [gelVolumeMl, setGelVolumeMl] = useState('');
   const [outputQty, setOutputQty] = useState('');
+  const [protocolName, setProtocolName] = useState('');
+  const [manualComponents, setManualComponents] = useState([emptyManualComponent()]);
+  const [masterMixVolume, setMasterMixVolume] = useState('10');
+  const [masterMixUnit, setMasterMixUnit] = useState<ManualProtocolUnit>('ul');
+  const [mixtureComponents, setMixtureComponents] = useState<
+    Array<{ key: string; name: string; quantityValue: string; quantityUnit: ManualProtocolUnit }>
+  >([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [components, setComponents] = useState<
@@ -924,21 +983,27 @@ function LabScanCard({
     }>
   >([]);
 
+  const isManual = activityId === MANUAL_WORK_TYPE_VALUE;
   const selectedActivity = card.activities.find((row) => row.id === activityId);
   const isMethod = selectedActivity?.usageMode === 'method';
   const isPcr = selectedActivity?.usageMode === 'pcr';
   const isGel = selectedActivity?.usageMode === 'gel';
-  const isNx = isMethod || isPcr;
+  const isNx = isMethod;
 
   const { data: recipesData, isFetching: loadingRecipes } = useGetInventoryPublicLabRecipesQuery(
     activityId,
-    { skip: !activityId || isGel },
+    { skip: !activityId || isGel || isManual },
   );
   const recipes = recipesData?.data ?? [];
   const { data: gelChartData, isFetching: loadingGel } = useGetInventoryPublicLabGelChartQuery(
     activityId,
-    { skip: !activityId || !isGel },
+    { skip: !activityId || !isGel || isManual },
   );
+  const { data: labCatalogData, isFetching: loadingLabCatalog } = useGetInventoryPublicLabCatalogQuery(
+    token,
+    { skip: !token || !isManual },
+  );
+  const labCatalogItems = labCatalogData?.data ?? [];
   const gelChart = gelChartData?.data;
   const selectedRecipe = recipes.find((recipe) => recipe.id === recipeId);
   const multiplier = Number(howMany);
@@ -958,10 +1023,31 @@ function LabScanCard({
     setHowMany('1');
     setGelPercent('');
     setGelVolumeMl('');
+    setProtocolName('');
+    setManualComponents([emptyManualComponent()]);
+    setMasterMixVolume('10');
+    setMasterMixUnit('ul');
+    setMixtureComponents([]);
   }, [activityId]);
 
   useEffect(() => {
-    if (isGel) return;
+    if (!isPcr || !selectedRecipe) return;
+    const defaultVol =
+      selectedRecipe.finalVolumeValue != null
+        ? selectedRecipe.finalVolumeValue
+        : selectedRecipe.components[0]?.quantityValue != null
+          ? selectedRecipe.components[0].quantityValue
+          : 10;
+    setMasterMixVolume(String(defaultVol));
+    setMasterMixUnit(
+      asManualUnit(
+        selectedRecipe.finalVolumeUnit || selectedRecipe.components[0]?.quantityUnit || 'ul',
+      ),
+    );
+  }, [isPcr, selectedRecipe]);
+
+  useEffect(() => {
+    if (isManual || isGel || isPcr) return;
     if (!selectedRecipe) {
       setComponents([]);
       setOutputQty('');
@@ -991,7 +1077,7 @@ function LabScanCard({
         };
       }),
     );
-  }, [selectedRecipe, isNx, isGel, howMany, multiplier, multiplierOk]);
+  }, [selectedRecipe, isNx, isGel, isManual, isPcr, howMany, multiplier, multiplierOk]);
 
   useEffect(() => {
     if (!isGel || !gelChart || !gelSelectionOk) {
@@ -1010,6 +1096,75 @@ function LabScanCard({
     );
   }, [isGel, gelChart, gelPercent, gelVolumeMl, gelSelectionOk, selectedGelPercent, selectedGelVolume]);
 
+  async function onSubmitManual() {
+    setError(null);
+    setSuccess(null);
+    if (!online) {
+      setError('You are offline. Connect to the network before submitting — usage was not recorded.');
+      return;
+    }
+    if (!employeeId) {
+      setError('Select your name.');
+      return;
+    }
+    const name = protocolName.trim();
+    if (!name) {
+      setError('Enter the protocol name.');
+      return;
+    }
+    const lines: Array<{
+      catalogItemId: string;
+      quantityValue: number;
+      quantityUnit: ManualProtocolUnit;
+    }> = [];
+    for (const row of manualComponents) {
+      if (!row.catalogItemId) {
+        setError('Choose a catalog item for every component.');
+        return;
+      }
+      const qty = Number(row.quantityValue);
+      if (!Number.isFinite(qty) || qty <= 0) {
+        setError('Each component volume must be a positive number.');
+        return;
+      }
+      lines.push({
+        catalogItemId: row.catalogItemId,
+        quantityValue: qty,
+        quantityUnit: row.quantityUnit,
+      });
+    }
+    if (!lines.length) {
+      setError('Add at least one component.');
+      return;
+    }
+    try {
+      const result = await submitManual({
+        token,
+        body: {
+          employeeId,
+          protocolName: name,
+          components: lines,
+        },
+      }).unwrap();
+      const deducted = result.data.components.filter((line) => line.qtyDeducted != null).length;
+      setSuccess(
+        `Saved work type “${result.data.activityName}” and recorded 1X for ${result.data.employeeName} (${result.data.employeeCode}).${
+          deducted ? ` Deducted ${deducted} linked component(s).` : ''
+        } It will appear in Select work type next time.`,
+      );
+      setActivityId('');
+      setProtocolName('');
+      setManualComponents([emptyManualComponent()]);
+      onDone();
+    } catch (cause) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setError('You are offline. Connect to the network before submitting — usage was not recorded.');
+        return;
+      }
+      setError(apiErrorMessage(cause, 'Unable to save manual protocol.'));
+    }
+  }
+
   async function onSubmit() {
     setError(null);
     setSuccess(null);
@@ -1025,23 +1180,91 @@ function LabScanCard({
       setError('Select what you are doing.');
       return;
     }
+    if (isManual) {
+      await onSubmitManual();
+      return;
+    }
+    if (isPcr) {
+      if (!recipeId) {
+        setError('Select a master mix.');
+        return;
+      }
+      if (!multiplierOk) {
+        setError('Number of reactions must be a positive number (default 1).');
+        return;
+      }
+      const mmVol = Number(masterMixVolume);
+      if (!Number.isFinite(mmVol) || mmVol <= 0) {
+        setError('Master mix volume must be a positive number.');
+        return;
+      }
+      const mixture: Array<{
+        name: string;
+        quantityValue: number;
+        quantityUnit: ManualProtocolUnit;
+      }> = [];
+      for (const row of mixtureComponents) {
+        const name = row.name.trim();
+        if (!name && !row.quantityValue.trim()) continue;
+        if (!name) {
+          setError('Enter a name for every mixture component.');
+          return;
+        }
+        const qty = Number(row.quantityValue);
+        if (!Number.isFinite(qty) || qty < 0) {
+          setError(`Volume for “${name}” must be a number.`);
+          return;
+        }
+        mixture.push({ name, quantityValue: qty, quantityUnit: row.quantityUnit });
+      }
+      try {
+        const result = await submitUsage({
+          token,
+          body: {
+            employeeId,
+            activityId,
+            recipeId,
+            quantityMultiplier: multiplier,
+            masterMixVolumePerReaction: mmVol,
+            masterMixUnit,
+            mixtureComponents: mixture,
+          },
+        }).unwrap();
+        const deducted = result.data.components.filter((line) => line.qtyDeducted != null).length;
+        setSuccess(
+          `Recorded ${result.data.activityName} · ${result.data.recipeName} · ${multiplier}X for ${result.data.employeeName} (${result.data.employeeCode}).${
+            deducted ? ` Deducted master mix stock.` : ' Master mix has no catalog link yet — ask Inventory Manager to link it.'
+          }`,
+        );
+        setRecipeId('');
+        setComponents([]);
+        setHowMany('1');
+        setMasterMixVolume('10');
+        setMasterMixUnit('ul');
+        setMixtureComponents([]);
+        onDone();
+      } catch (cause) {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          setError(
+            'You are offline. Connect to the network before submitting — usage was not recorded.',
+          );
+          return;
+        }
+        setError(apiErrorMessage(cause, 'Unable to submit PCR usage.'));
+      }
+      return;
+    }
     if (isGel) {
       if (!gelSelectionOk) {
         setError('Choose agarose percentage and gel volume.');
         return;
       }
     } else if (!recipeId) {
-      setError(
-        isPcr ? 'Select a master mix.' : isMethod ? 'Select a method.' : 'Select a recipe / type.',
-      );
+      setError(isMethod ? 'Select a method.' : 'Select a recipe / type.');
       return;
     }
     if (isNx && !multiplierOk) {
-      setError(
-        isPcr
-          ? 'Number of reactions must be a positive number (default 1).'
-          : 'How many must be a positive number (default 1).',
-      );
+      setError('How many must be a positive number (default 1).');
       return;
     }
     const lines = components
@@ -1140,6 +1363,7 @@ function LabScanCard({
               onChange={(event) => setActivityId(event.target.value)}
             >
               <option value="">Select work type</option>
+              <option value={MANUAL_WORK_TYPE_VALUE}>Manual</option>
               {card.activities.map((activity) => (
                 <option key={activity.id} value={activity.id}>
                   {activity.name}
@@ -1148,7 +1372,279 @@ function LabScanCard({
             </select>
           </div>
 
-          {activityId && isGel ? (
+          {isManual ? (
+            <div className="space-y-4 rounded border border-border p-3">
+              <p className="text-sm font-medium">Work type : Manual</p>
+              <p className="text-xs text-muted">
+                First-time R&amp;D protocol. Save &amp; submit creates a new work type you can pick next
+                time (with Nx).
+              </p>
+              <div>
+                <Label htmlFor="lab-protocol-name">Name of the protocol</Label>
+                <Input
+                  id="lab-protocol-name"
+                  value={protocolName}
+                  onChange={(event) => setProtocolName(event.target.value)}
+                  placeholder="e.g. Pilot assay A"
+                  autoComplete="off"
+                />
+              </div>
+              <div className="space-y-3">
+                {manualComponents.map((row, index) => (
+                  <div key={row.key} className="space-y-2 rounded border border-border p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-muted">Component {index + 1}</p>
+                      {manualComponents.length > 1 ? (
+                        <button
+                          type="button"
+                          className="text-xs underline-offset-2 hover:underline"
+                          onClick={() =>
+                            setManualComponents((current) =>
+                              current.filter((item) => item.key !== row.key),
+                            )
+                          }
+                        >
+                          Remove
+                        </button>
+                      ) : null}
+                    </div>
+                    <InventoryCatalogItemPicker
+                      id={`manual-component-${row.key}`}
+                      label="Component"
+                      value={row.catalogItemId}
+                      catalogItems={labCatalogItems}
+                      emptyLabel={loadingLabCatalog ? 'Loading…' : 'Select catalog item'}
+                      disabled={loadingLabCatalog}
+                      onChange={(catalogItemId) =>
+                        setManualComponents((current) =>
+                          current.map((item) =>
+                            item.key === row.key ? { ...item, catalogItemId } : item,
+                          ),
+                        )
+                      }
+                    />
+                    <div className="grid grid-cols-[1fr_5.5rem] gap-2">
+                      <div>
+                        <Label htmlFor={`manual-qty-${row.key}`}>Volume</Label>
+                        <Input
+                          id={`manual-qty-${row.key}`}
+                          type="number"
+                          min={0.0001}
+                          step="any"
+                          value={row.quantityValue}
+                          onChange={(event) =>
+                            setManualComponents((current) =>
+                              current.map((item) =>
+                                item.key === row.key
+                                  ? { ...item, quantityValue: event.target.value }
+                                  : item,
+                              ),
+                            )
+                          }
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`manual-unit-${row.key}`}>Unit</Label>
+                        <select
+                          id={`manual-unit-${row.key}`}
+                          className={SELECT_CLASS}
+                          value={row.quantityUnit}
+                          onChange={(event) =>
+                            setManualComponents((current) =>
+                              current.map((item) =>
+                                item.key === row.key
+                                  ? {
+                                      ...item,
+                                      quantityUnit: event.target.value as ManualProtocolUnit,
+                                    }
+                                  : item,
+                              ),
+                            )
+                          }
+                        >
+                          {MANUAL_PROTOCOL_UNITS.map((unit) => (
+                            <option key={unit} value={unit}>
+                              {unit}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="text-sm underline-offset-2 hover:underline"
+                  onClick={() =>
+                    setManualComponents((current) => [...current, emptyManualComponent()])
+                  }
+                >
+                  + Add component
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {isPcr ? (
+            <div className="space-y-4 rounded border border-border p-3">
+              <p className="text-sm font-medium">Work type : PCR reaction</p>
+              <p className="text-xs text-muted">
+                Flexible mixture per run. Only the master mix deducts from Inside lab lots (Nx ×
+                volume).
+              </p>
+              <div>
+                <Label htmlFor="lab-pcr-reactions">Number of reactions (Nx)</Label>
+                <Input
+                  id="lab-pcr-reactions"
+                  type="number"
+                  min={0.0001}
+                  step="any"
+                  value={howMany}
+                  onChange={(event) => setHowMany(event.target.value)}
+                  placeholder="1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="lab-pcr-master-mix">Master mix</Label>
+                <select
+                  id="lab-pcr-master-mix"
+                  className={SELECT_CLASS}
+                  value={recipeId}
+                  onChange={(event) => setRecipeId(event.target.value)}
+                  disabled={loadingRecipes}
+                >
+                  <option value="">
+                    {loadingRecipes ? 'Loading…' : 'Select master mix'}
+                  </option>
+                  {recipes.map((recipe) => (
+                    <option key={recipe.id} value={recipe.id}>
+                      {recipe.name}
+                      {recipe.finalVolumeValue != null
+                        ? ` (${recipe.finalVolumeValue} ${recipe.finalVolumeUnit || 'ul'})`
+                        : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-[1fr_5.5rem] gap-2">
+                <div>
+                  <Label htmlFor="lab-pcr-mm-vol">Master mix volume / reaction</Label>
+                  <Input
+                    id="lab-pcr-mm-vol"
+                    type="number"
+                    min={0.0001}
+                    step="any"
+                    value={masterMixVolume}
+                    onChange={(event) => setMasterMixVolume(event.target.value)}
+                    placeholder="10"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lab-pcr-mm-unit">Unit</Label>
+                  <select
+                    id="lab-pcr-mm-unit"
+                    className={SELECT_CLASS}
+                    value={masterMixUnit}
+                    onChange={(event) =>
+                      setMasterMixUnit(event.target.value as ManualProtocolUnit)
+                    }
+                  >
+                    {MANUAL_PROTOCOL_UNITS.map((unit) => (
+                      <option key={unit} value={unit}>
+                        {unit}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <p className="text-xs text-muted">
+                  Mixture components (primer / NFW / template…). Logged only — no stock deduct.
+                </p>
+                {mixtureComponents.map((row, index) => (
+                  <div key={row.key} className="space-y-2 rounded border border-border p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-muted">Component {index + 1}</p>
+                      <button
+                        type="button"
+                        className="text-xs underline-offset-2 hover:underline"
+                        onClick={() =>
+                          setMixtureComponents((current) =>
+                            current.filter((item) => item.key !== row.key),
+                          )
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <Input
+                      value={row.name}
+                      onChange={(event) =>
+                        setMixtureComponents((current) =>
+                          current.map((item) =>
+                            item.key === row.key ? { ...item, name: event.target.value } : item,
+                          ),
+                        )
+                      }
+                      placeholder="e.g. Forward primer / NFW / Template"
+                    />
+                    <div className="grid grid-cols-[1fr_5.5rem] gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        step="any"
+                        value={row.quantityValue}
+                        onChange={(event) =>
+                          setMixtureComponents((current) =>
+                            current.map((item) =>
+                              item.key === row.key
+                                ? { ...item, quantityValue: event.target.value }
+                                : item,
+                            ),
+                          )
+                        }
+                        placeholder="Vol / reaction"
+                      />
+                      <select
+                        className={SELECT_CLASS}
+                        value={row.quantityUnit}
+                        onChange={(event) =>
+                          setMixtureComponents((current) =>
+                            current.map((item) =>
+                              item.key === row.key
+                                ? {
+                                    ...item,
+                                    quantityUnit: event.target.value as ManualProtocolUnit,
+                                  }
+                                : item,
+                            ),
+                          )
+                        }
+                      >
+                        {MANUAL_PROTOCOL_UNITS.map((unit) => (
+                          <option key={unit} value={unit}>
+                            {unit}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="text-sm underline-offset-2 hover:underline"
+                  onClick={() =>
+                    setMixtureComponents((current) => [...current, emptyMixtureComponent()])
+                  }
+                >
+                  + Add component
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {activityId && !isManual && !isPcr && isGel ? (
             <>
               <div>
                 <Label htmlFor="lab-gel-percent">Agarose %</Label>
@@ -1187,11 +1683,9 @@ function LabScanCard({
             </>
           ) : null}
 
-          {activityId && !isGel ? (
+          {activityId && !isManual && !isPcr && !isGel ? (
             <div>
-              <Label htmlFor="lab-recipe">
-                {isPcr ? 'Master mix' : isMethod ? 'Method' : 'Recipe / type'}
-              </Label>
+              <Label htmlFor="lab-recipe">{isMethod ? 'Method' : 'Recipe / type'}</Label>
               <select
                 id="lab-recipe"
                 className={SELECT_CLASS}
@@ -1200,18 +1694,12 @@ function LabScanCard({
                 disabled={loadingRecipes}
               >
                 <option value="">
-                  {loadingRecipes
-                    ? 'Loading…'
-                    : isPcr
-                      ? 'Select master mix'
-                      : isMethod
-                        ? 'Select method'
-                        : 'Select recipe'}
+                  {loadingRecipes ? 'Loading…' : isMethod ? 'Select method' : 'Select recipe'}
                 </option>
                 {recipes.map((recipe) => (
                   <option key={recipe.id} value={recipe.id}>
                     {recipe.name}
-                    {(isPcr || !isMethod) && recipe.finalVolumeValue != null
+                    {!isMethod && recipe.finalVolumeValue != null
                       ? ` (${recipe.finalVolumeValue} ${recipe.finalVolumeUnit})`
                       : ''}
                   </option>
@@ -1220,7 +1708,7 @@ function LabScanCard({
             </div>
           ) : null}
 
-          {selectedRecipe && !isGel ? (
+          {selectedRecipe && !isManual && !isPcr && !isGel ? (
             <>
               {selectedRecipe.sopFileId ? (
                 <div className="flex items-center justify-between gap-3 rounded border border-border px-3 py-2">
@@ -1264,9 +1752,7 @@ function LabScanCard({
 
               {isNx ? (
                 <div>
-                  <Label htmlFor="lab-how-many">
-                    {isPcr ? 'Number of reactions (Nx)' : 'How many (Nx)'}
-                  </Label>
+                  <Label htmlFor="lab-how-many">How many (Nx)</Label>
                   <Input
                     id="lab-how-many"
                     type="number"
@@ -1277,11 +1763,9 @@ function LabScanCard({
                     placeholder="1"
                   />
                   <p className="mt-1 text-xs text-muted">
-                    {isPcr
-                      ? 'Default 1. Volume deducted = reactions × volume per reaction (editable below).'
-                      : 'Default 1. Enter 2 if you ran this method twice (logged as 2X).'}
+                    Default 1. Enter 2 if you ran this method twice (logged as 2X).
                   </p>
-                </div>
+              </div>
               ) : null}
 
               {!isNx && selectedRecipe.createsOutputLot ? (
@@ -1302,24 +1786,22 @@ function LabScanCard({
             </>
           ) : null}
 
-          {(selectedRecipe && !isGel) || (isGel && gelSelectionOk) ? (
+          {!isManual &&
+          !isPcr &&
+          ((selectedRecipe && !isGel) || (isGel && gelSelectionOk)) ? (
             <div className="space-y-3">
               <Label>
                 {isGel
                   ? 'Components (from chart)'
-                  : isPcr
-                    ? 'Master mix volume'
-                    : isMethod
-                      ? 'Components (from method)'
-                      : 'Components (editable)'}
+                  : isMethod
+                    ? 'Components (from method)'
+                    : 'Components (editable)'}
               </Label>
               {isNx || isGel ? (
                 <p className="text-xs text-muted">
                   {isGel
                     ? 'Amounts come from the agarose chart. Edit a value when this run differs.'
-                    : isPcr
-                      ? 'Volume defaults to (default µL × number of reactions). Edit when this run differs.'
-                      : 'Volumes default from the method × How many (Nx). Edit a volume when this run differs.'}
+                    : 'Volumes default from the method × How many (Nx). Edit a volume when this run differs.'}
                 </p>
               ) : null}
               {components.map((component, index) => (
@@ -1408,21 +1890,36 @@ function LabScanCard({
             className="w-full"
             disabled={
               submitting ||
+              submittingManual ||
               !online ||
-              (isGel ? !gelSelectionOk : !recipeId)
+              (isManual
+                ? !protocolName.trim() || !manualComponents.length
+                : isPcr
+                  ? !recipeId || !multiplierOk
+                  : isGel
+                    ? !gelSelectionOk
+                    : !recipeId)
             }
             onClick={() => void onSubmit()}
           >
-            {submitting ? 'Submitting…' : 'Submit'}
+            {submitting || submittingManual
+              ? isManual
+                ? 'Saving…'
+                : 'Submitting…'
+              : isManual
+                ? 'Save & submit'
+                : 'Submit'}
           </Button>
           <p className="text-xs text-muted">
-            {isGel
-              ? 'Agarose, TAE Buffer, and EtBr are calculated from % and volume. Linked components deduct stock from Inside lab.'
+            {isManual
+              ? 'Saves this protocol as a new work type and records this run (1X). Linked catalog items deduct from Inside lab stock.'
               : isPcr
-                ? 'Number of reactions × master mix volume is recorded. Linked master mixes deduct stock from Inside lab.'
-                : isMethod
-                  ? 'How many (Nx) and edited volumes are recorded with this method run. Linked components deduct stock from Inside lab.'
-                  : 'Linked components deduct stock from Inside lab. Reagent recipes can also create a new lot.'}
+                ? 'Only the master mix deducts stock (Nx × volume). Mixture rows are logged for the run.'
+                : isGel
+                  ? 'Agarose, TAE Buffer, and EtBr are calculated from % and volume. Linked components deduct stock from Inside lab.'
+                  : isMethod
+                    ? 'How many (Nx) and edited volumes are recorded with this method run. Linked components deduct stock from Inside lab.'
+                    : 'Linked components deduct stock from Inside lab. Reagent recipes can also create a new lot.'}
           </p>
           <p className="text-xs text-muted">
             <Link href="/scan" className="underline-offset-2 hover:underline">

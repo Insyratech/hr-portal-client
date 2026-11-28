@@ -1,6 +1,13 @@
 export const SELECT_CLASS =
   'h-10 w-full rounded border border-border bg-background px-3 text-sm';
 
+/** Units for Inside lab Manual protocol component rows (wireframe). */
+export const MANUAL_PROTOCOL_UNITS = ['mg', 'g', 'ul', 'ml', 'l'] as const;
+export type ManualProtocolUnit = (typeof MANUAL_PROTOCOL_UNITS)[number];
+
+/** Client-only work-type value that opens the Manual R&D form. */
+export const MANUAL_WORK_TYPE_VALUE = '__manual__';
+
 export const LOCATION_TYPES: readonly { value: string; label: string }[] = [
   { value: 'stock_room', label: 'Stock room' },
   { value: 'store', label: 'Store' },

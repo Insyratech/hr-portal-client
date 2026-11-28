@@ -3880,6 +3880,22 @@ export type InventoryLabUsageResult = {
   }>;
 };
 
+/** Catalog rows for Inside lab Manual protocol component picker. */
+export type InventoryPublicLabCatalogItem = {
+  id: string;
+  name: string;
+  brandName: string;
+  catalogNumber: string;
+  categoryName: string;
+  unit: string;
+};
+
+/** Manual Save & submit: new work type + method + this run's usage. */
+export type InventoryLabManualUsageResult = InventoryLabUsageResult & {
+  activityId: string;
+  recipeId: string;
+};
+
 export type InventoryCentralQrKind = 'stock_room' | 'stationery' | 'inside_lab';
 
 export type InventoryCentralQr = {
